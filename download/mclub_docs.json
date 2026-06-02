@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">[\n  {\n    \"name\": \"products\",\n    \"path\": \"docs/products\",\n    \"sha\": \"d7417e0be7b0c4ea76c68dff3425bff3d6b070b7\",\n    \"size\": 0,\n    \"url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/docs/products?ref=main\",\n    \"html_url\": \"https://github.com/mypathtravel101-cyber/mclub/tree/main/docs/products\",\n    \"git_url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/trees/d7417e0be7b0c4ea76c68dff3425bff3d6b070b7\",\n    \"download_url\": null,\n    \"type\": \"dir\",\n    \"_links\": {\n      \"self\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/docs/products?ref=main\",\n      \"git\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/trees/d7417e0be7b0c4ea76c68dff3425bff3d6b070b7\",\n      \"html\": \"https://github.com/mypathtravel101-cyber/mclub/tree/main/docs/products\"\n    }\n  }\n]\n</pre></body></html>",
+    "publishedTime": "Tue, 02 Jun 2026 08:02:51 GMT",
+    "title": "",
+    "url": "https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/docs",
+    "usage": {
+      "tokens": 335
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 335
+    }
+  },
+  "status": 20000
+}
