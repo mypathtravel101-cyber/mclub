@@ -51,4 +51,7 @@ prompt
 
 server.log
 # Skills directory
-/skills/
+/skills/.zscripts/dev.pid
+.zscripts/dev.log
+.zscripts/mini-service-*.log
+__pycache__/
