@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCLUB CRM System Framework</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+  @page {
+    size: 794px 1123px;
+    margin: 0;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 794px;
+    height: 1123px;
+    background: #ffffff;
+    font-family: 'Noto Sans SC', 'Inter', sans-serif;
+  }
+
+  :root {
+    --c-accent: #2f8cab;
+    --c-primary: #776c4b;
+    --c-text: #232220;
+    --c-muted: #89867f;
+    --c-bg: #f5f4f3;
+  }
+
+  /* Layer 0: Background */
+  .cover-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: #ffffff;
+  }
+
+  /* Layer 1: Background decoration */
+  .cover-layer-1 {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  /* Giant year watermark */
+  .watermark {
+    position: absolute;
+    right: 10px;
+    top: 80px;
+    font-size: 160pt;
+    font-weight: 900;
+    color: var(--c-accent);
+    opacity: 0.04;
+    line-height: 1;
+    letter-spacing: -5px;
+    user-select: none;
+  }
+
+  /* Subtle grid pattern */
+  .grid-pattern {
+    position: absolute;
+    inset: 0;
+    opacity: 0.015;
+    background-image:
+      linear-gradient(var(--c-accent) 1px, transparent 1px),
+      linear-gradient(90deg, var(--c-accent) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  /* Layer 2: Structure lines */
+  .cover-layer-2 {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+  }
+
+  /* Top bar */
+  .top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 15px;
+    background: var(--c-accent);
+  }
+
+  /* Right accent line */
+  .right-accent {
+    position: absolute;
+    right: 95px;
+    top: 70%;
+    width: 4px;
+    height: 8%;
+    background: var(--c-accent);
+  }
+
+  /* Layer 3: Content */
+  .cover-layer-3 {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+  }
+
+  .kicker {
+    position: absolute;
+    left: 95px;
+    top: 168px;
+    font-size: 16pt;
+    font-weight: 400;
+    letter-spacing: 3pt;
+    color: var(--c-muted);
+    opacity: 0.6;
+    text-transform: uppercase;
+  }
+
+  .hero-title {
+    position: absolute;
+    left: 95px;
+    top: 300px;
+    font-size: 58pt;
+    font-weight: 900;
+    color: var(--c-text);
+    line-height: 1.15;
+    max-width: 480px;
+  }
+
+  .summary {
+    position: absolute;
+    left: 95px;
+    top: 540px;
+    font-size: 17pt;
+    font-weight: 400;
+    color: var(--c-text);
+    opacity: 0.85;
+    line-height: 1.6;
+    max-width: 400px;
+  }
+
+  .meta-block {
+    position: absolute;
+    right: 150px;
+    top: 82%;
+    text-align: right;
+    font-size: 16pt;
+    font-weight: 400;
+    color: var(--c-muted);
+    line-height: 2.0;
+    padding-right: 0px;
+  }
+
+  .footer {
+    position: absolute;
+    left: 95px;
+    bottom: 60px;
+    font-size: 14pt;
+    font-weight: 400;
+    color: var(--c-muted);
+    opacity: 0.6;
+    letter-spacing: 1pt;
+  }
+
+  @media screen {
+    html {
+      height: auto;
+      display: flex;
+      justify-content: center;
+    }
+    body {
+      transform-origin: top center;
+      scale: min(1, calc(100vh / 1123));
+      margin: 0 auto;
+    }
+  }
+</style>
+</head>
+<body>
+  <!-- Layer 0 -->
+  <div class="cover-bg"></div>
+
+  <!-- Layer 1 -->
+  <div class="cover-layer-1">
+    <div class="grid-pattern"></div>
+    <div class="watermark">2026</div>
+  </div>
+
+  <!-- Layer 2 -->
+  <div class="cover-layer-2">
+    <div class="top-bar"></div>
+    <div class="right-accent"></div>
+  </div>
+
+  <!-- Layer 3 -->
+  <div class="cover-layer-3">
+    <div class="kicker">SYSTEM FRAMEWORK DOCUMENT</div>
+    <div class="hero-title">MCLUB<br/>CRM</div>
+    <div class="summary">A comprehensive multi-role family office CRM platform integrating client management, order settlement, commission tracking, and event management for the Park Zeman Group.</div>
+    <div class="meta-block">
+      Park Zeman Group<br/>
+      June 2026<br/>
+      Version 1.0
+    </div>
+    <div class="footer">CONFIDENTIAL</div>
+  </div>
+</body>
+</html>

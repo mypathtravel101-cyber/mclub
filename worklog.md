@@ -126,3 +126,27 @@ Stage Summary:
 - Preview URL (https://preview-chat-cfbf9474-2db8-4ba4-8247-31eed109e08e.space-z.ai/) works fully
 - The platform CDN cache needs to be invalidated - this requires platform-level action
 - Code pushed to GitHub: https://github.com/mypathtravel101-cyber/mclub
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Generate MCLUB CRM Framework PDF document
+
+Work Log:
+- Read PDF skill instructions, report brief, cover.md, and palette.md
+- Generated cascade color palette using palette.cascade CLI tool
+- Created comprehensive ReportLab Python script for body PDF (13 sections, 16 tables)
+- Created HTML cover page using Template 02 (Corporate Editorial) with top bar, watermark, accent line
+- Validated cover HTML with poster_validate.py and cover_validate.js (fixed overlap issue)
+- Generated body PDF with auto-generated Table of Contents
+- Rendered cover HTML to PDF via html2poster.js
+- Merged cover + body into single PDF via pypdf
+- Ran pdf_qa.py quality checks: 10 passed, 2 warnings (cover margin asymmetry expected)
+- Added Z.ai branding metadata and verified font embedding
+- Final output: 13-page PDF at /home/z/my-project/download/MCLUB_CRM_Framework.pdf
+
+Stage Summary:
+- Delivered MCLUB_CRM_Framework.pdf (153KB, 13 pages)
+- Includes: Cover page, TOC, 8 major sections with 16 detailed tables
+- Sections: System Overview, Tech Stack, Data Models, API Architecture, Frontend Architecture, Core Business Flows, Infrastructure, Data Model Relationships
+- All quality checks passed
