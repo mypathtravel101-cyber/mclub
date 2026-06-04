@@ -52,6 +52,12 @@ enum RSVPStatus {
   CHECKED_IN  // 已簽到
 }
 
+enum TaskStatus {
+  TODO        // 待辦
+  IN_PROGRESS // 進行中
+  DONE        // 已完成
+}
+
 model User {
   id          String    @id @default(cuid())
   email       String    @unique
@@ -87,6 +93,9 @@ model User {
   
   // Timeline events created by this user
   timelineEvents TimelineEvent[] @relation("EventCreator")
+  
+  // Event tasks assigned to this user
+  assignedTasks EventTask[] @relation("TaskAssignee")
   
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -186,10 +195,12 @@ model ClubEvent {
   id            String       @id @default(cuid())
   title         String       // 活動名稱
   description   String?      // 活動描述
+  category      String       @default("networking") // 活動類別: networking, seminar, dinner, workshop, celebration
   venue         String?      // 地點
   eventDate     DateTime     // 活動日期
   endDate       DateTime?    // 結束日期
   status        EventStatus  @default(DRAFT)
+  coverImage    String?      // 封面圖片URL
   
   // 容量
   maxAttendees  Int?         // 最大人數
@@ -199,12 +210,55 @@ model ClubEvent {
   fee           Float        @default(0)     // 費用
   currency      String       @default("HKD")
   
+  // 聯絡人及贊助
+  contactPerson String?      // 聯絡人
+  sponsor       String?      // 贊助商
+  
   // 創建者
   createdById   String
   createdBy     User         @relation("EventOrganizer", fields: [createdById], references: [id])
   
   // RSVP
   rsvps         RSVP[]
+  
+  // 活動任務
+  tasks         EventTask[]
+  
+  // 活動預算
+  budgetItems   EventBudgetItem[]
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model EventTask {
+  id            String       @id @default(cuid())
+  eventId       String
+  event         ClubEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  title         String       // 任務名稱
+  description   String?      // 任務描述
+  status        TaskStatus   @default(TODO)  // 任務狀態
+  dueDate       DateTime?    // 截止日期
+  priority      String       @default("medium") // low, medium, high
+  
+  // 負責人
+  assigneeId    String?      // 負責人ID
+  assignee      User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model EventBudgetItem {
+  id            String       @id @default(cuid())
+  eventId       String
+  event         ClubEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  category      String       // 預算類別: venue, catering, decoration, av, marketing, staff, other
+  description   String       // 項目描述
+  estimatedCost Float        @default(0)  // 預算金額
+  actualCost    Float?       // 實際金額
   
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt

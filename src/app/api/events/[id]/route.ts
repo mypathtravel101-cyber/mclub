@@ -14,9 +14,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const body = await req.json();
+    const updateData: any = { ...body };
+    
+    // Handle date fields
+    if (body.eventDate) updateData.eventDate = new Date(body.eventDate);
+    if (body.endDate) updateData.endDate = new Date(body.endDate);
+    if (body.endDate === null) updateData.endDate = null;
+
     const event = await db.clubEvent.update({
       where: { id },
-      data: body.eventDate ? { ...body, eventDate: new Date(body.eventDate) } : body,
+      data: updateData,
     });
 
     return NextResponse.json({ event });
@@ -36,6 +43,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ error: '權限不足' }, { status: 403 });
     }
 
+    // Delete in order: tasks, budget items, RSVPs, then event
+    await db.eventTask.deleteMany({ where: { eventId: id } });
+    await db.eventBudgetItem.deleteMany({ where: { eventId: id } });
     await db.rSVP.deleteMany({ where: { eventId: id } });
     await db.clubEvent.delete({ where: { id } });
 

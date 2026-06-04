@@ -64,6 +64,7 @@ export async function POST() {
       data: {
         title: 'MCLUB 2026 夏季投資論壇',
         description: '探討家族辦公室資產配置策略，邀請行業專家分享市場見解',
+        category: 'seminar',
         venue: '香港四季酒店宴會廳',
         eventDate: new Date('2026-07-15T14:00:00'),
         endDate: new Date('2026-07-15T18:00:00'),
@@ -72,6 +73,8 @@ export async function POST() {
         isPublic: true,
         fee: 0,
         currency: 'HKD',
+        contactPerson: 'Kenneth Mak',
+        sponsor: '野村資本',
         createdById: kenneth.id,
       },
     });
@@ -79,6 +82,7 @@ export async function POST() {
       data: {
         title: '日本物業投資說明會',
         description: '大阪物業投資機會深度解析，6%租金保證方案',
+        category: 'seminar',
         venue: '線上 Zoom 會議',
         eventDate: new Date('2026-07-22T10:00:00'),
         endDate: new Date('2026-07-22T12:00:00'),
@@ -87,13 +91,15 @@ export async function POST() {
         isPublic: true,
         fee: 0,
         currency: 'HKD',
+        contactPerson: '野村至紀',
         createdById: kenneth.id,
       },
     });
-    await db.clubEvent.create({
+    const event3 = await db.clubEvent.create({
       data: {
         title: 'VFK健康產品體驗日',
         description: '產品試用及健康諮詢，Plan A/B/C會員專享',
+        category: 'workshop',
         venue: 'MCLUB會所',
         eventDate: new Date('2026-08-05T15:00:00'),
         endDate: new Date('2026-08-05T17:30:00'),
@@ -102,6 +108,8 @@ export async function POST() {
         isPublic: false,
         fee: 200,
         currency: 'HKD',
+        contactPerson: 'Calvin Chu',
+        sponsor: 'VFK Health',
         createdById: kenneth.id,
       },
     });
@@ -113,6 +121,30 @@ export async function POST() {
         { eventId: event1.id, userId: endUser.id, status: 'PENDING', guests: 0 },
         { eventId: event2.id, userId: agent.id, status: 'CONFIRMED', guests: 0 },
         { eventId: event2.id, userId: endUser2.id, status: 'CONFIRMED', guests: 2 },
+      ],
+    });
+
+    // Create sample event tasks
+    await db.eventTask.createMany({
+      data: [
+        { eventId: event1.id, title: '預訂場地', description: '四季酒店宴會廳預訂確認', status: 'DONE', priority: 'high', dueDate: new Date('2026-06-15'), assigneeId: kenneth.id },
+        { eventId: event1.id, title: '邀請演講嘉賓', description: '確認3位行業專家出席', status: 'IN_PROGRESS', priority: 'high', dueDate: new Date('2026-07-01'), assigneeId: kenneth.id },
+        { eventId: event1.id, title: '準備宣傳物料', description: '海報、邀請函、社交媒體素材', status: 'TODO', priority: 'medium', dueDate: new Date('2026-07-05') },
+        { eventId: event1.id, title: '安排餐飲服務', description: '茶點及雞尾酒安排', status: 'TODO', priority: 'medium', dueDate: new Date('2026-07-10') },
+        { eventId: event1.id, title: '影音設備測試', description: '投影、音響、直播設備', status: 'TODO', priority: 'low', dueDate: new Date('2026-07-14') },
+        { eventId: event3.id, title: '準備產品試用裝', description: 'VFK產品試用包裝', status: 'TODO', priority: 'high', dueDate: new Date('2026-08-01') },
+      ],
+    });
+
+    // Create sample budget items
+    await db.eventBudgetItem.createMany({
+      data: [
+        { eventId: event1.id, category: 'venue', description: '四季酒店宴會廳租金', estimatedCost: 50000, actualCost: 48000 },
+        { eventId: event1.id, category: 'catering', description: '茶點及雞尾酒', estimatedCost: 15000, actualCost: null },
+        { eventId: event1.id, category: 'av', description: '影音設備租賃', estimatedCost: 8000, actualCost: null },
+        { eventId: event1.id, category: 'marketing', description: '宣傳物料及社交媒體推廣', estimatedCost: 5000, actualCost: 3200 },
+        { eventId: event1.id, category: 'staff', description: '臨時工作人員', estimatedCost: 6000, actualCost: null },
+        { eventId: event1.id, category: 'other', description: '紀念品及文具', estimatedCost: 3000, actualCost: null },
       ],
     });
 

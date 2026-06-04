@@ -10,12 +10,14 @@ export async function GET(req: NextRequest) {
 
     let events;
     if (userRole === 'MCLUB_STAFF') {
-      // MCLUB Admin sees all events
+      // MCLUB Admin sees all events with full details
       events = await db.clubEvent.findMany({
         include: {
           createdBy: { select: { id: true, name: true, role: true } },
           rsvps: { include: { user: { select: { id: true, name: true, role: true, email: true } } }, orderBy: { createdAt: 'desc' } },
-          _count: { select: { rsvps: true } },
+          _count: { select: { rsvps: true, tasks: true, budgetItems: true } },
+          tasks: { include: { assignee: { select: { id: true, name: true } } }, orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }] },
+          budgetItems: { orderBy: { createdAt: 'asc' } },
         },
         orderBy: { eventDate: 'desc' },
       });
@@ -53,7 +55,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { title, description, venue, eventDate, endDate, maxAttendees, isPublic, fee, currency, status } = body;
+    const { title, description, category, venue, eventDate, endDate, maxAttendees, isPublic, fee, currency, status, coverImage, contactPerson, sponsor } = body;
 
     if (!title || !eventDate) {
       return NextResponse.json({ error: '活動名稱和日期為必填' }, { status: 400 });
@@ -63,6 +65,7 @@ export async function POST(req: NextRequest) {
       data: {
         title,
         description: description || null,
+        category: category || 'networking',
         venue: venue || null,
         eventDate: new Date(eventDate),
         endDate: endDate ? new Date(endDate) : null,
@@ -71,6 +74,9 @@ export async function POST(req: NextRequest) {
         fee: fee || 0,
         currency: currency || 'HKD',
         status: status || 'DRAFT',
+        coverImage: coverImage || null,
+        contactPerson: contactPerson || null,
+        sponsor: sponsor || null,
         createdById: userId,
       },
       include: {

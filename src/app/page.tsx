@@ -16,8 +16,11 @@ interface TimelineEvent { id: string; clientId: string; orderId?: string; eventT
 
 type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED';
 type RSVPStatus = 'PENDING' | 'CONFIRMED' | 'DECLINED' | 'CHECKED_IN';
-interface ClubEvent { id: string; title: string; description?: string; venue?: string; eventDate: string; endDate?: string; status: EventStatus; maxAttendees?: number; isPublic: boolean; fee: number; currency: string; createdById: string; createdBy?: { id: string; name: string; role: string }; rsvps?: RSVP[]; _count?: { rsvps: number }; }
+type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
+interface ClubEvent { id: string; title: string; description?: string; category?: string; venue?: string; eventDate: string; endDate?: string; status: EventStatus; maxAttendees?: number; isPublic: boolean; fee: number; currency: string; coverImage?: string; contactPerson?: string; sponsor?: string; createdById: string; createdBy?: { id: string; name: string; role: string }; rsvps?: RSVP[]; tasks?: EventTask[]; budgetItems?: EventBudgetItem[]; _count?: { rsvps: number; tasks: number; budgetItems: number }; }
 interface RSVP { id: string; eventId: string; userId: string; status: RSVPStatus; notes?: string; guests: number; user?: { id: string; name: string; email?: string; role?: string }; }
+interface EventTask { id: string; eventId: string; title: string; description?: string; status: TaskStatus; dueDate?: string; priority: string; assigneeId?: string; assignee?: { id: string; name: string; role?: string }; createdAt: string; }
+interface EventBudgetItem { id: string; eventId: string; category: string; description: string; estimatedCost: number; actualCost?: number; }
 
 // ── API Helper ──
 const API_BASE = '/api';
@@ -49,6 +52,24 @@ const roleLabel: Record<UserRole, string> = { MCLUB_STAFF: 'MCLUB Admin', SME_OW
 const eventStatusLabel: Record<EventStatus, string> = { DRAFT: '草稿', PUBLISHED: '已發佈', CANCELLED: '已取消', COMPLETED: '已完成' };
 const eventStatusClass: Record<EventStatus, string> = { DRAFT: 'status-pending', PUBLISHED: 'status-completed', CANCELLED: 'status-pending', COMPLETED: 'status-settled' };
 const rsvpStatusLabel: Record<RSVPStatus, string> = { PENDING: '待確認', CONFIRMED: '已確認', DECLINED: '已拒絕', CHECKED_IN: '已簽到' };
+const taskStatusLabel: Record<TaskStatus, string> = { TODO: '待辦', IN_PROGRESS: '進行中', DONE: '已完成' };
+const taskStatusClass: Record<TaskStatus, string> = { TODO: 'status-pending', IN_PROGRESS: 'status-in_progress', DONE: 'status-completed' };
+const priorityLabel: Record<string, string> = { high: '高', medium: '中', low: '低' };
+const priorityColor: Record<string, string> = { high: 'text-red-400', medium: 'text-yellow-400', low: 'text-green-400' };
+const budgetCategoryLabel: Record<string, string> = { venue: '場地', catering: '餐飲', decoration: '佈置', av: '影音', marketing: '宣傳', staff: '人員', other: '其他' };
+const eventCategoryLabel: Record<string, string> = { networking: '交流', seminar: '研討會', dinner: '晚宴', workshop: '工作坊', celebration: '慶典' };
+
+function rsvpStatusClass(s: RSVPStatus): string {
+  return s === 'CONFIRMED' || s === 'CHECKED_IN' ? 'status-completed' : s === 'DECLINED' ? 'status-pending' : 'status-in_progress';
+}
+
+function eventStatusBadge(s: EventStatus): string {
+  return 'text-xs px-2 py-0.5 rounded-full ' + eventStatusClass[s];
+}
+
+function orderStatusBadge(s: OrderStatus): string {
+  return 'text-xs px-2 py-0.5 rounded-full ' + statusClass[s];
+}
 
 // ── Login Page ──
 function LoginPage({ onLogin }: { onLogin: (user: User) => void }) {
@@ -123,7 +144,7 @@ function Sidebar({ current, onChange, role, onLogout }: { current: string; onCha
     MCLUB_STAFF: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '客戶管理', icon: '👥' },
       { key: 'orders', label: '訂單管理', icon: '📋' }, { key: 'products', label: '產品管理', icon: '📦' },
-      { key: 'commissions', label: '佣金管理', icon: '💰' }, { key: 'events', label: '活動管理', icon: '🎉' },
+      { key: 'commissions', label: '佣金管理', icon: '💰' }, { key: 'events', label: '活動統籌', icon: '🎉' },
     ],
     SME_OWNER: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'products', label: '我的產品', icon: '📦' },
@@ -259,7 +280,7 @@ function OverviewDashboard({ user, data, error, loading, onRetry, onNavigate }: 
                 <span className="text-sm">{o.product?.icon} {o.product?.name}</span>
                 <span className="text-xs text-[#5a6a7a] ml-2">— {o.client?.name}</span>
               </div>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass[o.status]}`}>{statusLabel[o.status]}</span>
+              <span className={orderStatusBadge(o.status)}>{statusLabel[o.status]}</span>
             </div>
           ))}
           {(!data.smeProductOrders || data.smeProductOrders.length === 0) && <p className="text-[#5a6a7a] text-sm">暫無訂單</p>}
@@ -318,7 +339,7 @@ function OverviewDashboard({ user, data, error, loading, onRetry, onNavigate }: 
               <span>{o.product?.icon}</span>
               <span className="text-sm">{o.product?.name}</span>
             </div>
-            <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass[o.status]}`}>{statusLabel[o.status]}</span>
+            <span className={orderStatusBadge(o.status)}>{statusLabel[o.status]}</span>
           </div>
         ))}
         {(!data.myOrders || data.myOrders.length === 0) && <p className="text-[#5a6a7a] text-sm">暫無購買記錄</p>}
@@ -411,7 +432,7 @@ function ClientList({ user }: { user: User }) {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gold">{o.currency === 'USD' ? 'US$' : 'HK$'}{o.amount.toLocaleString()}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass[o.status]}`}>{statusLabel[o.status]}</span>
+                <span className={orderStatusBadge(o.status)}>{statusLabel[o.status]}</span>
               </div>
             </div>
           ))}
@@ -496,7 +517,7 @@ function OrderList({ user }: { user: User }) {
                 <span className="text-lg">{o.product?.icon}</span>
                 <span className="font-medium text-sm">{o.product?.name}</span>
               </div>
-              <span className={`text-xs px-2 py-1 rounded-full ${statusClass[o.status]}`}>{statusLabel[o.status]}</span>
+              <span className={orderStatusBadge(o.status)}>{statusLabel[o.status]}</span>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs text-[#8899aa] mb-2">
               <div>客戶：{o.client?.name || '-'}</div>
@@ -595,19 +616,24 @@ function CommissionList({ user }: { user: User }) {
   );
 }
 
-// ── Event List ──
+// ── Event List (Enhanced) ──
 function EventList({ user }: { user: User }) {
   const [events, setEvents] = useState<ClubEvent[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<ClubEvent | null>(null);
-  const [newEvent, setNewEvent] = useState({ title: '', description: '', venue: '', eventDate: '', endDate: '', maxAttendees: '', isPublic: true, fee: '', status: 'DRAFT' as EventStatus });
+  const [detailTab, setDetailTab] = useState<'details' | 'tasks' | 'budget' | 'attendees'>('details');
+  const [newEvent, setNewEvent] = useState({ title: '', description: '', category: 'networking', venue: '', eventDate: '', endDate: '', maxAttendees: '', isPublic: true, fee: '', contactPerson: '', sponsor: '', status: 'DRAFT' as EventStatus });
+  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'medium', dueDate: '', assigneeId: '' });
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [newBudgetItem, setNewBudgetItem] = useState({ category: 'venue', description: '', estimatedCost: '', actualCost: '' });
+  const [showAddBudget, setShowAddBudget] = useState(false);
 
   const loadEvents = async () => {
     const res = await apiFetch('/events', user);
     if (res.events) setEvents(res.events);
   };
 
-  useEffect(() => { apiFetch('/events', user).then(res => { if (res.events) setEvents(res.events); }); }, [user]);
+  useEffect(() => { loadEvents(); }, [user]);
 
   const createEvent = async () => {
     if (!newEvent.title || !newEvent.eventDate) return;
@@ -620,7 +646,7 @@ function EventList({ user }: { user: User }) {
       }),
     });
     setShowCreate(false);
-    setNewEvent({ title: '', description: '', venue: '', eventDate: '', endDate: '', maxAttendees: '', isPublic: true, fee: '', status: 'DRAFT' });
+    setNewEvent({ title: '', description: '', category: 'networking', venue: '', eventDate: '', endDate: '', maxAttendees: '', isPublic: true, fee: '', contactPerson: '', sponsor: '', status: 'DRAFT' });
     loadEvents();
   };
 
@@ -640,39 +666,176 @@ function EventList({ user }: { user: User }) {
     loadEvents();
   };
 
-  // ── Event Detail View ──
+  // Task operations
+  const addTask = async () => {
+    if (!selectedEvent || !newTask.title) return;
+    await apiFetch(`/events/${selectedEvent.id}/tasks`, user, {
+      method: 'POST',
+      body: JSON.stringify({ ...newTask, dueDate: newTask.dueDate || null, assigneeId: newTask.assigneeId || null }),
+    });
+    setShowAddTask(false);
+    setNewTask({ title: '', description: '', priority: 'medium', dueDate: '', assigneeId: '' });
+    loadEvents();
+    // Refresh selected event
+    const fresh = await apiFetch('/events', user);
+    if (fresh.events) {
+      setEvents(fresh.events);
+      const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent.id);
+      if (updated) setSelectedEvent(updated);
+    }
+  };
+
+  const updateTaskStatus = async (eventId: string, taskId: string, status: TaskStatus) => {
+    await apiFetch(`/events/${eventId}/tasks/${taskId}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
+    loadEvents();
+    const fresh = await apiFetch('/events', user);
+    if (fresh.events) {
+      setEvents(fresh.events);
+      const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent?.id);
+      if (updated) setSelectedEvent(updated);
+    }
+  };
+
+  const deleteTask = async (eventId: string, taskId: string) => {
+    await apiFetch(`/events/${eventId}/tasks/${taskId}`, user, { method: 'DELETE' });
+    loadEvents();
+    const fresh = await apiFetch('/events', user);
+    if (fresh.events) {
+      setEvents(fresh.events);
+      const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent?.id);
+      if (updated) setSelectedEvent(updated);
+    }
+  };
+
+  // Budget operations
+  const addBudgetItem = async () => {
+    if (!selectedEvent || !newBudgetItem.description) return;
+    await apiFetch(`/events/${selectedEvent.id}/budget`, user, {
+      method: 'POST',
+      body: JSON.stringify({
+        ...newBudgetItem,
+        estimatedCost: parseFloat(newBudgetItem.estimatedCost) || 0,
+        actualCost: newBudgetItem.actualCost ? parseFloat(newBudgetItem.actualCost) : null,
+      }),
+    });
+    setShowAddBudget(false);
+    setNewBudgetItem({ category: 'venue', description: '', estimatedCost: '', actualCost: '' });
+    const fresh = await apiFetch('/events', user);
+    if (fresh.events) {
+      setEvents(fresh.events);
+      const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent.id);
+      if (updated) setSelectedEvent(updated);
+    }
+  };
+
+  const deleteBudgetItem = async (eventId: string, budgetId: string) => {
+    await apiFetch(`/events/${eventId}/budget/${budgetId}`, user, { method: 'DELETE' });
+    const fresh = await apiFetch('/events', user);
+    if (fresh.events) {
+      setEvents(fresh.events);
+      const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent?.id);
+      if (updated) setSelectedEvent(updated);
+    }
+  };
+
+  // Check-in attendee
+  const checkInAttendee = async (eventId: string, rsvpId: string, checkIn: boolean) => {
+    await apiFetch(`/events/${eventId}/checkin`, user, { method: 'POST', body: JSON.stringify({ rsvpId, checkIn }) });
+    const fresh = await apiFetch('/events', user);
+    if (fresh.events) {
+      setEvents(fresh.events);
+      const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent?.id);
+      if (updated) setSelectedEvent(updated);
+    }
+  };
+
+  const selectEvent = (e: ClubEvent) => {
+    setSelectedEvent(e);
+    setDetailTab('details');
+  };
+
+  // ── Event Detail View (with Tabs) ──
   if (selectedEvent) {
     const e = selectedEvent;
     const myRsvp = e.rsvps?.find(r => r.userId === user.id);
     const confirmedCount = e.rsvps?.filter(r => r.status === 'CONFIRMED' || r.status === 'CHECKED_IN').length || 0;
+    const checkedInCount = e.rsvps?.filter(r => r.status === 'CHECKED_IN').length || 0;
     const fmtDate = (d: string) => new Date(d).toLocaleDateString('zh-HK', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const tasks = e.tasks || [];
+    const doneTasks = tasks.filter(t => t.status === 'DONE').length;
+    const budgetItems = e.budgetItems || [];
+    const totalEstimated = budgetItems.reduce((s, b) => s + b.estimatedCost, 0);
+    const totalActual = budgetItems.reduce((s, b) => s + (b.actualCost || 0), 0);
+
+    const tabs = [
+      { key: 'details' as const, label: '詳情', icon: '📋' },
+      { key: 'tasks' as const, label: `任務 (${doneTasks}/${tasks.length})`, icon: '✅' },
+      { key: 'budget' as const, label: '預算', icon: '💰' },
+      { key: 'attendees' as const, label: `出席 (${confirmedCount})`, icon: '👥' },
+    ];
 
     return (
       <div className="space-y-4">
         <button onClick={() => setSelectedEvent(null)} className="text-sm text-gold hover:underline">← 返回活動列表</button>
+
+        {/* Event Header */}
         <div className="mclub-card">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold">🎉 {e.title}</h3>
-            <span className={`text-xs px-2 py-1 rounded-full ${eventStatusClass[e.status]}`}>{eventStatusLabel[e.status]}</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-bold">🎉 {e.title}</h3>
+              {e.category && <span className="text-xs px-2 py-0.5 rounded-full bg-[#2a3a4e] text-[#8899aa]">{eventCategoryLabel[e.category] || e.category}</span>}
+            </div>
+            <span className={eventStatusBadge(e.status)}>{eventStatusLabel[e.status]}</span>
           </div>
-          <div className="space-y-2 text-sm">
-            <div><span className="text-[#5a6a7a]">日期：</span>{fmtDate(e.eventDate)}</div>
-            {e.endDate && <div><span className="text-[#5a6a7a]">結束：</span>{fmtDate(e.endDate)}</div>}
-            {e.venue && <div><span className="text-[#5a6a7a]">地點：</span>{e.venue}</div>}
-            {e.description && <div><span className="text-[#5a6a7a]">描述：</span>{e.description}</div>}
-            <div><span className="text-[#5a6a7a]">人數：</span>{confirmedCount}{e.maxAttendees ? ` / ${e.maxAttendees}` : ''} 人</div>
-            {e.fee > 0 && <div><span className="text-[#5a6a7a]">費用：</span><span className="text-gold">{e.currency === 'USD' ? 'US$' : 'HK$'}{e.fee.toLocaleString()}</span></div>}
-            <div><span className="text-[#5a6a7a]">創建者：</span>{e.createdBy?.name}</div>
+
+          {/* Quick Stats Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div className="bg-[#0f1923] rounded-lg p-2">
+              <span className="text-[#5a6a7a]">出席</span>
+              <p className="font-bold text-sm">{confirmedCount}{e.maxAttendees ? `/${e.maxAttendees}` : ''}</p>
+            </div>
+            <div className="bg-[#0f1923] rounded-lg p-2">
+              <span className="text-[#5a6a7a]">已簽到</span>
+              <p className="font-bold text-sm text-green-400">{checkedInCount}</p>
+            </div>
+            <div className="bg-[#0f1923] rounded-lg p-2">
+              <span className="text-[#5a6a7a]">任務完成</span>
+              <p className="font-bold text-sm">{doneTasks}/{tasks.length}</p>
+            </div>
+            <div className="bg-[#0f1923] rounded-lg p-2">
+              <span className="text-[#5a6a7a]">預算</span>
+              <p className="font-bold text-sm text-gold">HK${totalEstimated.toLocaleString()}</p>
+            </div>
           </div>
+
+          {/* Admin action buttons */}
+          {user.role === 'MCLUB_STAFF' && (
+            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-[#2a3a4e]">
+              {e.status === 'DRAFT' && <button onClick={() => updateEventStatus(e.id, 'PUBLISHED')} className="px-3 py-1 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">發佈活動</button>}
+              {e.status === 'PUBLISHED' && <button onClick={() => updateEventStatus(e.id, 'COMPLETED')} className="px-3 py-1 rounded text-xs bg-blue-900 text-blue-300 hover:bg-blue-800">標記完成</button>}
+              {e.status === 'PUBLISHED' && <button onClick={() => updateEventStatus(e.id, 'CANCELLED')} className="px-3 py-1 rounded text-xs bg-orange-900 text-orange-300 hover:bg-orange-800">取消活動</button>}
+              <button onClick={() => deleteEvent(e.id)} className="px-3 py-1 rounded text-xs bg-red-900 text-red-300 hover:bg-red-800">刪除活動</button>
+            </div>
+          )}
         </div>
 
-        {/* RSVP Actions for non-admin */}
-        {user.role !== 'MCLUB_STAFF' && e.status === 'PUBLISHED' && (
+        {/* Tab Navigation */}
+        <div className="flex gap-1 bg-[#1a2330] rounded-lg p-1">
+          {tabs.map(tab => (
+            <button key={tab.key} onClick={() => setDetailTab(tab.key)}
+              className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-colors ${detailTab === tab.key ? 'bg-[#2a3a4e] text-gold' : 'text-[#8899aa] hover:text-white'}`}>
+              <span className="mr-1">{tab.icon}</span>{tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* RSVP Actions for non-admin (shown on Details tab) */}
+        {detailTab === 'details' && user.role !== 'MCLUB_STAFF' && e.status === 'PUBLISHED' && (
           <div className="mclub-card">
             <h4 className="font-bold mb-3">我的報名狀態</h4>
             {myRsvp ? (
               <div className="flex items-center justify-between">
-                <span className={`text-xs px-2 py-1 rounded-full ${myRsvp.status === 'CONFIRMED' || myRsvp.status === 'CHECKED_IN' ? 'status-completed' : myRsvp.status === 'DECLINED' ? 'status-pending' : 'status-in_progress'}`}>
+                <span className={'text-xs px-2 py-1 rounded-full ' + rsvpStatusClass(myRsvp.status)}>
                   {rsvpStatusLabel[myRsvp.status]}
                 </span>
                 {myRsvp.status !== 'CHECKED_IN' && (
@@ -688,34 +851,229 @@ function EventList({ user }: { user: User }) {
           </div>
         )}
 
-        {/* Admin actions */}
-        {user.role === 'MCLUB_STAFF' && (
+        {/* Tab Content: Details */}
+        {detailTab === 'details' && (
           <div className="mclub-card">
-            <h4 className="font-bold mb-3">管理操作</h4>
-            <div className="flex flex-wrap gap-2">
-              {e.status === 'DRAFT' && <button onClick={() => updateEventStatus(e.id, 'PUBLISHED')} className="px-3 py-1 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">發佈活動</button>}
-              {e.status === 'PUBLISHED' && <button onClick={() => updateEventStatus(e.id, 'COMPLETED')} className="px-3 py-1 rounded text-xs bg-blue-900 text-blue-300 hover:bg-blue-800">標記完成</button>}
-              {e.status === 'PUBLISHED' && <button onClick={() => updateEventStatus(e.id, 'CANCELLED')} className="px-3 py-1 rounded text-xs bg-orange-900 text-orange-300 hover:bg-orange-800">取消活動</button>}
-              <button onClick={() => deleteEvent(e.id)} className="px-3 py-1 rounded text-xs bg-red-900 text-red-300 hover:bg-red-800">刪除活動</button>
+            <div className="space-y-2 text-sm">
+              <div><span className="text-[#5a6a7a]">日期：</span>{fmtDate(e.eventDate)}</div>
+              {e.endDate && <div><span className="text-[#5a6a7a]">結束：</span>{fmtDate(e.endDate)}</div>}
+              {e.venue && <div><span className="text-[#5a6a7a]">地點：</span>{e.venue}</div>}
+              {e.description && <div><span className="text-[#5a6a7a]">描述：</span><span className="whitespace-pre-wrap">{e.description}</span></div>}
+              {e.fee > 0 && <div><span className="text-[#5a6a7a]">費用：</span><span className="text-gold">{e.currency === 'USD' ? 'US$' : 'HK$'}{e.fee.toLocaleString()}</span></div>}
+              {e.contactPerson && <div><span className="text-[#5a6a7a]">聯絡人：</span>{e.contactPerson}</div>}
+              {e.sponsor && <div><span className="text-[#5a6a7a]">贊助商：</span>{e.sponsor}</div>}
+              <div><span className="text-[#5a6a7a]">創建者：</span>{e.createdBy?.name}</div>
             </div>
           </div>
         )}
 
-        {/* Attendee list for MCLUB_STAFF */}
-        {user.role === 'MCLUB_STAFF' && e.rsvps && e.rsvps.length > 0 && (
-          <div className="mclub-card">
-            <h4 className="font-bold mb-3">報名列表 ({e.rsvps.length}人)</h4>
-            {e.rsvps.map(r => (
-              <div key={r.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
-                <div>
-                  <span className="text-sm font-medium">{r.user?.name}</span>
-                  {r.guests > 0 && <span className="text-xs text-[#5a6a7a] ml-2">+{r.guests}位賓客</span>}
+        {/* Tab Content: Tasks */}
+        {detailTab === 'tasks' && (
+          <div className="space-y-3">
+            {user.role === 'MCLUB_STAFF' && (
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm">活動任務</h3>
+                <button onClick={() => setShowAddTask(!showAddTask)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>
+                  + 新增任務
+                </button>
+              </div>
+            )}
+            {showAddTask && (
+              <div className="mclub-card space-y-3">
+                <input placeholder="任務名稱 *" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} className="w-full p-2 text-sm" />
+                <input placeholder="任務描述" value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} className="w-full p-2 text-sm" />
+                <div className="grid grid-cols-2 gap-2">
+                  <select value={newTask.priority} onChange={e => setNewTask({ ...newTask, priority: e.target.value })} className="w-full p-2 text-sm">
+                    <option value="high">高優先</option><option value="medium">中優先</option><option value="low">低優先</option>
+                  </select>
+                  <input type="date" value={newTask.dueDate} onChange={e => setNewTask({ ...newTask, dueDate: e.target.value })} className="w-full p-2 text-sm" placeholder="截止日期" />
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${r.status === 'CONFIRMED' || r.status === 'CHECKED_IN' ? 'status-completed' : r.status === 'DECLINED' ? 'status-pending' : 'status-in_progress'}`}>
-                  {rsvpStatusLabel[r.status]}
-                </span>
+                <div className="flex gap-2">
+                  <button onClick={addTask} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>確認</button>
+                  <button onClick={() => setShowAddTask(false)} className="px-4 py-2 rounded-lg text-sm text-[#8899aa] border border-[#2a3a4e]">取消</button>
+                </div>
+              </div>
+            )}
+            {/* Task progress bar */}
+            {tasks.length > 0 && (
+              <div className="mclub-card">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-[#5a6a7a]">任務進度</span>
+                  <span className="text-xs font-bold">{doneTasks}/{tasks.length} 完成</span>
+                </div>
+                <div className="w-full bg-[#0f1923] rounded-full h-2">
+                  <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${tasks.length > 0 ? (doneTasks / tasks.length) * 100 : 0}%` }}></div>
+                </div>
+              </div>
+            )}
+            {tasks.map(t => (
+              <div key={t.id} className="mclub-card">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-2 flex-1">
+                    {user.role === 'MCLUB_STAFF' && (
+                      <button onClick={() => updateTaskStatus(e.id, t.id, t.status === 'DONE' ? 'TODO' : 'DONE')}
+                        className={`mt-0.5 w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center text-xs ${t.status === 'DONE' ? 'bg-green-600 border-green-600 text-white' : 'border-[#5a6a7a] hover:border-gold'}`}>
+                        {t.status === 'DONE' && '✓'}
+                      </button>
+                    )}
+                    <div className="flex-1">
+                      <p className={`text-sm font-medium ${t.status === 'DONE' ? 'line-through text-[#5a6a7a]' : ''}`}>{t.title}</p>
+                      {t.description && <p className="text-xs text-[#8899aa] mt-1">{t.description}</p>}
+                      <div className="flex items-center gap-3 mt-2 text-xs">
+                        <span className={'px-1.5 py-0.5 rounded ' + taskStatusClass[t.status]}>{taskStatusLabel[t.status]}</span>
+                        <span className={priorityColor[t.priority] || ''}>● {priorityLabel[t.priority] || t.priority}</span>
+                        {t.dueDate && <span className="text-[#5a6a7a]">截止：{new Date(t.dueDate).toLocaleDateString('zh-HK')}</span>}
+                        {t.assignee && <span className="text-[#5a6a7a]">負責：{t.assignee.name}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  {user.role === 'MCLUB_STAFF' && t.status !== 'DONE' && (
+                    <div className="flex gap-1 ml-2">
+                      {t.status === 'TODO' && <button onClick={() => updateTaskStatus(e.id, t.id, 'IN_PROGRESS')} className="px-2 py-1 rounded text-[10px] bg-blue-900 text-blue-300">開始</button>}
+                      {t.status === 'IN_PROGRESS' && <button onClick={() => updateTaskStatus(e.id, t.id, 'DONE')} className="px-2 py-1 rounded text-[10px] bg-green-900 text-green-300">完成</button>}
+                      <button onClick={() => deleteTask(e.id, t.id)} className="px-2 py-1 rounded text-[10px] bg-red-900 text-red-300">刪除</button>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
+            {tasks.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無任務，點擊「新增任務」開始規劃</p>}
+          </div>
+        )}
+
+        {/* Tab Content: Budget */}
+        {detailTab === 'budget' && (
+          <div className="space-y-3">
+            {user.role === 'MCLUB_STAFF' && (
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm">活動預算</h3>
+                <button onClick={() => setShowAddBudget(!showAddBudget)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>
+                  + 新增預算項目
+                </button>
+              </div>
+            )}
+            {/* Budget Summary */}
+            <div className="grid grid-cols-2 gap-3">
+              <StatCard label="預估總額" value={`HK$${totalEstimated.toLocaleString()}`} gold />
+              <StatCard label="實際支出" value={`HK$${totalActual.toLocaleString()}`} sub={totalEstimated > 0 ? `佔預算 ${Math.round((totalActual / totalEstimated) * 100)}%` : undefined} />
+            </div>
+            {totalEstimated > 0 && (
+              <div className="mclub-card">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-[#5a6a7a]">預算使用率</span>
+                  <span className={`text-xs font-bold ${totalActual > totalEstimated ? 'text-red-400' : 'text-green-400'}`}>{Math.round((totalActual / totalEstimated) * 100)}%</span>
+                </div>
+                <div className="w-full bg-[#0f1923] rounded-full h-2">
+                  <div className={`h-2 rounded-full transition-all ${totalActual > totalEstimated ? 'bg-red-500' : 'bg-gold'}`} style={{ width: `${Math.min((totalActual / totalEstimated) * 100, 100)}%` }}></div>
+                </div>
+              </div>
+            )}
+            {showAddBudget && (
+              <div className="mclub-card space-y-3">
+                <select value={newBudgetItem.category} onChange={e => setNewBudgetItem({ ...newBudgetItem, category: e.target.value })} className="w-full p-2 text-sm">
+                  <option value="venue">場地</option><option value="catering">餐飲</option><option value="decoration">佈置</option>
+                  <option value="av">影音</option><option value="marketing">宣傳</option><option value="staff">人員</option><option value="other">其他</option>
+                </select>
+                <input placeholder="項目描述 *" value={newBudgetItem.description} onChange={e => setNewBudgetItem({ ...newBudgetItem, description: e.target.value })} className="w-full p-2 text-sm" />
+                <div className="grid grid-cols-2 gap-2">
+                  <input placeholder="預估金額 (HKD)" type="number" value={newBudgetItem.estimatedCost} onChange={e => setNewBudgetItem({ ...newBudgetItem, estimatedCost: e.target.value })} className="w-full p-2 text-sm" />
+                  <input placeholder="實際金額 (HKD)" type="number" value={newBudgetItem.actualCost} onChange={e => setNewBudgetItem({ ...newBudgetItem, actualCost: e.target.value })} className="w-full p-2 text-sm" />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={addBudgetItem} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>確認</button>
+                  <button onClick={() => setShowAddBudget(false)} className="px-4 py-2 rounded-lg text-sm text-[#8899aa] border border-[#2a3a4e]">取消</button>
+                </div>
+              </div>
+            )}
+            {budgetItems.map(b => (
+              <div key={b.id} className="mclub-card">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-[#2a3a4e] text-[#8899aa]">{budgetCategoryLabel[b.category] || b.category}</span>
+                      <span className="text-sm font-medium">{b.description}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs">
+                      <span className="text-[#5a6a7a]">預估：<span className="text-gold font-bold">HK${b.estimatedCost.toLocaleString()}</span></span>
+                      {b.actualCost != null && (
+                        <span className="text-[#5a6a7a]">實際：<span className={b.actualCost > b.estimatedCost ? 'text-red-400' : 'text-green-400'}>HK${b.actualCost.toLocaleString()}</span></span>
+                      )}
+                    </div>
+                  </div>
+                  {user.role === 'MCLUB_STAFF' && (
+                    <button onClick={() => deleteBudgetItem(e.id, b.id)} className="ml-2 px-2 py-1 rounded text-xs bg-red-900 text-red-300 hover:bg-red-800">刪除</button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {budgetItems.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無預算項目，點擊「新增預算項目」開始規劃</p>}
+          </div>
+        )}
+
+        {/* Tab Content: Attendees */}
+        {detailTab === 'attendees' && (
+          <div className="space-y-3">
+            {user.role !== 'MCLUB_STAFF' && e.status === 'PUBLISHED' && (
+              <div className="mclub-card">
+                <h4 className="font-bold mb-3">我的報名狀態</h4>
+                {myRsvp ? (
+                  <div className="flex items-center justify-between">
+                    <span className={'text-xs px-2 py-1 rounded-full ' + rsvpStatusClass(myRsvp.status)}>
+                      {rsvpStatusLabel[myRsvp.status]}
+                    </span>
+                    {myRsvp.status !== 'CHECKED_IN' && (
+                      <div className="flex gap-2">
+                        <button onClick={() => rsvpToEvent(e.id, 'CONFIRMED')} className="px-3 py-1 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">確認出席</button>
+                        <button onClick={() => rsvpToEvent(e.id, 'DECLINED')} className="px-3 py-1 rounded text-xs bg-red-900 text-red-300 hover:bg-red-800">取消出席</button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button onClick={() => rsvpToEvent(e.id, 'CONFIRMED')} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>立即報名</button>
+                )}
+              </div>
+            )}
+            {/* Attendee stats */}
+            <div className="grid grid-cols-3 gap-3">
+              <StatCard label="已確認" value={confirmedCount} />
+              <StatCard label="已簽到" value={checkedInCount} gold />
+              <StatCard label="待確認" value={e.rsvps?.filter(r => r.status === 'PENDING').length || 0} />
+            </div>
+            {/* Attendee list for MCLUB_STAFF */}
+            {user.role === 'MCLUB_STAFF' && e.rsvps && e.rsvps.length > 0 && (
+              <div className="space-y-2">
+                {e.rsvps.map(r => (
+                  <div key={r.id} className="mclub-card">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#2a3a4e] flex items-center justify-center text-sm">
+                          {r.user?.name?.charAt(0) || '?'}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{r.user?.name}</p>
+                          <div className="flex items-center gap-2 text-xs text-[#5a6a7a]">
+                            <span>{rsvpStatusLabel[r.status]}</span>
+                            {r.guests > 0 && <span>+{r.guests}賓客</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={'text-xs px-2 py-0.5 rounded-full ' + rsvpStatusClass(r.status)}>
+                          {rsvpStatusLabel[r.status]}
+                        </span>
+                        {user.role === 'MCLUB_STAFF' && r.status === 'CONFIRMED' && (
+                          <button onClick={() => checkInAttendee(e.id, r.id, true)} className="px-2 py-1 rounded text-[10px] bg-green-900 text-green-300 hover:bg-green-800">簽到</button>
+                        )}
+                        {user.role === 'MCLUB_STAFF' && r.status === 'CHECKED_IN' && (
+                          <button onClick={() => checkInAttendee(e.id, r.id, false)} className="px-2 py-1 rounded text-[10px] bg-orange-900 text-orange-300 hover:bg-orange-800">取消簽到</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {(!e.rsvps || e.rsvps.length === 0) && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無報名</p>}
           </div>
         )}
       </div>
@@ -738,7 +1096,13 @@ function EventList({ user }: { user: User }) {
         <div className="mclub-card space-y-3">
           <input placeholder="活動名稱 *" value={newEvent.title} onChange={e => setNewEvent({ ...newEvent, title: e.target.value })} className="w-full p-2 text-sm" />
           <textarea placeholder="活動描述" value={newEvent.description} onChange={e => setNewEvent({ ...newEvent, description: e.target.value })} className="w-full p-2 text-sm" rows={2} />
-          <input placeholder="地點" value={newEvent.venue} onChange={e => setNewEvent({ ...newEvent, venue: e.target.value })} className="w-full p-2 text-sm" />
+          <div className="grid grid-cols-2 gap-2">
+            <select value={newEvent.category} onChange={e => setNewEvent({ ...newEvent, category: e.target.value })} className="w-full p-2 text-sm">
+              <option value="networking">交流活動</option><option value="seminar">研討會</option><option value="dinner">晚宴</option>
+              <option value="workshop">工作坊</option><option value="celebration">慶典</option>
+            </select>
+            <input placeholder="地點" value={newEvent.venue} onChange={e => setNewEvent({ ...newEvent, venue: e.target.value })} className="w-full p-2 text-sm" />
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-[#5a6a7a] mb-1">開始日期 *</label>
@@ -749,10 +1113,12 @@ function EventList({ user }: { user: User }) {
               <input type="datetime-local" value={newEvent.endDate} onChange={e => setNewEvent({ ...newEvent, endDate: e.target.value })} className="w-full p-2 text-sm" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <input placeholder="最大人數" type="number" value={newEvent.maxAttendees} onChange={e => setNewEvent({ ...newEvent, maxAttendees: e.target.value })} className="w-full p-2 text-sm" />
             <input placeholder="費用 (HKD)" type="number" value={newEvent.fee} onChange={e => setNewEvent({ ...newEvent, fee: e.target.value })} className="w-full p-2 text-sm" />
+            <input placeholder="聯絡人" value={newEvent.contactPerson} onChange={e => setNewEvent({ ...newEvent, contactPerson: e.target.value })} className="w-full p-2 text-sm" />
           </div>
+          <input placeholder="贊助商" value={newEvent.sponsor} onChange={e => setNewEvent({ ...newEvent, sponsor: e.target.value })} className="w-full p-2 text-sm" />
           <select value={newEvent.status} onChange={e => setNewEvent({ ...newEvent, status: e.target.value as EventStatus })} className="w-full p-2 text-sm">
             <option value="DRAFT">草稿</option>
             <option value="PUBLISHED">直接發佈</option>
@@ -769,21 +1135,30 @@ function EventList({ user }: { user: User }) {
           const fmtDate = (d: string) => new Date(d).toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' });
           const myRsvp = e.rsvps?.find(r => r.userId === user.id);
           const confirmedCount = e.rsvps?.filter(r => r.status === 'CONFIRMED' || r.status === 'CHECKED_IN').length || 0;
+          const tasks = e.tasks || [];
+          const doneTasks = tasks.filter(t => t.status === 'DONE').length;
+          const budgetItems = e.budgetItems || [];
+          const totalBudget = budgetItems.reduce((s, b) => s + b.estimatedCost, 0);
+
           return (
-            <div key={e.id} onClick={() => setSelectedEvent(e)} className="mclub-card mclub-card-hover cursor-pointer">
+            <div key={e.id} onClick={() => selectEvent(e)} className="mclub-card mclub-card-hover cursor-pointer">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-medium text-sm">🎉 {e.title}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${eventStatusClass[e.status]}`}>{eventStatusLabel[e.status]}</span>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm">🎉 {e.title}</h3>
+                  {e.category && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#2a3a4e] text-[#8899aa]">{eventCategoryLabel[e.category] || e.category}</span>}
+                </div>
+                <span className={eventStatusBadge(e.status)}>{eventStatusLabel[e.status]}</span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-[#5a6a7a]">
+              <div className="flex items-center gap-3 text-xs text-[#8899aa]">
                 <span>{fmtDate(e.eventDate)}</span>
-                {e.venue && <span>📍 {e.venue}</span>}
-                <span>👥 {confirmedCount}{e.maxAttendees ? `/${e.maxAttendees}` : ''}</span>
-                {e.fee > 0 && <span className="text-gold">{e.currency === 'USD' ? 'US$' : 'HK$'}{e.fee.toLocaleString()}</span>}
+                {e.venue && <span>{e.venue}</span>}
+                <span>👥 {confirmedCount}{e.maxAttendees ? '/' + e.maxAttendees : ''}</span>
+                {user.role === 'MCLUB_STAFF' && tasks.length > 0 && <span>✅ {doneTasks}/{tasks.length}</span>}
+                {user.role === 'MCLUB_STAFF' && totalBudget > 0 && <span className="text-gold">💰 {'HK$' + totalBudget.toLocaleString()}</span>}
               </div>
               {myRsvp && (
-                <div className="mt-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${myRsvp.status === 'CONFIRMED' || myRsvp.status === 'CHECKED_IN' ? 'status-completed' : myRsvp.status === 'DECLINED' ? 'status-pending' : 'status-in_progress'}`}>
+                <div className="mt-2 pt-2 border-t border-[#2a3a4e]">
+                  <span className={'text-xs px-2 py-0.5 rounded-full ' + rsvpStatusClass(myRsvp.status)}>
                     我的狀態：{rsvpStatusLabel[myRsvp.status]}
                   </span>
                 </div>
