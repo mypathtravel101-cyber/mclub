@@ -1,0 +1,181 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ── 四角角色模型 ──
+
+enum UserRole {
+  MCLUB_STAFF    // MCLUB員工 — 全局數據
+  SME_OWNER      // SME老闆 — 產品提供者
+  AGENT          // Agent — 搵生意
+  END_USER       // End User — 最終客戶
+}
+
+enum OrderStatus {
+  PENDING       // 待確認
+  IN_PROGRESS   // 進行中
+  COMPLETED     // 已完成
+  SETTLED       // 已分帳
+}
+
+enum MemberLevel {
+  PLAN_A   // 入門級
+  PLAN_B   // 進階
+  PLAN_C   // 高端
+  FULL     // MCLUB全會員
+}
+
+enum CommissionStatus {
+  PENDING   // 待發放
+  PAID      // 已發放
+}
+
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  password    String    // hashed
+  name        String
+  phone       String?
+  role        UserRole
+  avatar      String?
+  referredById String?  // Agent who referred this End User
+  referredBy  User?     @relation("Referrals", fields: [referredById], references: [id])
+  referrals   User[]    @relation("Referrals")
+  
+  // SME老闆: which products they own
+  ownedProducts  Product[] @relation("SMEOwner")
+  
+  // Agent: clients they referred
+  clients     Client[]  @relation("AgentClients")
+  
+  // Orders placed (End User)
+  orders      Order[]   @relation("EndUserOrders")
+  
+  // Orders where this user is the agent
+  agentOrders Order[]   @relation("OrderAgent")
+  
+  // Commissions received
+  commissions Commission[] @relation("CommissionRecipient")
+  
+  // Timeline events created by this user
+  timelineEvents TimelineEvent[] @relation("EventCreator")
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  name          String   // 產品名稱
+  category      String   // 產品分類
+  description   String   // 產品描述
+  keyPoints     String   // 重點賣點 (JSON array string)
+  minInvestment String?  // 最低投資額
+  smeOwnerId    String   // SME老闆ID
+  smeOwner      User     @relation("SMEOwner", fields: [smeOwnerId], references: [id])
+  
+  // 佣金規則 (JSON string)
+  commissionRules String  // { agentRate, smeRate, mclubRate, type: "percent"|"flat" }
+  
+  icon          String?  // 圖標emoji
+  color         String?  // 主題色
+  
+  orders        Order[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Client {
+  id            String      @id @default(cuid())
+  name          String
+  phone         String?
+  email         String?
+  source        String?     // 客戶來源
+  memberLevel   MemberLevel @default(PLAN_A)
+  notes         String?
+  
+  agentId       String      // 推薦Agent
+  agent         User        @relation("AgentClients", fields: [agentId], references: [id])
+  
+  orders        Order[]
+  timelineEvents TimelineEvent[]
+  
+  // LTV計算
+  totalSpent    Float       @default(0)
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Order {
+  id            String       @id @default(cuid())
+  productId     String
+  product       Product      @relation(fields: [productId], references: [id])
+  
+  endUserId     String       // 購買的End User
+  endUser       User         @relation("EndUserOrders", fields: [endUserId], references: [id])
+  
+  clientId      String       // 對應的Client記錄
+  client        Client       @relation(fields: [clientId], references: [id])
+  
+  agentId       String?      // 推薦Agent (可為空)
+  agent         User?        @relation("OrderAgent", fields: [agentId], references: [id])
+  
+  status        OrderStatus  @default(PENDING)
+  amount        Float        // 訂單金額
+  currency      String       @default("HKD")
+  
+  notes         String?      // 訂單備註
+  
+  // 佣金已分帳標記
+  commissionSettled Boolean @default(false)
+  
+  commissions   Commission[]
+  timelineEvents TimelineEvent[]
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Commission {
+  id            String           @id @default(cuid())
+  orderId       String
+  order         Order            @relation(fields: [orderId], references: [id])
+  
+  recipientId   String           // 收款人
+  recipient     User             @relation("CommissionRecipient", fields: [recipientId], references: [id])
+  
+  role          UserRole         // 收款時的角色
+  amount        Float            // 佣金金額
+  status        CommissionStatus @default(PENDING)
+  
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model TimelineEvent {
+  id          String   @id @default(cuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  
+  orderId     String?  // 關聯訂單（可選）
+  order       Order?   @relation(fields: [orderId], references: [id])
+  
+  eventType   String   // 事件類型: "purchase" | "upgrade" | "followup" | "note" | "status_change"
+  title       String   // 事件標題
+  description String?  // 事件描述
+  
+  createdById String?  // 誰創建的
+  createdBy   User?    @relation("EventCreator", fields: [createdById], references: [id])
+  
+  createdAt   DateTime @default(now())
+}
