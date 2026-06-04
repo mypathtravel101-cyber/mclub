@@ -1,0 +1,60 @@
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserAuth } from '@/lib/auth-helpers';
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = getUserAuth(req);
+    if (!auth) return NextResponse.json({ error: '未登入' }, { status: 401 });
+    const { userId, userRole } = auth;
+    const { id } = await params;
+
+    if (userRole !== 'MCLUB_STAFF') {
+      return NextResponse.json({ error: '權限不足' }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const updateData: any = { ...body };
+    
+    // Handle date fields
+    if (body.eventDate) updateData.eventDate = new Date(body.eventDate);
+    if (body.endDate) updateData.endDate = new Date(body.endDate);
+    if (body.endDate === null) updateData.endDate = null;
+
+    const event = await db.clubEvent.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return NextResponse.json({ event });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || '更新活動失敗' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = getUserAuth(req);
+    if (!auth) return NextResponse.json({ error: '未登入' }, { status: 401 });
+    const { userRole } = auth;
+    const { id } = await params;
+
+    if (userRole !== 'MCLUB_STAFF') {
+      return NextResponse.json({ error: '權限不足' }, { status: 403 });
+    }
+
+    // Delete in order: tasks, budget items, RSVPs, then event
+    await db.eventTask.deleteMany({ where: { eventId: id } });
+    await db.eventBudgetItem.deleteMany({ where: { eventId: id } });
+    await db.rSVP.deleteMany({ where: { eventId: id } });
+    await db.clubEvent.delete({ where: { id } });
+
+    return NextResponse.json({ message: '活動已刪除' });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || '刪除活動失敗' }, { status: 500 });
+  }
+}

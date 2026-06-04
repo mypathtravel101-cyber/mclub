@@ -629,7 +629,7 @@ function EventList({ user }: { user: User }) {
   const [showAddBudget, setShowAddBudget] = useState(false);
 
   const loadEvents = async () => {
-    const res = await apiFetch('/events', user);
+    const res = await apiFetch('/e', user);
     if (res.events) setEvents(res.events);
   };
 
@@ -637,7 +637,7 @@ function EventList({ user }: { user: User }) {
 
   const createEvent = async () => {
     if (!newEvent.title || !newEvent.eventDate) return;
-    await apiFetch('/events', user, {
+    await apiFetch('/e', user, {
       method: 'POST',
       body: JSON.stringify({
         ...newEvent,
@@ -651,25 +651,25 @@ function EventList({ user }: { user: User }) {
   };
 
   const rsvpToEvent = async (eventId: string, status: RSVPStatus) => {
-    await apiFetch(`/events/${eventId}/rsvp`, user, { method: 'POST', body: JSON.stringify({ status }) });
+    await apiFetch(`/e/${eventId}/rsvp`, user, { method: 'POST', body: JSON.stringify({ status }) });
     loadEvents();
   };
 
   const updateEventStatus = async (eventId: string, status: EventStatus) => {
-    await apiFetch(`/events/${eventId}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
+    await apiFetch(`/e/${eventId}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
     loadEvents();
   };
 
   const deleteEvent = async (eventId: string) => {
     if (!confirm('確認刪除此活動？')) return;
-    await apiFetch(`/events/${eventId}`, user, { method: 'DELETE' });
+    await apiFetch(`/e/${eventId}`, user, { method: 'DELETE' });
     loadEvents();
   };
 
   // Task operations
   const addTask = async () => {
     if (!selectedEvent || !newTask.title) return;
-    await apiFetch(`/events/${selectedEvent.id}/tasks`, user, {
+    await apiFetch(`/e/${selectedEvent.id}/tasks`, user, {
       method: 'POST',
       body: JSON.stringify({ ...newTask, dueDate: newTask.dueDate || null, assigneeId: newTask.assigneeId || null }),
     });
@@ -677,7 +677,7 @@ function EventList({ user }: { user: User }) {
     setNewTask({ title: '', description: '', priority: 'medium', dueDate: '', assigneeId: '' });
     loadEvents();
     // Refresh selected event
-    const fresh = await apiFetch('/events', user);
+    const fresh = await apiFetch('/e', user);
     if (fresh.events) {
       setEvents(fresh.events);
       const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent.id);
@@ -686,9 +686,9 @@ function EventList({ user }: { user: User }) {
   };
 
   const updateTaskStatus = async (eventId: string, taskId: string, status: TaskStatus) => {
-    await apiFetch(`/events/${eventId}/tasks/${taskId}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
+    await apiFetch(`/e/${eventId}/tasks/${taskId}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
     loadEvents();
-    const fresh = await apiFetch('/events', user);
+    const fresh = await apiFetch('/e', user);
     if (fresh.events) {
       setEvents(fresh.events);
       const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent?.id);
@@ -697,9 +697,9 @@ function EventList({ user }: { user: User }) {
   };
 
   const deleteTask = async (eventId: string, taskId: string) => {
-    await apiFetch(`/events/${eventId}/tasks/${taskId}`, user, { method: 'DELETE' });
+    await apiFetch(`/e/${eventId}/tasks/${taskId}`, user, { method: 'DELETE' });
     loadEvents();
-    const fresh = await apiFetch('/events', user);
+    const fresh = await apiFetch('/e', user);
     if (fresh.events) {
       setEvents(fresh.events);
       const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent?.id);
@@ -710,7 +710,7 @@ function EventList({ user }: { user: User }) {
   // Budget operations
   const addBudgetItem = async () => {
     if (!selectedEvent || !newBudgetItem.description) return;
-    await apiFetch(`/events/${selectedEvent.id}/budget`, user, {
+    await apiFetch(`/e/${selectedEvent.id}/budget`, user, {
       method: 'POST',
       body: JSON.stringify({
         ...newBudgetItem,
@@ -720,7 +720,7 @@ function EventList({ user }: { user: User }) {
     });
     setShowAddBudget(false);
     setNewBudgetItem({ category: 'venue', description: '', estimatedCost: '', actualCost: '' });
-    const fresh = await apiFetch('/events', user);
+    const fresh = await apiFetch('/e', user);
     if (fresh.events) {
       setEvents(fresh.events);
       const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent.id);
@@ -729,8 +729,8 @@ function EventList({ user }: { user: User }) {
   };
 
   const deleteBudgetItem = async (eventId: string, budgetId: string) => {
-    await apiFetch(`/events/${eventId}/budget/${budgetId}`, user, { method: 'DELETE' });
-    const fresh = await apiFetch('/events', user);
+    await apiFetch(`/e/${eventId}/budget/${budgetId}`, user, { method: 'DELETE' });
+    const fresh = await apiFetch('/e', user);
     if (fresh.events) {
       setEvents(fresh.events);
       const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent?.id);
@@ -740,8 +740,8 @@ function EventList({ user }: { user: User }) {
 
   // Check-in attendee
   const checkInAttendee = async (eventId: string, rsvpId: string, checkIn: boolean) => {
-    await apiFetch(`/events/${eventId}/checkin`, user, { method: 'POST', body: JSON.stringify({ rsvpId, checkIn }) });
-    const fresh = await apiFetch('/events', user);
+    await apiFetch(`/e/${eventId}/checkin`, user, { method: 'POST', body: JSON.stringify({ rsvpId, checkIn }) });
+    const fresh = await apiFetch('/e', user);
     if (fresh.events) {
       setEvents(fresh.events);
       const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent?.id);
