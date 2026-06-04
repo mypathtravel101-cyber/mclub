@@ -99,3 +99,30 @@ Added a complete "活動管理" (Event Management) feature to the MCLUB CRM, inc
 
 ### Server status:
 Running on port 3000 via `.zscripts/dev.sh`
+
+---
+Task ID: deploy-mclub-domain
+Agent: main
+Task: Deploy MCLUB CRM to mclub.space-z.ai custom domain
+
+Work Log:
+- Investigated the platform deployment architecture
+- Found that mclub.space-z.ai resolves to platform FC gateway IPs (47.239.88.7 etc)
+- Discovered that most API endpoints work (200) on mclub.space-z.ai
+- Found that /api/events returns 404 due to Next.js ISR cache (X-Nextjs-Cache: HIT)
+- The platform's production deployment was built before the events module was added
+- Added force-dynamic and no-cache headers to events API routes
+- Added Cache-Control: no-store headers in next.config.ts
+- Created /api/e route alias to bypass CDN cache for /api/events
+- Updated frontend to use /api/e instead of /api/events
+- Rebuilt production bundle multiple times
+- Pushed all changes to GitHub
+
+Stage Summary:
+- mclub.space-z.ai root page and most APIs work (HTTP 200)
+- /api/events and /api/e return 404 on mclub.space-z.ai due to platform CDN cache
+- The platform's FC gateway has a cached 404 response for /api/events
+- Local server (port 3000) and Caddy proxy (port 81) work correctly for all routes
+- Preview URL (https://preview-chat-cfbf9474-2db8-4ba4-8247-31eed109e08e.space-z.ai/) works fully
+- The platform CDN cache needs to be invalidated - this requires platform-level action
+- Code pushed to GitHub: https://github.com/mypathtravel101-cyber/mclub
