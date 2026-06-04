@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   typescript: { ignoreBuildErrors: true },
   reactStrictMode: false,
-  allowedDevOrigins: ['.space.chatglm.site', '.space-z.ai'],
+  allowedDevOrigins: ['.space.chatglm.site', '.space-z.ai', 'preview-chat-cfbf9474-2db8-4ba4-8247-31eed109e08e.space-z.ai'],
   async headers() {
     return [
       {
