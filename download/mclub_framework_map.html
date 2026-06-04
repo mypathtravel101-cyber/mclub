@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #FFFFFF;
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'SimHei', sans-serif;
+  }
+  #mindmap { padding: 60px; display: inline-block; min-width: 100%; position: relative; }
+  #mindmap > svg.lines {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ─── Root Node ─── */
+  #mindmap[data-intent="finance"] .root-node { background: linear-gradient(135deg, #1E3A5F, #1E40AF); box-shadow: 0 4px 12px rgba(30,58,95,0.25); }
+  .root-node {
+    color: white; font-size: 20px; font-weight: 700;
+    padding: 18px 28px; border-radius: 12px;
+    white-space: nowrap; flex-shrink: 0; align-self: center;
+  }
+
+  /* ─── Left-Right Expanding Layout ─── */
+  .lr-tree { display: flex; align-items: center; gap: 0; position: relative; }
+  .lr-tree .root-node {
+    padding: 20px 32px; border-radius: 14px;
+    margin: 0 60px; text-align: center;
+  }
+  .sub-branch { display: flex; align-items: flex-start; gap: 0; }
+
+  .left-branches { display: flex; flex-direction: column; gap: 16px; }
+  .left-branch { display: flex; align-items: flex-start; flex-direction: row-reverse; gap: 0; }
+  .left-branch .children {
+    display: flex; flex-direction: column; gap: 6px;
+    margin-right: 48px; align-items: flex-end;
+  }
+  .left-branch .children:has(.sub-branch) { gap: 10px; }
+  .left-branch .sub-branch .children { gap: 5px; margin-right: 40px; margin-left: 0; align-items: flex-end; }
+  .left-branch .sub-branch { flex-direction: row-reverse; }
+
+  .right-branches { display: flex; flex-direction: column; gap: 16px; }
+  .right-branch { display: flex; align-items: flex-start; gap: 0; }
+  .right-branch .children {
+    display: flex; flex-direction: column; gap: 6px; margin-left: 48px; align-items: flex-start;
+  }
+  .right-branch .children:has(.sub-branch) { gap: 10px; }
+  .right-branch .sub-branch .children { gap: 5px; margin-left: 40px; align-items: flex-start; }
+
+  /* ─── First-Level Branch Node ─── */
+  .branch-node {
+    font-size: 15px; font-weight: 600;
+    padding: 10px 20px; border-radius: 8px;
+    white-space: nowrap; flex-shrink: 0; border: 2px solid;
+  }
+  /* ─── Second-Level Sub-Node ─── */
+  .sub-node {
+    font-size: 13px; font-weight: 500;
+    padding: 7px 14px; border-radius: 6px;
+    white-space: nowrap; flex-shrink: 0; border: 1.5px solid;
+    background: #F8FAFC;
+  }
+  /* ─── Leaf Node ─── */
+  .leaf {
+    font-size: 13px; font-weight: 400; color: #475569;
+    padding: 4px 10px; background: #FAFAFA;
+    border-radius: 12px; border: 1px solid #E5E7EB;
+    white-space: nowrap; line-height: 1.5;
+  }
+  .leaf.text-only {
+    background: none; border: none; padding: 2px 0; border-radius: 0;
+  }
+  .leaf-desc {
+    font-size: 12px; color: #94A3B8; font-weight: 400; margin-left: 8px;
+  }
+
+  /* ─── Color System ─── */
+  .c-blue { background: #EFF6FF; border-color: #3B82F6; color: #1E40AF; }
+  .c-green { background: #F0FDF4; border-color: #10B981; color: #065F46; }
+  .c-amber { background: #FFF7ED; border-color: #F59E0B; color: #92400E; }
+  .c-purple { background: #F5F3FF; border-color: #8B5CF6; color: #5B21B6; }
+  .c-red { background: #FEF2F2; border-color: #EF4444; color: #991B1B; }
+  .c-cyan { background: #ECFEFF; border-color: #06B6D4; color: #155E75; }
+  .c-teal { background: #F0FDFA; border-color: #14B8A6; color: #134E4A; }
+
+  .c-blue .sub-node { background: #F0F7FF; border-color: #93C5FD; color: #1E40AF; }
+  .c-green .sub-node { background: #F2FDF6; border-color: #6EE7B7; color: #065F46; }
+  .c-amber .sub-node { background: #FFF9F0; border-color: #FCD34D; color: #92400E; }
+  .c-purple .sub-node { background: #F8F6FF; border-color: #C4B5FD; color: #5B21B6; }
+  .c-red .sub-node { background: #FFF5F5; border-color: #FCA5A5; color: #991B1B; }
+  .c-cyan .sub-node { background: #F0FEFF; border-color: #67E8F9; color: #155E75; }
+  .c-teal .sub-node { background: #F2FDFA; border-color: #5EEAD4; color: #134E4A; }
+</style>
+</head>
+<body>
+<div id="mindmap" data-intent="finance">
+  <div class="lr-tree">
+
+    <!-- ===== LEFT SIDE ===== -->
+    <div class="left-branches">
+
+      <!-- 1. Frontend Layer -->
+      <div class="left-branch">
+        <div class="branch-node c-blue">Frontend 前端層</div>
+        <div class="children">
+          <div class="leaf">Next.js 16 + React 19</div>
+          <div class="leaf">Tailwind CSS 4 + shadcn/ui</div>
+          <div class="leaf">Radix UI + Recharts</div>
+          <div class="leaf">Framer Motion 動畫</div>
+          <div class="leaf">React Hook Form + Zod</div>
+          <div class="leaf">Zustand 狀態管理</div>
+        </div>
+      </div>
+
+      <!-- 2. 4 User Roles -->
+      <div class="left-branch">
+        <div class="branch-node c-amber">4 大用戶角色</div>
+        <div class="children">
+          <div class="sub-branch">
+            <div class="sub-node c-amber">MCLUB_STAFF</div>
+            <div class="children">
+              <div class="leaf">全局數據總覽</div>
+              <div class="leaf">客戶/訂單/產品/佣金管理</div>
+              <div class="leaf">活動統籌 + 分帳操作</div>
+            </div>
+          </div>
+          <div class="sub-branch">
+            <div class="sub-node c-amber">SME_OWNER</div>
+            <div class="children">
+              <div class="leaf">產品上架 + 收入查看</div>
+              <div class="leaf">訂單追蹤</div>
+            </div>
+          </div>
+          <div class="sub-branch">
+            <div class="sub-node c-amber">AGENT 經紀</div>
+            <div class="children">
+              <div class="leaf">客戶管理 + 佣金追蹤</div>
+              <div class="leaf">產品資訊瀏覽</div>
+            </div>
+          </div>
+          <div class="sub-branch">
+            <div class="sub-node c-amber">END_USER 客戶</div>
+            <div class="children">
+              <div class="leaf">購買記錄 + 會員等級</div>
+              <div class="leaf">活動報名</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Database Models -->
+      <div class="left-branch">
+        <div class="branch-node c-green">Database 資料模型 (9)</div>
+        <div class="children">
+          <div class="sub-branch">
+            <div class="sub-node c-green">核心業務</div>
+            <div class="children">
+              <div class="leaf">User 用戶</div>
+              <div class="leaf">Client 客戶</div>
+              <div class="leaf">Product 產品</div>
+              <div class="leaf">Order 訂單</div>
+              <div class="leaf">Commission 佣金</div>
+            </div>
+          </div>
+          <div class="sub-branch">
+            <div class="sub-node c-green">活動模組</div>
+            <div class="children">
+              <div class="leaf">ClubEvent 活動</div>
+              <div class="leaf">RSVP 報名</div>
+              <div class="leaf">EventTask 任務</div>
+              <div class="leaf">EventBudgetItem 預算</div>
+              <div class="leaf">TimelineEvent 時間軸</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===== ROOT ===== -->
+    <div class="root-node">MCLUB CRM<br/>百盛家族辦公室</div>
+
+    <!-- ===== RIGHT SIDE ===== -->
+    <div class="right-branches">
+
+      <!-- 4. API Routes -->
+      <div class="right-branch">
+        <div class="branch-node c-purple">API 路由層</div>
+        <div class="children">
+          <div class="sub-branch">
+            <div class="sub-node c-purple">Auth 認證</div>
+            <div class="children">
+              <div class="leaf">/api/auth/login</div>
+              <div class="leaf">/api/auth/me</div>
+            </div>
+          </div>
+          <div class="sub-branch">
+            <div class="sub-node c-purple">Dashboard 儀表板</div>
+            <div class="children">
+              <div class="leaf">/api/dashboard/[role]</div>
+            </div>
+          </div>
+          <div class="sub-branch">
+            <div class="sub-node c-purple">Client 客戶</div>
+            <div class="children">
+              <div class="leaf">CRUD + Timeline</div>
+            </div>
+          </div>
+          <div class="sub-branch">
+            <div class="sub-node c-purple">Order 訂單</div>
+            <div class="children">
+              <div class="leaf">CRUD + Settle 分帳</div>
+            </div>
+          </div>
+          <div class="sub-branch">
+            <div class="sub-node c-purple">Event 活動</div>
+            <div class="children">
+              <div class="leaf">RSVP + Check-in</div>
+              <div class="leaf">Tasks + Budget</div>
+            </div>
+          </div>
+          <div class="leaf">/api/products / /api/commissions / /api/users / /api/seed</div>
+        </div>
+      </div>
+
+      <!-- 5. Infrastructure -->
+      <div class="right-branch">
+        <div class="branch-node c-teal">Infrastructure 基礎設施</div>
+        <div class="children">
+          <div class="sub-branch">
+            <div class="sub-node c-teal">Data 數據</div>
+            <div class="children">
+              <div class="leaf">SQLite (dev.db)</div>
+              <div class="leaf">Prisma ORM v6</div>
+            </div>
+          </div>
+          <div class="sub-branch">
+            <div class="sub-node c-teal">Server 服務</div>
+            <div class="children">
+              <div class="leaf">PM2 Process Manager</div>
+              <div class="leaf">Caddy Reverse Proxy :81</div>
+              <div class="leaf">Next.js Dev :3000</div>
+            </div>
+          </div>
+          <div class="sub-branch">
+            <div class="sub-node c-teal">DevOps 開發運維</div>
+            <div class="children">
+              <div class="leaf">GitHub Repository</div>
+              <div class="leaf">Bun Runtime</div>
+              <div class="leaf">TypeScript 5</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Key Business Flows -->
+      <div class="right-branch">
+        <div class="branch-node c-red">核心業務流程</div>
+        <div class="children">
+          <div class="leaf">Agent 推薦客戶 → 產品購買 → 訂單確認 → 分帳結算</div>
+          <div class="leaf">佣金自動計算: Agent% + SME% + MCLUB%</div>
+          <div class="leaf">活動流程: 建立草稿 → 發佈 → RSVP → 簽到 → 完成</div>
+          <div class="leaf">會員等級: Plan A → Plan B → Plan C → Full</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+<script>
+/**
+ * Universal recursive connector script v4-fix
+ */
+function drawAllLines() {
+  const map = document.getElementById('mindmap');
+  if (!map) { console.error('#mindmap not found'); return; }
+  const cRect = map.getBoundingClientRect();
+
+  const old = map.querySelector('svg.lines');
+  if (old) old.remove();
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.classList.add('lines');
+  svg.setAttribute('width', cRect.width);
+  svg.setAttribute('height', cRect.height);
+  svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:1;';
+  let lineCount = 0;
+
+  function rel(el) {
+    const r = el.getBoundingClientRect();
+    return {
+      cx: r.left - cRect.left + r.width/2,
+      cy: r.top - cRect.top + r.height/2,
+      left: r.left - cRect.left,
+      right: r.right - cRect.left,
+    };
+  }
+
+  function drawLine(x1, y1, x2, y2, color, width) {
+    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l.setAttribute('x1', Math.round(x1)); l.setAttribute('y1', Math.round(y1));
+    l.setAttribute('x2', Math.round(x2)); l.setAttribute('y2', Math.round(y2));
+    l.setAttribute('stroke', color); l.setAttribute('stroke-width', width);
+    l.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(l);
+    lineCount++;
+  }
+
+  const lineStyles = [
+    { color: '#64748B', width: 2.5 },
+    { color: '#94A3B8', width: 2 },
+    { color: '#A8B4C2', width: 1.5 },
+    { color: '#B8C2CC', width: 1.2 },
+    { color: '#CBD5E1', width: 1 },
+  ];
+  function getLineStyle(branchColor, depth) {
+    const s = lineStyles[Math.min(depth, lineStyles.length - 1)];
+    return { color: s.color, width: s.width };
+  }
+
+  function connect(parentEl, childEls, color, width, dir) {
+    if (!childEls.length) return;
+    const p = rel(parentEl);
+    const startX = dir === 'left' ? p.left : p.right;
+    const startY = p.cy;
+
+    if (childEls.length === 1) {
+      const c = rel(childEls[0]);
+      const endX = dir === 'left' ? c.right : c.left;
+      const midY = Math.round((startY + c.cy) / 2);
+      drawLine(startX, midY, endX, midY, color, width);
+      return;
+    }
+
+    let closestEdge;
+    if (dir === 'left') {
+      closestEdge = Math.max(...childEls.map(ch => rel(ch).right));
+    } else {
+      closestEdge = Math.min(...childEls.map(ch => rel(ch).left));
+    }
+    const childClearance = 16;
+    const midpoint = startX + (closestEdge - startX) / 2;
+    const midFromChild = dir === 'left' ? closestEdge + childClearance : closestEdge - childClearance;
+    const midX = dir === 'left'
+      ? Math.min(midpoint, midFromChild)
+      : Math.max(midpoint, midFromChild);
+
+    drawLine(startX, startY, midX, startY, color, width);
+
+    const allCYs = childEls.map(ch => rel(ch).cy);
+    const minY = Math.min(startY, ...allCYs);
+    const maxY = Math.max(startY, ...allCYs);
+    drawLine(midX, minY, midX, maxY, color, width);
+
+    childEls.forEach(ch => {
+      const c = rel(ch);
+      const endX = dir === 'left' ? c.right : c.left;
+      const endY = c.cy;
+      drawLine(midX, endY, endX, endY, color, width);
+    });
+  }
+
+  const NODE_SEL = '.branch-node, .sub-node, .leaf, .deep-node';
+  const CONTAINER_SEL = ':scope > .children, :scope > .leaf-group, :scope > .deep-group';
+
+  function processChildren(parentNodeEl, containerEl, branchColor, depth, dir) {
+    if (!containerEl) return;
+    const childNodeEls = [];
+    for (const wrapper of containerEl.children) {
+      const nodeEl = wrapper.matches?.(NODE_SEL) ? wrapper : wrapper.querySelector(NODE_SEL);
+      if (nodeEl) childNodeEls.push(nodeEl);
+    }
+    if (!childNodeEls.length) return;
+    const style = getLineStyle(branchColor, depth);
+    connect(parentNodeEl, childNodeEls, style.color, style.width, dir);
+
+    for (const wrapper of containerEl.children) {
+      const nodeEl = wrapper.matches?.(NODE_SEL) ? wrapper : wrapper.querySelector(NODE_SEL);
+      if (!nodeEl) continue;
+      wrapper.querySelectorAll(CONTAINER_SEL).forEach(nc =>
+        processChildren(nodeEl, nc, branchColor, depth + 1, dir)
+      );
+    }
+  }
+
+  const rootNode = map.querySelector('.root-node');
+  if (!rootNode) { console.error('.root-node not found'); return; }
+
+  // Left side
+  const leftSel = '.left-branches > .left-branch';
+  const leftBranches = map.querySelectorAll(leftSel);
+  const leftBranchNodes = [];
+  leftBranches.forEach(branch => {
+    const bNode = branch.querySelector('.branch-node');
+    if (bNode) leftBranchNodes.push(bNode);
+  });
+  if (leftBranchNodes.length) {
+    connect(rootNode, leftBranchNodes, lineStyles[0].color, lineStyles[0].width, 'left');
+  }
+  leftBranches.forEach(branch => {
+    const bNode = branch.querySelector('.branch-node');
+    if (!bNode) return;
+    processChildren(bNode, branch.querySelector(':scope > .children'), null, 1, 'left');
+  });
+
+  // Right side
+  const rightSel = '.right-branches > .right-branch';
+  const rightBranches = map.querySelectorAll(rightSel);
+  const rightBranchNodes = [];
+  rightBranches.forEach(branch => {
+    const bNode = branch.querySelector('.branch-node');
+    if (bNode) rightBranchNodes.push(bNode);
+  });
+  if (rightBranchNodes.length) {
+    connect(rootNode, rightBranchNodes, lineStyles[0].color, lineStyles[0].width, 'right');
+  }
+  rightBranches.forEach(branch => {
+    const bNode = branch.querySelector('.branch-node');
+    if (!bNode) return;
+    processChildren(bNode, branch.querySelector(':scope > .children'), null, 1, 'right');
+  });
+
+  map.insertBefore(svg, map.firstChild);
+  console.log('Drew ' + lineCount + ' lines');
+}
+
+window.addEventListener('load', () => setTimeout(drawAllLines, 300));
+</script>
+</body>
+</html>
