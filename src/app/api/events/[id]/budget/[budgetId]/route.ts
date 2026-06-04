@@ -1,3 +1,7 @@
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserAuth } from '@/lib/auth-helpers';
