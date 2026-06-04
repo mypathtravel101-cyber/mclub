@@ -14,6 +14,11 @@ interface Order { id: string; productId: string; endUserId: string; clientId: st
 interface Commission { id: string; orderId: string; recipientId: string; role: UserRole; amount: number; status: 'PENDING' | 'PAID'; order?: { product?: { name: string; icon: string }; client?: { name: string } }; recipient?: { name: string; role: string }; }
 interface TimelineEvent { id: string; clientId: string; orderId?: string; eventType: string; title: string; description?: string; createdById?: string; createdBy?: { name: string }; createdAt: string; }
 
+type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED';
+type RSVPStatus = 'PENDING' | 'CONFIRMED' | 'DECLINED' | 'CHECKED_IN';
+interface ClubEvent { id: string; title: string; description?: string; venue?: string; eventDate: string; endDate?: string; status: EventStatus; maxAttendees?: number; isPublic: boolean; fee: number; currency: string; createdById: string; createdBy?: { id: string; name: string; role: string }; rsvps?: RSVP[]; _count?: { rsvps: number }; }
+interface RSVP { id: string; eventId: string; userId: string; status: RSVPStatus; notes?: string; guests: number; user?: { id: string; name: string; email?: string; role?: string }; }
+
 // ── API Helper ──
 const API_BASE = '/api';
 
@@ -41,6 +46,9 @@ const statusLabel: Record<OrderStatus, string> = { PENDING: '待確認', IN_PROG
 const statusClass: Record<OrderStatus, string> = { PENDING: 'status-pending', IN_PROGRESS: 'status-in_progress', COMPLETED: 'status-completed', SETTLED: 'status-settled' };
 const memberLabel: Record<MemberLevel, string> = { PLAN_A: 'Plan A 入門', PLAN_B: 'Plan B 進階', PLAN_C: 'Plan C 高端', FULL: 'MCLUB全會員' };
 const roleLabel: Record<UserRole, string> = { MCLUB_STAFF: 'MCLUB Admin', SME_OWNER: 'SME老闆', AGENT: 'Agent經紀', END_USER: '客戶' };
+const eventStatusLabel: Record<EventStatus, string> = { DRAFT: '草稿', PUBLISHED: '已發佈', CANCELLED: '已取消', COMPLETED: '已完成' };
+const eventStatusClass: Record<EventStatus, string> = { DRAFT: 'status-pending', PUBLISHED: 'status-completed', CANCELLED: 'status-pending', COMPLETED: 'status-settled' };
+const rsvpStatusLabel: Record<RSVPStatus, string> = { PENDING: '待確認', CONFIRMED: '已確認', DECLINED: '已拒絕', CHECKED_IN: '已簽到' };
 
 // ── Login Page ──
 function LoginPage({ onLogin }: { onLogin: (user: User) => void }) {
@@ -115,19 +123,21 @@ function Sidebar({ current, onChange, role, onLogout }: { current: string; onCha
     MCLUB_STAFF: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '客戶管理', icon: '👥' },
       { key: 'orders', label: '訂單管理', icon: '📋' }, { key: 'products', label: '產品管理', icon: '📦' },
-      { key: 'commissions', label: '佣金管理', icon: '💰' },
+      { key: 'commissions', label: '佣金管理', icon: '💰' }, { key: 'events', label: '活動管理', icon: '🎉' },
     ],
     SME_OWNER: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'products', label: '我的產品', icon: '📦' },
       { key: 'orders', label: '訂單', icon: '📋' }, { key: 'commissions', label: '收入', icon: '💰' },
+      { key: 'events', label: '活動', icon: '🎉' },
     ],
     AGENT: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '我的客戶', icon: '👥' },
       { key: 'commissions', label: '佣金', icon: '💰' }, { key: 'products', label: '產品資訊', icon: '📦' },
+      { key: 'events', label: '活動', icon: '🎉' },
     ],
     END_USER: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'orders', label: '我的產品', icon: '📦' },
-      { key: 'profile', label: '會員等級', icon: '⭐' },
+      { key: 'events', label: '活動', icon: '🎉' }, { key: 'profile', label: '會員等級', icon: '⭐' },
     ],
   };
   const items = menus[role] || [];
@@ -585,6 +595,208 @@ function CommissionList({ user }: { user: User }) {
   );
 }
 
+// ── Event List ──
+function EventList({ user }: { user: User }) {
+  const [events, setEvents] = useState<ClubEvent[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<ClubEvent | null>(null);
+  const [newEvent, setNewEvent] = useState({ title: '', description: '', venue: '', eventDate: '', endDate: '', maxAttendees: '', isPublic: true, fee: '', status: 'DRAFT' as EventStatus });
+
+  const loadEvents = async () => {
+    const res = await apiFetch('/events', user);
+    if (res.events) setEvents(res.events);
+  };
+
+  useEffect(() => { apiFetch('/events', user).then(res => { if (res.events) setEvents(res.events); }); }, [user]);
+
+  const createEvent = async () => {
+    if (!newEvent.title || !newEvent.eventDate) return;
+    await apiFetch('/events', user, {
+      method: 'POST',
+      body: JSON.stringify({
+        ...newEvent,
+        maxAttendees: newEvent.maxAttendees ? parseInt(newEvent.maxAttendees) : null,
+        fee: newEvent.fee ? parseFloat(newEvent.fee) : 0,
+      }),
+    });
+    setShowCreate(false);
+    setNewEvent({ title: '', description: '', venue: '', eventDate: '', endDate: '', maxAttendees: '', isPublic: true, fee: '', status: 'DRAFT' });
+    loadEvents();
+  };
+
+  const rsvpToEvent = async (eventId: string, status: RSVPStatus) => {
+    await apiFetch(`/events/${eventId}/rsvp`, user, { method: 'POST', body: JSON.stringify({ status }) });
+    loadEvents();
+  };
+
+  const updateEventStatus = async (eventId: string, status: EventStatus) => {
+    await apiFetch(`/events/${eventId}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
+    loadEvents();
+  };
+
+  const deleteEvent = async (eventId: string) => {
+    if (!confirm('確認刪除此活動？')) return;
+    await apiFetch(`/events/${eventId}`, user, { method: 'DELETE' });
+    loadEvents();
+  };
+
+  // ── Event Detail View ──
+  if (selectedEvent) {
+    const e = selectedEvent;
+    const myRsvp = e.rsvps?.find(r => r.userId === user.id);
+    const confirmedCount = e.rsvps?.filter(r => r.status === 'CONFIRMED' || r.status === 'CHECKED_IN').length || 0;
+    const fmtDate = (d: string) => new Date(d).toLocaleDateString('zh-HK', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    return (
+      <div className="space-y-4">
+        <button onClick={() => setSelectedEvent(null)} className="text-sm text-gold hover:underline">← 返回活動列表</button>
+        <div className="mclub-card">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold">🎉 {e.title}</h3>
+            <span className={`text-xs px-2 py-1 rounded-full ${eventStatusClass[e.status]}`}>{eventStatusLabel[e.status]}</span>
+          </div>
+          <div className="space-y-2 text-sm">
+            <div><span className="text-[#5a6a7a]">日期：</span>{fmtDate(e.eventDate)}</div>
+            {e.endDate && <div><span className="text-[#5a6a7a]">結束：</span>{fmtDate(e.endDate)}</div>}
+            {e.venue && <div><span className="text-[#5a6a7a]">地點：</span>{e.venue}</div>}
+            {e.description && <div><span className="text-[#5a6a7a]">描述：</span>{e.description}</div>}
+            <div><span className="text-[#5a6a7a]">人數：</span>{confirmedCount}{e.maxAttendees ? ` / ${e.maxAttendees}` : ''} 人</div>
+            {e.fee > 0 && <div><span className="text-[#5a6a7a]">費用：</span><span className="text-gold">{e.currency === 'USD' ? 'US$' : 'HK$'}{e.fee.toLocaleString()}</span></div>}
+            <div><span className="text-[#5a6a7a]">創建者：</span>{e.createdBy?.name}</div>
+          </div>
+        </div>
+
+        {/* RSVP Actions for non-admin */}
+        {user.role !== 'MCLUB_STAFF' && e.status === 'PUBLISHED' && (
+          <div className="mclub-card">
+            <h4 className="font-bold mb-3">我的報名狀態</h4>
+            {myRsvp ? (
+              <div className="flex items-center justify-between">
+                <span className={`text-xs px-2 py-1 rounded-full ${myRsvp.status === 'CONFIRMED' || myRsvp.status === 'CHECKED_IN' ? 'status-completed' : myRsvp.status === 'DECLINED' ? 'status-pending' : 'status-in_progress'}`}>
+                  {rsvpStatusLabel[myRsvp.status]}
+                </span>
+                {myRsvp.status !== 'CHECKED_IN' && (
+                  <div className="flex gap-2">
+                    <button onClick={() => rsvpToEvent(e.id, 'CONFIRMED')} className="px-3 py-1 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">確認出席</button>
+                    <button onClick={() => rsvpToEvent(e.id, 'DECLINED')} className="px-3 py-1 rounded text-xs bg-red-900 text-red-300 hover:bg-red-800">取消出席</button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button onClick={() => rsvpToEvent(e.id, 'CONFIRMED')} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>立即報名</button>
+            )}
+          </div>
+        )}
+
+        {/* Admin actions */}
+        {user.role === 'MCLUB_STAFF' && (
+          <div className="mclub-card">
+            <h4 className="font-bold mb-3">管理操作</h4>
+            <div className="flex flex-wrap gap-2">
+              {e.status === 'DRAFT' && <button onClick={() => updateEventStatus(e.id, 'PUBLISHED')} className="px-3 py-1 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">發佈活動</button>}
+              {e.status === 'PUBLISHED' && <button onClick={() => updateEventStatus(e.id, 'COMPLETED')} className="px-3 py-1 rounded text-xs bg-blue-900 text-blue-300 hover:bg-blue-800">標記完成</button>}
+              {e.status === 'PUBLISHED' && <button onClick={() => updateEventStatus(e.id, 'CANCELLED')} className="px-3 py-1 rounded text-xs bg-orange-900 text-orange-300 hover:bg-orange-800">取消活動</button>}
+              <button onClick={() => deleteEvent(e.id)} className="px-3 py-1 rounded text-xs bg-red-900 text-red-300 hover:bg-red-800">刪除活動</button>
+            </div>
+          </div>
+        )}
+
+        {/* Attendee list for MCLUB_STAFF */}
+        {user.role === 'MCLUB_STAFF' && e.rsvps && e.rsvps.length > 0 && (
+          <div className="mclub-card">
+            <h4 className="font-bold mb-3">報名列表 ({e.rsvps.length}人)</h4>
+            {e.rsvps.map(r => (
+              <div key={r.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
+                <div>
+                  <span className="text-sm font-medium">{r.user?.name}</span>
+                  {r.guests > 0 && <span className="text-xs text-[#5a6a7a] ml-2">+{r.guests}位賓客</span>}
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${r.status === 'CONFIRMED' || r.status === 'CHECKED_IN' ? 'status-completed' : r.status === 'DECLINED' ? 'status-pending' : 'status-in_progress'}`}>
+                  {rsvpStatusLabel[r.status]}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Event List View ──
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">活動管理</h2>
+        {user.role === 'MCLUB_STAFF' && (
+          <button onClick={() => setShowCreate(!showCreate)} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+            + 新增活動
+          </button>
+        )}
+      </div>
+
+      {showCreate && (
+        <div className="mclub-card space-y-3">
+          <input placeholder="活動名稱 *" value={newEvent.title} onChange={e => setNewEvent({ ...newEvent, title: e.target.value })} className="w-full p-2 text-sm" />
+          <textarea placeholder="活動描述" value={newEvent.description} onChange={e => setNewEvent({ ...newEvent, description: e.target.value })} className="w-full p-2 text-sm" rows={2} />
+          <input placeholder="地點" value={newEvent.venue} onChange={e => setNewEvent({ ...newEvent, venue: e.target.value })} className="w-full p-2 text-sm" />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-[#5a6a7a] mb-1">開始日期 *</label>
+              <input type="datetime-local" value={newEvent.eventDate} onChange={e => setNewEvent({ ...newEvent, eventDate: e.target.value })} className="w-full p-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-[#5a6a7a] mb-1">結束日期</label>
+              <input type="datetime-local" value={newEvent.endDate} onChange={e => setNewEvent({ ...newEvent, endDate: e.target.value })} className="w-full p-2 text-sm" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input placeholder="最大人數" type="number" value={newEvent.maxAttendees} onChange={e => setNewEvent({ ...newEvent, maxAttendees: e.target.value })} className="w-full p-2 text-sm" />
+            <input placeholder="費用 (HKD)" type="number" value={newEvent.fee} onChange={e => setNewEvent({ ...newEvent, fee: e.target.value })} className="w-full p-2 text-sm" />
+          </div>
+          <select value={newEvent.status} onChange={e => setNewEvent({ ...newEvent, status: e.target.value as EventStatus })} className="w-full p-2 text-sm">
+            <option value="DRAFT">草稿</option>
+            <option value="PUBLISHED">直接發佈</option>
+          </select>
+          <div className="flex gap-2">
+            <button onClick={createEvent} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>確認新增</button>
+            <button onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg text-sm text-[#8899aa] border border-[#2a3a4e]">取消</button>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {events.map(e => {
+          const fmtDate = (d: string) => new Date(d).toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' });
+          const myRsvp = e.rsvps?.find(r => r.userId === user.id);
+          const confirmedCount = e.rsvps?.filter(r => r.status === 'CONFIRMED' || r.status === 'CHECKED_IN').length || 0;
+          return (
+            <div key={e.id} onClick={() => setSelectedEvent(e)} className="mclub-card mclub-card-hover cursor-pointer">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-sm">🎉 {e.title}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${eventStatusClass[e.status]}`}>{eventStatusLabel[e.status]}</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-[#5a6a7a]">
+                <span>{fmtDate(e.eventDate)}</span>
+                {e.venue && <span>📍 {e.venue}</span>}
+                <span>👥 {confirmedCount}{e.maxAttendees ? `/${e.maxAttendees}` : ''}</span>
+                {e.fee > 0 && <span className="text-gold">{e.currency === 'USD' ? 'US$' : 'HK$'}{e.fee.toLocaleString()}</span>}
+              </div>
+              {myRsvp && (
+                <div className="mt-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${myRsvp.status === 'CONFIRMED' || myRsvp.status === 'CHECKED_IN' ? 'status-completed' : myRsvp.status === 'DECLINED' ? 'status-pending' : 'status-in_progress'}`}>
+                    我的狀態：{rsvpStatusLabel[myRsvp.status]}
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {events.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無活動</p>}
+      </div>
+    </div>
+  );
+}
+
 // ── Member Profile (End User) ──
 function MemberProfile({ user }: { user: User }) {
   return (
@@ -669,6 +881,7 @@ export default function Home() {
       case 'orders': return <OrderList user={user} />;
       case 'products': return <ProductList user={user} />;
       case 'commissions': return <CommissionList user={user} />;
+      case 'events': return <EventList user={user} />;
       case 'profile': return <MemberProfile user={user} />;
       default: return <OverviewDashboard user={user} data={dashboardData} error={dashboardError} loading={dashboardLoading} onRetry={loadDashboard} onNavigate={handleNavChange} />;
     }

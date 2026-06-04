@@ -59,6 +59,63 @@ export async function POST() {
       { orderId: order1.id, recipientId: calvin.id, role: 'SME_OWNER', amount: 1920, status: 'PAID' },
     ] });
 
+    // Create sample events
+    const event1 = await db.clubEvent.create({
+      data: {
+        title: 'MCLUB 2026 夏季投資論壇',
+        description: '探討家族辦公室資產配置策略，邀請行業專家分享市場見解',
+        venue: '香港四季酒店宴會廳',
+        eventDate: new Date('2026-07-15T14:00:00'),
+        endDate: new Date('2026-07-15T18:00:00'),
+        status: 'PUBLISHED',
+        maxAttendees: 50,
+        isPublic: true,
+        fee: 0,
+        currency: 'HKD',
+        createdById: kenneth.id,
+      },
+    });
+    const event2 = await db.clubEvent.create({
+      data: {
+        title: '日本物業投資說明會',
+        description: '大阪物業投資機會深度解析，6%租金保證方案',
+        venue: '線上 Zoom 會議',
+        eventDate: new Date('2026-07-22T10:00:00'),
+        endDate: new Date('2026-07-22T12:00:00'),
+        status: 'PUBLISHED',
+        maxAttendees: 30,
+        isPublic: true,
+        fee: 0,
+        currency: 'HKD',
+        createdById: kenneth.id,
+      },
+    });
+    await db.clubEvent.create({
+      data: {
+        title: 'VFK健康產品體驗日',
+        description: '產品試用及健康諮詢，Plan A/B/C會員專享',
+        venue: 'MCLUB會所',
+        eventDate: new Date('2026-08-05T15:00:00'),
+        endDate: new Date('2026-08-05T17:30:00'),
+        status: 'DRAFT',
+        maxAttendees: 20,
+        isPublic: false,
+        fee: 200,
+        currency: 'HKD',
+        createdById: kenneth.id,
+      },
+    });
+
+    // Create sample RSVPs
+    await db.rSVP.createMany({
+      data: [
+        { eventId: event1.id, userId: agent.id, status: 'CONFIRMED', guests: 1 },
+        { eventId: event1.id, userId: endUser.id, status: 'PENDING', guests: 0 },
+        { eventId: event2.id, userId: agent.id, status: 'CONFIRMED', guests: 0 },
+        { eventId: event2.id, userId: endUser2.id, status: 'CONFIRMED', guests: 2 },
+      ],
+    });
+
     return NextResponse.json({ message: '數據初始化成功', users: 8, products: 7, clients: 2, orders: 3 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

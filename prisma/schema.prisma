@@ -38,6 +38,20 @@ enum CommissionStatus {
   PAID      // 已發放
 }
 
+enum EventStatus {
+  DRAFT       // 草稿
+  PUBLISHED   // 已發佈
+  CANCELLED   // 已取消
+  COMPLETED   // 已完成
+}
+
+enum RSVPStatus {
+  PENDING     // 待確認
+  CONFIRMED   // 已確認
+  DECLINED    // 已拒絕
+  CHECKED_IN  // 已簽到
+}
+
 model User {
   id          String    @id @default(cuid())
   email       String    @unique
@@ -64,6 +78,12 @@ model User {
   
   // Commissions received
   commissions Commission[] @relation("CommissionRecipient")
+  
+  // Events organized
+  organizedEvents ClubEvent[] @relation("EventOrganizer")
+  
+  // Event RSVPs
+  eventRSVPs RSVP[] @relation("EventAttendee")
   
   // Timeline events created by this user
   timelineEvents TimelineEvent[] @relation("EventCreator")
@@ -160,6 +180,52 @@ model Commission {
   
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+}
+
+model ClubEvent {
+  id            String       @id @default(cuid())
+  title         String       // 活動名稱
+  description   String?      // 活動描述
+  venue         String?      // 地點
+  eventDate     DateTime     // 活動日期
+  endDate       DateTime?    // 結束日期
+  status        EventStatus  @default(DRAFT)
+  
+  // 容量
+  maxAttendees  Int?         // 最大人數
+  isPublic      Boolean      @default(true)  // 是否公開
+  
+  // 費用
+  fee           Float        @default(0)     // 費用
+  currency      String       @default("HKD")
+  
+  // 創建者
+  createdById   String
+  createdBy     User         @relation("EventOrganizer", fields: [createdById], references: [id])
+  
+  // RSVP
+  rsvps         RSVP[]
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model RSVP {
+  id            String       @id @default(cuid())
+  eventId       String
+  event         ClubEvent    @relation(fields: [eventId], references: [id])
+  
+  userId        String
+  user          User         @relation("EventAttendee", fields: [userId], references: [id])
+  
+  status        RSVPStatus   @default(PENDING)
+  notes         String?      // 備註
+  guests        Int          @default(0)     // 攜帶人數
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  
+  @@unique([eventId, userId])  // 每人每活動只能RSVP一次
 }
 
 model TimelineEvent {
