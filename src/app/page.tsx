@@ -140,35 +140,29 @@ function LoginPage({ onLogin }: { onLogin: (user: User) => void }) {
 
 // ── Sidebar Nav ──
 function Sidebar({ current, onChange, role, onLogout }: { current: string; onChange: (v: string) => void; role: UserRole; onLogout: () => void }) {
-  const [showMore, setShowMore] = useState(false);
   const menus: Record<UserRole, { key: string; label: string; icon: string }[]> = {
     MCLUB_STAFF: [
-      { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '客戶管理', icon: '👥' },
-      { key: 'orders', label: '訂單管理', icon: '📋' }, { key: 'products', label: '產品管理', icon: '📦' },
-      { key: 'commissions', label: '佣金管理', icon: '💰' }, { key: 'events', label: '活動統籌', icon: '🎉' },
+      { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '客戶', icon: '👥' },
+      { key: 'orders', label: '訂單', icon: '📋' }, { key: 'products', label: '產品', icon: '📦' },
+      { key: 'commissions', label: '佣金', icon: '💰' }, { key: 'events', label: '活動', icon: '🎉' },
     ],
     SME_OWNER: [
-      { key: 'overview', label: '總覽', icon: '📊' }, { key: 'products', label: '我的產品', icon: '📦' },
+      { key: 'overview', label: '總覽', icon: '📊' }, { key: 'products', label: '產品', icon: '📦' },
       { key: 'orders', label: '訂單', icon: '📋' }, { key: 'commissions', label: '收入', icon: '💰' },
       { key: 'events', label: '活動', icon: '🎉' },
     ],
     AGENT: [
-      { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '我的客戶', icon: '👥' },
-      { key: 'commissions', label: '佣金', icon: '💰' }, { key: 'products', label: '產品資訊', icon: '📦' },
+      { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '客戶', icon: '👥' },
+      { key: 'commissions', label: '佣金', icon: '💰' }, { key: 'products', label: '產品', icon: '📦' },
       { key: 'events', label: '活動', icon: '🎉' },
     ],
     END_USER: [
-      { key: 'overview', label: '總覽', icon: '📊' }, { key: 'orders', label: '我的產品', icon: '📦' },
-      { key: 'events', label: '活動', icon: '🎉' }, { key: 'profile', label: '會員等級', icon: '⭐' },
+      { key: 'overview', label: '總覽', icon: '📊' }, { key: 'orders', label: '產品', icon: '📦' },
+      { key: 'events', label: '活動', icon: '🎉' }, { key: 'profile', label: '會員', icon: '⭐' },
     ],
   };
   const items = menus[role] || [];
-  // Mobile nav: show first 4 items + "更多" if overflow
-  const mobileVisible = items.slice(0, 4);
-  const mobileOverflow = items.slice(4);
-  const hasOverflow = mobileOverflow.length > 0;
-  // Check if any overflow item is currently active
-  const isOverflowActive = mobileOverflow.some(item => item.key === current);
+  const itemCount = items.length;
 
   return (
     <>
@@ -190,36 +184,16 @@ function Sidebar({ current, onChange, role, onLogout }: { current: string; onCha
           <button onClick={onLogout} className="text-[#5a6a7a] text-sm hover:text-red-400 transition-colors">← 登出</button>
         </div>
       </div>
-      {/* Mobile bottom nav */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#1a2330] border-t border-[#2a3a4e] flex z-50">
-        {mobileVisible.map(item => (
-          <button key={item.key} onClick={() => { onChange(item.key); setShowMore(false); }}
-            className={`flex-1 py-3 text-center text-xs ${current === item.key ? 'text-gold' : 'text-[#5a6a7a]'}`}>
-            <div className="text-lg">{item.icon}</div>{item.label}
+      {/* Mobile bottom nav — show ALL items with compact layout */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#1a2330] border-t border-[#2a3a4e] flex z-50 safe-area-pb">
+        {items.map(item => (
+          <button key={item.key} onClick={() => onChange(item.key)}
+            className={`flex-1 py-2 text-center ${itemCount > 5 ? 'text-[10px]' : 'text-xs'} ${current === item.key ? 'text-gold' : 'text-[#5a6a7a]'}`}>
+            <div className={itemCount > 5 ? 'text-base' : 'text-lg'}>{item.icon}</div>
+            <div className="truncate leading-tight">{item.label}</div>
           </button>
         ))}
-        {hasOverflow && (
-          <div className="relative flex-1">
-            {/* Overflow popup */}
-            {showMore && (
-              <div className="absolute bottom-full right-0 left-0 mb-1 mx-1 bg-[#1a2330] border border-[#2a3a4e] rounded-lg shadow-lg overflow-hidden">
-                {mobileOverflow.map(item => (
-                  <button key={item.key} onClick={() => { onChange(item.key); setShowMore(false); }}
-                    className={`w-full py-2.5 px-3 text-left text-xs flex items-center gap-2 transition-colors border-b border-[#2a3a4e] last:border-0 ${current === item.key ? 'text-gold bg-[#1f2b3d]' : 'text-[#5a6a7a] hover:bg-[#1f2b3d]'}`}>
-                    <span className="text-lg">{item.icon}</span>{item.label}
-                  </button>
-                ))}
-              </div>
-            )}
-            <button onClick={() => setShowMore(!showMore)}
-              className={`w-full py-3 text-center text-xs ${isOverflowActive ? 'text-gold' : showMore ? 'text-gold' : 'text-[#5a6a7a]'}`}>
-              <div className="text-lg">{showMore ? '✕' : '⋯'}</div>{showMore ? '關閉' : '更多'}
-            </button>
-          </div>
-        )}
       </div>
-      {/* Backdrop to close overflow menu when tapping outside */}
-      {showMore && <div className="md:hidden fixed inset-0 z-40" onClick={() => setShowMore(false)} />}
     </>
   );
 }
