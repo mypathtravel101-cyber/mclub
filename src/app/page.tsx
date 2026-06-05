@@ -140,6 +140,7 @@ function LoginPage({ onLogin }: { onLogin: (user: User) => void }) {
 
 // ── Sidebar Nav ──
 function Sidebar({ current, onChange, role, onLogout }: { current: string; onChange: (v: string) => void; role: UserRole; onLogout: () => void }) {
+  const [showMore, setShowMore] = useState(false);
   const menus: Record<UserRole, { key: string; label: string; icon: string }[]> = {
     MCLUB_STAFF: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '客戶管理', icon: '👥' },
@@ -162,6 +163,12 @@ function Sidebar({ current, onChange, role, onLogout }: { current: string; onCha
     ],
   };
   const items = menus[role] || [];
+  // Mobile nav: show first 4 items + "更多" if overflow
+  const mobileVisible = items.slice(0, 4);
+  const mobileOverflow = items.slice(4);
+  const hasOverflow = mobileOverflow.length > 0;
+  // Check if any overflow item is currently active
+  const isOverflowActive = mobileOverflow.some(item => item.key === current);
 
   return (
     <>
@@ -185,13 +192,34 @@ function Sidebar({ current, onChange, role, onLogout }: { current: string; onCha
       </div>
       {/* Mobile bottom nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#1a2330] border-t border-[#2a3a4e] flex z-50">
-        {items.slice(0, 5).map(item => (
-          <button key={item.key} onClick={() => onChange(item.key)}
+        {mobileVisible.map(item => (
+          <button key={item.key} onClick={() => { onChange(item.key); setShowMore(false); }}
             className={`flex-1 py-3 text-center text-xs ${current === item.key ? 'text-gold' : 'text-[#5a6a7a]'}`}>
             <div className="text-lg">{item.icon}</div>{item.label}
           </button>
         ))}
+        {hasOverflow && (
+          <div className="relative flex-1">
+            {/* Overflow popup */}
+            {showMore && (
+              <div className="absolute bottom-full right-0 left-0 mb-1 mx-1 bg-[#1a2330] border border-[#2a3a4e] rounded-lg shadow-lg overflow-hidden">
+                {mobileOverflow.map(item => (
+                  <button key={item.key} onClick={() => { onChange(item.key); setShowMore(false); }}
+                    className={`w-full py-2.5 px-3 text-left text-xs flex items-center gap-2 transition-colors border-b border-[#2a3a4e] last:border-0 ${current === item.key ? 'text-gold bg-[#1f2b3d]' : 'text-[#5a6a7a] hover:bg-[#1f2b3d]'}`}>
+                    <span className="text-lg">{item.icon}</span>{item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button onClick={() => setShowMore(!showMore)}
+              className={`w-full py-3 text-center text-xs ${isOverflowActive ? 'text-gold' : showMore ? 'text-gold' : 'text-[#5a6a7a]'}`}>
+              <div className="text-lg">{showMore ? '✕' : '⋯'}</div>{showMore ? '關閉' : '更多'}
+            </button>
+          </div>
+        )}
       </div>
+      {/* Backdrop to close overflow menu when tapping outside */}
+      {showMore && <div className="md:hidden fixed inset-0 z-40" onClick={() => setShowMore(false)} />}
     </>
   );
 }
