@@ -55,3 +55,7 @@ server.log
 .zscripts/dev.log
 .zscripts/mini-service-*.log
 __pycache__/
+.env
+node_modules/
+.next/
+*.db
