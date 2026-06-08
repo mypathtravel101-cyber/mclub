@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">[\n  {\n    \"name\": \"schema.prisma\",\n    \"path\": \"prisma/schema.prisma\",\n    \"sha\": \"c5417a5387eaaf3243c485e46cfc48880a9a61d5\",\n    \"size\": 9057,\n    \"url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/prisma/schema.prisma?ref=main\",\n    \"html_url\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/prisma/schema.prisma\",\n    \"git_url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/c5417a5387eaaf3243c485e46cfc48880a9a61d5\",\n    \"download_url\": \"https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/prisma/schema.prisma\",\n    \"type\": \"file\",\n    \"_links\": {\n      \"self\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/prisma/schema.prisma?ref=main\",\n      \"git\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/c5417a5387eaaf3243c485e46cfc48880a9a61d5\",\n      \"html\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/prisma/schema.prisma\"\n    }\n  }\n]\n</pre></body></html>",
+    "publishedTime": "Fri, 05 Jun 2026 10:39:04 GMT",
+    "title": "",
+    "url": "https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/prisma",
+    "usage": {
+      "tokens": 375
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 375
+    }
+  },
+  "status": 20000
+}

@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">#!/bin/bash\necho \"=== MCLUB Deployment to Alibaba Cloud FC ===\"\necho \"\"\necho \"Prerequisites: Alibaba Cloud AccessKey configured\"\necho \"  Run: s config add\"\necho \"\"\n\n# Build production\necho \"Step 1: Building production package...\"\nnpm ci\nnpx prisma generate\nnpm run build\n\n# Prepare deployment directory\necho \"Step 2: Preparing deployment package...\"\nrm -rf /tmp/mclub-deploy\nmkdir -p /tmp/mclub-deploy\n\ncp -a .next/standalone/. /tmp/mclub-deploy/\ncp -a .next/static /tmp/mclub-deploy/.next/static\ncp -a public /tmp/mclub-deploy/ 2>/dev/null\ncp -a prisma /tmp/mclub-deploy/ 2>/dev/null\nmkdir -p /tmp/mclub-deploy/db\ncp -a db/custom.db /tmp/mclub-deploy/db/ 2>/dev/null\ncp -a bootstrap /tmp/mclub-deploy/\ncp -a s.yaml /tmp/mclub-deploy/\n\necho \"Step 3: Deploying to Function Compute...\"\ncd /tmp/mclub-deploy\ns deploy -y\n\necho \"\"\necho \"Done! Visit your function URL to verify.\"\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/deploy-fc.sh",
+    "usage": {
+      "tokens": 305
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 305
+    }
+  },
+  "status": 20000
+}

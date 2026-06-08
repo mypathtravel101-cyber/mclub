@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">import { NextRequest } from 'next/server';\n\n/**\n * Extract user ID and role from request, checking both query params and headers.\n * Query params are preferred because they don't trigger CORS preflight requests.\n */\nexport function getUserAuth(req: NextRequest): { userId: string; userRole: string } | null {\n  // Try query params first (CORS-friendly)\n  const userId = req.nextUrl.searchParams.get('userId') || req.headers.get('x-user-id');\n  const userRole = req.nextUrl.searchParams.get('userRole') || req.headers.get('x-user-role');\n\n  if (!userId || !userRole) return null;\n  return { userId, userRole };\n}\n\n/**\n * Require authentication - returns auth info or null (caller should return 401)\n */\nexport function requireAuth(req: NextRequest): { userId: string; userRole: string } | { error: boolean } {\n  const auth = getUserAuth(req);\n  if (!auth) return { error: true };\n  return auth;\n}\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/src/lib/auth-helpers.ts",
+    "usage": {
+      "tokens": 253
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 253
+    }
+  },
+  "status": 20000
+}

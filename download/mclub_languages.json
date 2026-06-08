@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">{\n  \"Python\": 1246232,\n  \"TypeScript\": 417704,\n  \"HTML\": 210309,\n  \"JavaScript\": 199420,\n  \"TeX\": 86069,\n  \"Shell\": 57050,\n  \"CSS\": 2048,\n  \"Dockerfile\": 900\n}\n</pre></body></html>",
+    "publishedTime": "Fri, 05 Jun 2026 10:39:04 GMT",
+    "title": "",
+    "url": "https://api.github.com/repos/mypathtravel101-cyber/mclub/languages",
+    "usage": {
+      "tokens": 111
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 111
+    }
+  },
+  "status": 20000
+}

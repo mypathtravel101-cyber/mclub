@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">[\n  {\n    \"name\": \"login\",\n    \"path\": \"src/app/api/auth/login\",\n    \"sha\": \"a21897a4c34fa52ecf74286c00a278a3cc762b7a\",\n    \"size\": 0,\n    \"url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/app/api/auth/login?ref=main\",\n    \"html_url\": \"https://github.com/mypathtravel101-cyber/mclub/tree/main/src/app/api/auth/login\",\n    \"git_url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/trees/a21897a4c34fa52ecf74286c00a278a3cc762b7a\",\n    \"download_url\": null,\n    \"type\": \"dir\",\n    \"_links\": {\n      \"self\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/app/api/auth/login?ref=main\",\n      \"git\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/trees/a21897a4c34fa52ecf74286c00a278a3cc762b7a\",\n      \"html\": \"https://github.com/mypathtravel101-cyber/mclub/tree/main/src/app/api/auth/login\"\n    }\n  },\n  {\n    \"name\": \"me\",\n    \"path\": \"src/app/api/auth/me\",\n    \"sha\": \"a8511d1c59e2fdc779f691911249387229015304\",\n    \"size\": 0,\n    \"url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/app/api/auth/me?ref=main\",\n    \"html_url\": \"https://github.com/mypathtravel101-cyber/mclub/tree/main/src/app/api/auth/me\",\n    \"git_url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/trees/a8511d1c59e2fdc779f691911249387229015304\",\n    \"download_url\": null,\n    \"type\": \"dir\",\n    \"_links\": {\n      \"self\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/app/api/auth/me?ref=main\",\n      \"git\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/trees/a8511d1c59e2fdc779f691911249387229015304\",\n      \"html\": \"https://github.com/mypathtravel101-cyber/mclub/tree/main/src/app/api/auth/me\"\n    }\n  }\n]\n</pre></body></html>",
+    "publishedTime": "Fri, 05 Jun 2026 10:39:04 GMT",
+    "title": "",
+    "url": "https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/app/api/auth",
+    "usage": {
+      "tokens": 629
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 629
+    }
+  },
+  "status": 20000
+}

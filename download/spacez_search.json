@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://www.youtube.com/watch?v=EmsJG8RVhWY",
+    "name": "MLOps Recipe: Deploy HuggingFace Models with GitHub Actions",
+    "snippet": "Codespaces, configuring secrets, pushing to the Space on every commit ... Creating Hugging Face Spaces 02:28 Creating Github Repo and Github ...",
+    "host_name": "www.youtube.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/orgs/community/discussions/46398",
+    "name": "remote: Write access to repository not granted. #46398 - GitHub",
+    "snippet": "If I am the owner of the repo, why do I not have write access? I created a fine-grained token for this repo but still, nothing.",
+    "host_name": "github.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/vibecodinglife/posts/1804703230118206",
+    "name": "What is the best way to deploy z.ai web app? - Facebook",
+    "snippet": "Your best way is to import the code to github and finalize the project, like backend functions and DB, using Claude or Gemini. Run git push ...",
+    "host_name": "www.facebook.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/NousResearch/hermes-agent/issues/4167",
+    "name": "Z.AI / GLM integration fails: Access token missing required scope",
+    "snippet": "Standard Z.AI API keys do not include this scope. A possible fix would be to use direct API calls for Z.AI instead of minting agent keys. Proposed Fix (optional).",
+    "host_name": "github.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://replicate.com/docs/guides/build/push-a-model-using-github-actions",
+    "name": "Push a model using GitHub Actions - Replicate",
+    "snippet": "Go to your GitHub repository, click “Settings”, click “Secrets”, click “New repository secret”, and add your token as the secret. Name it ...",
+    "host_name": "replicate.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  }
+]

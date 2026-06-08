@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">#!/bin/bash\ncd /code\nexport NODE_ENV=production\nexport DATABASE_URL=\"file:./db/custom.db\"\nexport PORT=3000\nexport HOSTNAME=0.0.0.0\nexec node server.js\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/bootstrap",
+    "usage": {
+      "tokens": 90
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 90
+    }
+  },
+  "status": 20000
+}

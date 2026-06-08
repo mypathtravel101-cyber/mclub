@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">import type { Metadata } from \"next\";\nimport { Geist } from \"next/font/google\";\nimport \"./globals.css\";\nimport { Toaster } from \"@/components/ui/toaster\";\n\nconst geistSans = Geist({ variable: \"--font-geist-sans\", subsets: [\"latin\"] });\n\nexport const metadata: Metadata = {\n  title: \"MCLUB CRM — 百盛家族辦公室\",\n  description: \"MCLUB客戶關係管理系統\",\n};\n\nexport default function RootLayout({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang=\"zh-Hant\" suppressHydrationWarning>\n      <body className={`${geistSans.variable} antialiased bg-[#0f1923] text-white`}>\n        {children}\n        <Toaster />\n      </body>\n    </html>\n  );\n}\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/src/app/layout.tsx",
+    "usage": {
+      "tokens": 226
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 226
+    }
+  },
+  "status": 20000
+}

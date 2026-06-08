@@ -170,3 +170,81 @@ export const EVENT_TYPE_ICONS: Record<string, string> = {
   note: '📝',
   status_change: '🔄',
 };
+
+// ── FX Risk Modelling Types ──
+
+export type StressScenario = 'MILD' | 'MODERATE' | 'EXTREME';
+export type AlertStatus = 'ACTIVE' | 'TRIGGERED' | 'DISMISSED';
+export type HedgingStatus = 'PENDING' | 'MATCHED' | 'COMPLETED' | 'CANCELLED';
+
+export interface FXStressTest {
+  id: string;
+  userId: string;
+  portfolio: string; // JSON string
+  baseCurrency: string;
+  results: string; // JSON string
+  totalAssetValue: number;
+  maxLossAmount: number;
+  reportUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CurrencyAlert {
+  id: string;
+  userId: string;
+  fromCurrency: string;
+  toCurrency: string;
+  threshold: number;
+  direction: string;
+  status: AlertStatus;
+  triggeredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HedgingMatch {
+  id: string;
+  userId: string;
+  stressTestId: string | null;
+  hedgingType: string;
+  fromCurrency: string;
+  toCurrency: string;
+  amount: number;
+  status: HedgingStatus;
+  matchedProvider: string | null; // JSON string
+  quote: string | null; // JSON string
+  commissionRate: number;
+  commissionAmount: number;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CurrencyRate {
+  id: string;
+  fromCurrency: string;
+  toCurrency: string;
+  rate: number;
+  source: string;
+  date: string;
+}
+
+export interface PortfolioItem {
+  productId: string;
+  productName: string;
+  currency: string;
+  amount: number;
+  weight: number;
+}
+
+export interface StressTestResult {
+  totalLoss: number;
+  items: { currency: string; loss: number; percent: number }[];
+}
+
+export interface StressTestResults {
+  mild: StressTestResult;
+  moderate: StressTestResult;
+  extreme: StressTestResult;
+}

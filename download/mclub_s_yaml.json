@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">edition: 3.0.0\nname: mclub\naccess: default\n\nvars:\n  region: cn-hongkong\n\nresources:\n  mclub:\n    component: fc3\n    props:\n      region: ${vars.region}\n      functionName: mclub-web\n      description: MCLUB CRM - 百盛家族辦公室\n      runtime: custom.debian10\n      code: ./\n      customRuntimeConfig:\n        command:\n          - ./bootstrap\n        port: 3000\n      memorySize: 4096\n      cpu: 2\n      diskSize: 512\n      timeout: 60\n      instanceConcurrency: 100\n      environmentVariables:\n        NODE_ENV: production\n        DATABASE_URL: file:./db/custom.db\n        PORT: \"3000\"\n        HOSTNAME: \"0.0.0.0\"\n      triggers:\n        - triggerName: httpTrigger\n          triggerType: http\n          triggerConfig:\n            authType: anonymous\n            methods:\n              - GET\n              - POST\n              - PUT\n              - DELETE\n              - PATCH\n              - HEAD\n              - OPTIONS\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/s.yaml",
+    "usage": {
+      "tokens": 285
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 285
+    }
+  },
+  "status": 20000
+}

@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">[\n  {\n    \"name\": \"logo.svg\",\n    \"path\": \"public/logo.svg\",\n    \"sha\": \"d93ac8f66e41897acac0185396d5b91c32856c9a\",\n    \"size\": 1065,\n    \"url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/public/logo.svg?ref=main\",\n    \"html_url\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/public/logo.svg\",\n    \"git_url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/d93ac8f66e41897acac0185396d5b91c32856c9a\",\n    \"download_url\": \"https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/public/logo.svg\",\n    \"type\": \"file\",\n    \"_links\": {\n      \"self\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/public/logo.svg?ref=main\",\n      \"git\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/d93ac8f66e41897acac0185396d5b91c32856c9a\",\n      \"html\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/public/logo.svg\"\n    }\n  },\n  {\n    \"name\": \"robots.txt\",\n    \"path\": \"public/robots.txt\",\n    \"sha\": \"6018e701fc7dd0317cda9eceea390524322e8a05\",\n    \"size\": 160,\n    \"url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/public/robots.txt?ref=main\",\n    \"html_url\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/public/robots.txt\",\n    \"git_url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/6018e701fc7dd0317cda9eceea390524322e8a05\",\n    \"download_url\": \"https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/public/robots.txt\",\n    \"type\": \"file\",\n    \"_links\": {\n      \"self\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/public/robots.txt?ref=main\",\n      \"git\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/6018e701fc7dd0317cda9eceea390524322e8a05\",\n      \"html\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/public/robots.txt\"\n    }\n  }\n]\n</pre></body></html>",
+    "publishedTime": "Fri, 05 Jun 2026 10:39:04 GMT",
+    "title": "",
+    "url": "https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/public",
+    "usage": {
+      "tokens": 664
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 664
+    }
+  },
+  "status": 20000
+}

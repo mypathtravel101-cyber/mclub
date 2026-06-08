@@ -22,6 +22,14 @@ interface RSVP { id: string; eventId: string; userId: string; status: RSVPStatus
 interface EventTask { id: string; eventId: string; title: string; description?: string; status: TaskStatus; dueDate?: string; priority: string; assigneeId?: string; assignee?: { id: string; name: string; role?: string }; createdAt: string; }
 interface EventBudgetItem { id: string; eventId: string; category: string; description: string; estimatedCost: number; actualCost?: number; }
 
+// ── FX Risk Types ──
+type AlertStatus = 'ACTIVE' | 'TRIGGERED' | 'DISMISSED';
+type HedgingStatus = 'PENDING' | 'MATCHED' | 'COMPLETED' | 'CANCELLED';
+interface FXStressTest { id: string; userId: string; portfolio: string; baseCurrency: string; results: string; totalAssetValue: number; maxLossAmount: number; reportUrl?: string; createdAt: string; }
+interface CurrencyAlert { id: string; userId: string; fromCurrency: string; toCurrency: string; threshold: number; direction: string; status: AlertStatus; triggeredAt?: string; createdAt: string; }
+interface HedgingMatch { id: string; userId: string; stressTestId?: string; hedgingType: string; fromCurrency: string; toCurrency: string; amount: number; status: HedgingStatus; matchedProvider?: string; quote?: string; commissionRate: number; commissionAmount: number; notes?: string; createdAt: string; }
+interface CurrencyRate { id: string; fromCurrency: string; toCurrency: string; rate: number; source: string; date: string; }
+
 // ── API Helper ──
 const API_BASE = '/api';
 
@@ -145,20 +153,22 @@ function Sidebar({ current, onChange, role, onLogout }: { current: string; onCha
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '客戶', icon: '👥' },
       { key: 'orders', label: '訂單', icon: '📋' }, { key: 'products', label: '產品', icon: '📦' },
       { key: 'commissions', label: '佣金', icon: '💰' }, { key: 'events', label: '活動', icon: '🎉' },
+      { key: 'fx', label: 'FX風險', icon: '💱' },
     ],
     SME_OWNER: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'products', label: '產品', icon: '📦' },
       { key: 'orders', label: '訂單', icon: '📋' }, { key: 'commissions', label: '收入', icon: '💰' },
-      { key: 'events', label: '活動', icon: '🎉' },
+      { key: 'events', label: '活動', icon: '🎉' }, { key: 'fx', label: 'FX風險', icon: '💱' },
     ],
     AGENT: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '客戶', icon: '👥' },
       { key: 'commissions', label: '佣金', icon: '💰' }, { key: 'products', label: '產品', icon: '📦' },
-      { key: 'events', label: '活動', icon: '🎉' },
+      { key: 'events', label: '活動', icon: '🎉' }, { key: 'fx', label: 'FX風險', icon: '💱' },
     ],
     END_USER: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'orders', label: '產品', icon: '📦' },
-      { key: 'events', label: '活動', icon: '🎉' }, { key: 'profile', label: '會員', icon: '⭐' },
+      { key: 'events', label: '活動', icon: '🎉' }, { key: 'fx', label: 'FX風險', icon: '💱' },
+      { key: 'profile', label: '會員', icon: '⭐' },
     ],
   };
   const items = menus[role] || [];
@@ -1174,7 +1184,506 @@ function EventList({ user }: { user: User }) {
   );
 }
 
-// ── Member Profile (End User) ──
+// ── FX Risk Modelling ──
+const fxStatusLabel: Record<AlertStatus, string> = { ACTIVE: '生效中', TRIGGERED: '已觸發', DISMISSED: '已關閉' };
+const fxStatusClass: Record<AlertStatus, string> = { ACTIVE: 'status-completed', TRIGGERED: 'status-pending', DISMISSED: 'status-in_progress' };
+const hedgingStatusLabel: Record<HedgingStatus, string> = { PENDING: '待配對', MATCHED: '已配對', COMPLETED: '已完成', CANCELLED: '已取消' };
+const hedgingStatusClass: Record<HedgingStatus, string> = { PENDING: 'status-pending', MATCHED: 'status-completed', COMPLETED: 'status-settled', CANCELLED: 'status-in_progress' };
+const hedgingTypeLabel: Record<string, string> = { forward: '遠期合約', option: '期權', natural: '自然對沖', other: '其他' };
+const currencyIcon: Record<string, string> = { HKD: '🇭🇰', USD: '🇺🇸', JPY: '🇯🇵', RMB: '🇨🇳', EUR: '🇪🇺', GBP: '🇬🇧' };
+
+function FXRisk({ user }: { user: User }) {
+  const [tab, setTab] = useState<'dashboard' | 'stress' | 'hedging' | 'alerts'>('dashboard');
+  const [dashboard, setDashboard] = useState<any>(null);
+  const [stressTests, setStressTests] = useState<FXStressTest[]>([]);
+  const [alerts, setAlerts] = useState<CurrencyAlert[]>([]);
+  const [hedges, setHedges] = useState<HedgingMatch[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Stress test form
+  const [showStressForm, setShowStressForm] = useState(false);
+  const [portfolioItems, setPortfolioItems] = useState([
+    { productName: '香港物業', currency: 'HKD', amount: 5000000 },
+    { productName: 'NPC基金', currency: 'USD', amount: 200000 },
+    { productName: '日本物業', currency: 'JPY', amount: 50000000 },
+    { productName: 'VFK健康產品', currency: 'RMB', amount: 3000000 },
+  ]);
+  const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>(['USD', 'JPY', 'RMB']);
+  const [stressResult, setStressResult] = useState<any>(null);
+
+  // Alert form
+  const [showAlertForm, setShowAlertForm] = useState(false);
+  const [newAlert, setNewAlert] = useState({ fromCurrency: 'JPY', toCurrency: 'HKD', threshold: '5', direction: 'down' });
+
+  // Hedging form
+  const [showHedgeForm, setShowHedgeForm] = useState(false);
+  const [newHedge, setNewHedge] = useState({ hedgingType: 'forward', fromCurrency: 'JPY', toCurrency: 'HKD', amount: '', notes: '' });
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [dashRes, stressRes, alertRes, hedgeRes] = await Promise.all([
+        apiFetch('/fx/dashboard', user),
+        apiFetch('/fx/stress-test', user),
+        apiFetch('/fx/alerts', user),
+        apiFetch('/fx/hedging', user),
+      ]);
+      if (dashRes.portfolio) setDashboard(dashRes);
+      if (stressRes.stressTests) setStressTests(stressRes.stressTests);
+      if (alertRes.alerts) setAlerts(alertRes.alerts);
+      if (hedgeRes.hedgingMatches) setHedges(hedgeRes.hedgingMatches);
+    } catch (e) { console.error('FX load error', e); }
+    setLoading(false);
+  };
+
+  useEffect(() => { loadData(); }, [user]);
+
+  const runStressTest = async () => {
+    const portfolio = portfolioItems
+      .filter(item => selectedCurrencies.includes(item.currency) || item.currency === 'HKD')
+      .map(item => ({ ...item, productId: `fx_${item.currency}` }));
+    const res = await apiFetch('/fx/stress-test', user, {
+      method: 'POST',
+      body: JSON.stringify({ portfolio, baseCurrency: 'HKD' }),
+    });
+    if (res.stressTest) {
+      setStressResult(res.results);
+      loadData();
+    }
+  };
+
+  const createAlert = async () => {
+    await apiFetch('/fx/alerts', user, {
+      method: 'POST',
+      body: JSON.stringify(newAlert),
+    });
+    setShowAlertForm(false);
+    setNewAlert({ fromCurrency: 'JPY', toCurrency: 'HKD', threshold: '5', direction: 'down' });
+    loadData();
+  };
+
+  const updateAlertStatus = async (id: string, status: string) => {
+    await apiFetch(`/fx/alerts/${id}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
+    loadData();
+  };
+
+  const deleteAlert = async (id: string) => {
+    if (!confirm('確認刪除此預警？')) return;
+    await apiFetch(`/fx/alerts/${id}`, user, { method: 'DELETE' });
+    loadData();
+  };
+
+  const createHedge = async () => {
+    await apiFetch('/fx/hedging', user, {
+      method: 'POST',
+      body: JSON.stringify(newHedge),
+    });
+    setShowHedgeForm(false);
+    setNewHedge({ hedgingType: 'forward', fromCurrency: 'JPY', toCurrency: 'HKD', amount: '', notes: '' });
+    loadData();
+  };
+
+  const updateHedgeStatus = async (id: string, status: string) => {
+    await apiFetch(`/fx/hedging/${id}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
+    loadData();
+  };
+
+  const fmt = (n: number) => n?.toLocaleString('zh-HK') || '0';
+  const fmtCurrency = (currency: string, amount: number) => {
+    const prefix: Record<string, string> = { HKD: 'HK$', USD: 'US$', JPY: '¥', RMB: '¥' };
+    return `${prefix[currency] || currency}${fmt(amount)}`;
+  };
+
+  const tabs = [
+    { key: 'dashboard' as const, label: '儀表板', icon: '📊' },
+    { key: 'stress' as const, label: '壓力測試', icon: '⚡' },
+    { key: 'hedging' as const, label: '對沖方案', icon: '🛡️' },
+    { key: 'alerts' as const, label: '匯率預警', icon: '🔔' },
+  ];
+
+  if (loading && !dashboard) {
+    return (
+      <div className="p-8 text-center">
+        <div className="inline-block w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mb-3"></div>
+        <p className="text-[#5a6a7a] text-sm">載入FX風險數據...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold">💱 FX風險管理</h2>
+
+      {/* Tab Bar */}
+      <div className="flex gap-1 bg-[#1a2330] p-1 rounded-lg">
+        {tabs.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className={`flex-1 py-2 text-center text-sm rounded-md transition-colors ${tab === t.key ? 'bg-[#2a3a4e] text-gold font-bold' : 'text-[#5a6a7a] hover:text-[#8899aa]'}`}>
+            <span className="mr-1">{t.icon}</span>
+            <span className="hidden sm:inline">{t.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Dashboard Tab ── */}
+      {tab === 'dashboard' && dashboard && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <StatCard label="總資產值 (HKD)" value={`HK$${fmt(dashboard.totalValueHKD)}`} gold />
+            <StatCard label="日匯率影響" value={`HK$${fmt(Math.abs(dashboard.totalDailyChange))}`} sub={Number(dashboard.dailyChangePercent) >= 0 ? '↑ 上漲' : '↓ 下跌'} />
+            <StatCard label="活躍預警" value={dashboard.alerts?.active || 0} sub={`${dashboard.alerts?.triggered || 0} 已觸發`} />
+          </div>
+
+          <div className="mclub-card">
+            <h3 className="font-bold mb-4">多幣種持倉</h3>
+            <div className="space-y-3">
+              {(dashboard.portfolio || []).map((item: any, i: number) => (
+                <div key={i} className="flex items-center justify-between py-3 border-b border-[#2a3a4e] last:border-0">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{currencyIcon[item.currency] || '💱'}</span>
+                    <div>
+                      <p className="font-medium text-sm">{item.productName}</p>
+                      <p className="text-xs text-[#5a6a7a]">{fmtCurrency(item.currency, item.amount)} @ {item.currency === 'HKD' ? '1.0000' : item.rate?.toFixed(4)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-gold">HK${fmt(item.valueHKD)}</p>
+                    <p className={`text-xs ${item.dailyChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {item.dailyChange >= 0 ? '↑' : '↓'} {Math.abs(item.dailyChange).toFixed(2)}%
+                      <span className="text-[#5a6a7a] ml-1">({item.dailyImpact >= 0 ? '+' : ''}HK${fmt(item.dailyImpact)})</span>
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Triggered alerts */}
+          {dashboard.alerts?.triggered > 0 && (
+            <div className="mclub-card border-l-4 border-red-500">
+              <h3 className="font-bold mb-2 text-red-400">⚠️ 已觸發預警</h3>
+              {(dashboard.alerts?.items || []).filter((a: CurrencyAlert) => a.status === 'TRIGGERED').map((a: CurrencyAlert) => (
+                <div key={a.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
+                  <span className="text-sm">{currencyIcon[a.fromCurrency] || ''} {a.fromCurrency}/{a.toCurrency} {a.direction === 'down' ? '下跌' : '上漲'} ≥ {a.threshold}%</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-red-900 text-red-300">已觸發</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Recent stress tests */}
+          {stressTests.length > 0 && (
+            <div className="mclub-card">
+              <h3 className="font-bold mb-3">最近壓力測試</h3>
+              {stressTests.slice(0, 2).map(t => (
+                <div key={t.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
+                  <div>
+                    <span className="text-sm">資產 HK${fmt(t.totalAssetValue)}</span>
+                    <span className="text-xs text-[#5a6a7a] ml-2">最大損失: HK${fmt(t.maxLossAmount)}</span>
+                  </div>
+                  <span className="text-xs text-[#5a6a7a]">{new Date(t.createdAt).toLocaleDateString('zh-HK')}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Stress Test Tab ── */}
+      {tab === 'stress' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold">匯率壓力測試</h3>
+            <button onClick={() => setShowStressForm(!showStressForm)} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+              {showStressForm ? '取消' : '+ 新增測試'}
+            </button>
+          </div>
+
+          {showStressForm && (
+            <div className="mclub-card space-y-3">
+              <p className="text-sm text-[#8899aa]">選擇要測試的外幣持倉（HKD為基準貨幣，自動包含）</p>
+              {portfolioItems.map((item, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <input type="checkbox" checked={selectedCurrencies.includes(item.currency) || item.currency === 'HKD'}
+                    disabled={item.currency === 'HKD'}
+                    onChange={e => {
+                      if (e.target.checked) setSelectedCurrencies([...selectedCurrencies, item.currency]);
+                      else setSelectedCurrencies(selectedCurrencies.filter(c => c !== item.currency));
+                    }}
+                    className="w-4 h-4" />
+                  <span className="text-xl">{currencyIcon[item.currency]}</span>
+                  <div className="flex-1">
+                    <input value={item.productName} onChange={e => { const n = [...portfolioItems]; n[i] = { ...n[i], productName: e.target.value }; setPortfolioItems(n); }}
+                      className="w-full p-1 text-sm bg-transparent border-b border-[#2a3a4e]" />
+                  </div>
+                  <div className="w-28">
+                    <input type="number" value={item.amount} onChange={e => { const n = [...portfolioItems]; n[i] = { ...n[i], amount: parseFloat(e.target.value) || 0 }; setPortfolioItems(n); }}
+                      className="w-full p-1 text-sm text-right bg-transparent border-b border-[#2a3a4e]" />
+                  </div>
+                  <span className="text-xs text-[#5a6a7a] w-10">{item.currency}</span>
+                </div>
+              ))}
+              <button onClick={runStressTest} className="w-full p-3 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+                ⚡ 執行壓力測試
+              </button>
+            </div>
+          )}
+
+          {/* Stress Test Results */}
+          {stressResult && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Mild */}
+                <div className="mclub-card border-l-4 border-yellow-500">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-yellow-500 text-lg">🌡️</span>
+                    <span className="font-bold text-sm">溫和波動</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-900 text-yellow-300">5%</span>
+                  </div>
+                  <p className="text-2xl font-bold text-yellow-400">HK${fmt(stressResult.mild?.totalLoss || 0)}</p>
+                  <p className="text-xs text-[#5a6a7a]">損失率 {stressResult.mild?.lossPercent || 0}%</p>
+                  <div className="mt-3 space-y-1">
+                    {(stressResult.mild?.items || []).map((item: any) => (
+                      <div key={item.currency} className="flex justify-between text-xs">
+                        <span>{currencyIcon[item.currency]} {item.currency}</span>
+                        <span className="text-yellow-400">-{fmt(item.loss)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Moderate */}
+                <div className="mclub-card border-l-4 border-orange-500">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-orange-500 text-lg">🔥</span>
+                    <span className="font-bold text-sm">中度壓力</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-orange-900 text-orange-300">15%</span>
+                  </div>
+                  <p className="text-2xl font-bold text-orange-400">HK${fmt(stressResult.moderate?.totalLoss || 0)}</p>
+                  <p className="text-xs text-[#5a6a7a]">損失率 {stressResult.moderate?.lossPercent || 0}%</p>
+                  <div className="mt-3 space-y-1">
+                    {(stressResult.moderate?.items || []).map((item: any) => (
+                      <div key={item.currency} className="flex justify-between text-xs">
+                        <span>{currencyIcon[item.currency]} {item.currency}</span>
+                        <span className="text-orange-400">-{fmt(item.loss)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Extreme */}
+                <div className="mclub-card border-l-4 border-red-500">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-red-500 text-lg">💥</span>
+                    <span className="font-bold text-sm">極端衝擊</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-900 text-red-300">30%+</span>
+                  </div>
+                  <p className="text-2xl font-bold text-red-400">HK${fmt(stressResult.extreme?.totalLoss || 0)}</p>
+                  <p className="text-xs text-[#5a6a7a]">損失率 {stressResult.extreme?.lossPercent || 0}%</p>
+                  <div className="mt-3 space-y-1">
+                    {(stressResult.extreme?.items || []).map((item: any) => (
+                      <div key={item.currency} className="flex justify-between text-xs">
+                        <span>{currencyIcon[item.currency]} {item.currency}</span>
+                        <span className="text-red-400">-{fmt(item.loss)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Previous Stress Tests */}
+          <div className="mclub-card">
+            <h3 className="font-bold mb-3">歷史測試記錄</h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {stressTests.map(t => {
+                let results: any = {};
+                try { results = JSON.parse(t.results); } catch {}
+                return (
+                  <div key={t.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
+                    <div>
+                      <span className="text-sm">資產 HK${fmt(t.totalAssetValue)}</span>
+                      <div className="flex gap-2 text-xs mt-1">
+                        <span className="text-yellow-400">溫和 -{fmt(results.mild?.totalLoss || 0)}</span>
+                        <span className="text-orange-400">中度 -{fmt(results.moderate?.totalLoss || 0)}</span>
+                        <span className="text-red-400">極端 -{fmt(results.extreme?.totalLoss || 0)}</span>
+                      </div>
+                    </div>
+                    <span className="text-xs text-[#5a6a7a]">{new Date(t.createdAt).toLocaleDateString('zh-HK')}</span>
+                  </div>
+                );
+              })}
+              {stressTests.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-4">暫無測試記錄</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Hedging Tab ── */}
+      {tab === 'hedging' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold">對沖方案配對</h3>
+            <button onClick={() => setShowHedgeForm(!showHedgeForm)} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+              + 新增對沖
+            </button>
+          </div>
+
+          {showHedgeForm && (
+            <div className="mclub-card space-y-3">
+              <select value={newHedge.hedgingType} onChange={e => setNewHedge({ ...newHedge, hedgingType: e.target.value })} className="w-full p-2 text-sm">
+                <option value="forward">遠期合約</option>
+                <option value="option">期權</option>
+                <option value="natural">自然對沖</option>
+                <option value="other">其他</option>
+              </select>
+              <div className="grid grid-cols-2 gap-3">
+                <select value={newHedge.fromCurrency} onChange={e => setNewHedge({ ...newHedge, fromCurrency: e.target.value })} className="w-full p-2 text-sm">
+                  <option value="USD">USD</option><option value="JPY">JPY</option><option value="RMB">RMB</option><option value="EUR">EUR</option>
+                </select>
+                <select value={newHedge.toCurrency} onChange={e => setNewHedge({ ...newHedge, toCurrency: e.target.value })} className="w-full p-2 text-sm">
+                  <option value="HKD">HKD</option><option value="USD">USD</option><option value="RMB">RMB</option>
+                </select>
+              </div>
+              <input type="number" placeholder="對沖金額" value={newHedge.amount} onChange={e => setNewHedge({ ...newHedge, amount: e.target.value })} className="w-full p-2 text-sm" />
+              <input placeholder="備註" value={newHedge.notes} onChange={e => setNewHedge({ ...newHedge, notes: e.target.value })} className="w-full p-2 text-sm" />
+              <button onClick={createHedge} className="w-full p-3 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+                🛡️ 提交對沖請求
+              </button>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {hedges.map(h => {
+              let provider: any = null;
+              let quote: any = null;
+              try { provider = h.matchedProvider ? JSON.parse(h.matchedProvider) : null; } catch {}
+              try { quote = h.quote ? JSON.parse(h.quote) : null; } catch {}
+              return (
+                <div key={h.id} className="mclub-card">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🛡️</span>
+                      <span className="font-medium text-sm">{hedgingTypeLabel[h.hedgingType] || h.hedgingType}</span>
+                      <span className="text-xs text-[#5a6a7a]">{currencyIcon[h.fromCurrency]} {h.fromCurrency} → {currencyIcon[h.toCurrency]} {h.toCurrency}</span>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${hedgingStatusClass[h.status]}`}>{hedgingStatusLabel[h.status]}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-[#8899aa] mb-2">
+                    <div>金額：<span className="text-gold font-bold">{fmtCurrency(h.fromCurrency, h.amount)}</span></div>
+                    {quote && <div>匯率：{quote.rate?.toFixed(4)} · 手續費：HK${fmt(quote.fee || 0)}</div>}
+                  </div>
+                  {provider && (
+                    <div className="text-xs text-[#8899aa] mb-2">
+                      配對機構：<span className="text-gold">{provider.name}</span> ({provider.type}) {provider.contact}
+                    </div>
+                  )}
+                  {h.commissionAmount > 0 && (
+                    <div className="text-xs text-[#5a6a7a] mb-2">
+                      佣金：{h.commissionRate}% = HK${fmt(h.commissionAmount)}
+                    </div>
+                  )}
+                  {h.notes && <p className="text-xs text-[#5a6a7a] mb-2">{h.notes}</p>}
+                  <div className="flex gap-2 mt-2">
+                    {h.status === 'PENDING' && (
+                      <button onClick={() => updateHedgeStatus(h.id, 'MATCHED')} className="px-3 py-1 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">確認配對</button>
+                    )}
+                    {h.status === 'MATCHED' && (
+                      <button onClick={() => updateHedgeStatus(h.id, 'COMPLETED')} className="px-3 py-1 rounded text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>完成</button>
+                    )}
+                    {(h.status === 'PENDING' || h.status === 'MATCHED') && (
+                      <button onClick={async () => { if (!confirm('確認取消？')) return; await apiFetch(`/fx/hedging/${h.id}`, user, { method: 'PATCH', body: JSON.stringify({ status: 'CANCELLED' }) }); loadData(); }}
+                        className="px-3 py-1 rounded text-xs bg-red-900 text-red-300 hover:bg-red-800">取消</button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {hedges.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無對沖方案</p>}
+          </div>
+        </div>
+      )}
+
+      {/* ── Alerts Tab ── */}
+      {tab === 'alerts' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold">匯率預警</h3>
+            <button onClick={() => setShowAlertForm(!showAlertForm)} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+              + 新增預警
+            </button>
+          </div>
+
+          {showAlertForm && (
+            <div className="mclub-card space-y-3">
+              <p className="text-sm text-[#8899aa]">設定匯率變動預警條件</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-[#5a6a7a] mb-1">來源貨幣</label>
+                  <select value={newAlert.fromCurrency} onChange={e => setNewAlert({ ...newAlert, fromCurrency: e.target.value })} className="w-full p-2 text-sm">
+                    <option value="USD">USD 美元</option><option value="JPY">JPY 日圓</option><option value="RMB">RMB 人民幣</option><option value="EUR">EUR 歐元</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-[#5a6a7a] mb-1">目標貨幣</label>
+                  <select value={newAlert.toCurrency} onChange={e => setNewAlert({ ...newAlert, toCurrency: e.target.value })} className="w-full p-2 text-sm">
+                    <option value="HKD">HKD 港幣</option><option value="USD">USD 美元</option><option value="RMB">RMB 人民幣</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-[#5a6a7a] mb-1">觸發百分比</label>
+                  <input type="number" value={newAlert.threshold} onChange={e => setNewAlert({ ...newAlert, threshold: e.target.value })} className="w-full p-2 text-sm" placeholder="5" />
+                </div>
+                <div>
+                  <label className="block text-xs text-[#5a6a7a] mb-1">方向</label>
+                  <select value={newAlert.direction} onChange={e => setNewAlert({ ...newAlert, direction: e.target.value })} className="w-full p-2 text-sm">
+                    <option value="down">↓ 下跌</option><option value="up">↑ 上漲</option>
+                  </select>
+                </div>
+              </div>
+              <button onClick={createAlert} className="w-full p-3 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+                🔔 建立預警
+              </button>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {alerts.map(a => (
+              <div key={a.id} className="mclub-card flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{currencyIcon[a.fromCurrency]}</span>
+                  <div>
+                    <p className="text-sm font-medium">{a.fromCurrency}/{a.toCurrency}</p>
+                    <p className="text-xs text-[#5a6a7a]">{a.direction === 'down' ? '↓ 下跌' : '↑ 上漲'} ≥ {a.threshold}%</p>
+                    {a.triggeredAt && <p className="text-[10px] text-red-400">觸發於 {new Date(a.triggeredAt).toLocaleDateString('zh-HK')}</p>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${fxStatusClass[a.status]}`}>{fxStatusLabel[a.status]}</span>
+                  {a.status === 'ACTIVE' && (
+                    <button onClick={() => updateAlertStatus(a.id, 'DISMISSED')} className="text-xs text-[#5a6a7a] hover:text-red-400">關閉</button>
+                  )}
+                  {a.status === 'TRIGGERED' && (
+                    <button onClick={() => updateAlertStatus(a.id, 'DISMISSED')} className="text-xs text-[#5a6a7a] hover:text-red-400">關閉</button>
+                  )}
+                  {a.status === 'DISMISSED' && (
+                    <button onClick={() => updateAlertStatus(a.id, 'ACTIVE')} className="text-xs text-[#5a6a7a] hover:text-green-400">重啟</button>
+                  )}
+                  <button onClick={() => deleteAlert(a.id)} className="text-xs text-[#5a6a7a] hover:text-red-400">刪除</button>
+                </div>
+              </div>
+            ))}
+            {alerts.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無預警</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MemberProfile({ user }: { user: User }) {
   return (
     <div className="space-y-4">
@@ -1259,6 +1768,7 @@ export default function Home() {
       case 'products': return <ProductList user={user} />;
       case 'commissions': return <CommissionList user={user} />;
       case 'events': return <EventList user={user} />;
+      case 'fx': return <FXRisk user={user} />;
       case 'profile': return <MemberProfile user={user} />;
       default: return <OverviewDashboard user={user} data={dashboardData} error={dashboardError} loading={dashboardLoading} onRetry={loadDashboard} onNavigate={handleNavChange} />;
     }

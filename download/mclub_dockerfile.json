@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">FROM node:20-slim AS base\n\n# Install dependencies only when needed\nFROM base AS deps\nWORKDIR /app\nCOPY package.json package-lock.json* ./\nRUN npm ci\n\n# Rebuild the source code only when needed\nFROM base AS builder\nWORKDIR /app\nCOPY --from=deps /app/node_modules ./node_modules\nCOPY . .\nENV DATABASE_URL=\"file:./db/custom.db\"\nRUN npx prisma generate\nRUN npm run build\n\n# Production image\nFROM base AS runner\nWORKDIR /app\nENV NODE_ENV=production\nENV DATABASE_URL=\"file:./db/custom.db\"\n\nRUN addgroup --system --gid 1001 nodejs\nRUN adduser --system --uid 1001 nextjs\n\nCOPY --from=builder /app/public ./public\nCOPY --from=builder /app/.next/standalone ./\nCOPY --from=builder /app/.next/static ./.next/static\nCOPY --from=builder /app/prisma ./prisma\nCOPY --from=builder /app/db ./db\n\nRUN chown -R nextjs:nodejs /app\n\nUSER nextjs\n\nEXPOSE 3000\nENV PORT=3000\nENV HOSTNAME=\"0.0.0.0\"\n\nCMD [\"node\", \"server.js\"]\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/Dockerfile",
+    "usage": {
+      "tokens": 310
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 310
+    }
+  },
+  "status": 20000
+}

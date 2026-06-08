@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://www.youtube.com/watch?v=kHkQnuYzwoo",
+    "name": "Using Personal Access Tokens with GIT and GitHub - YouTube",
+    "snippet": "... tokens-with-git-and-github.html For more information about Python and Cybersecurity, check out my new book! https://www.pythonforcybersec.com/",
+    "host_name": "www.youtube.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens",
+    "name": "Managing your personal access tokens - GitHub Docs",
+    "snippet": "Personal access tokens are an alternative to using passwords for authentication to GitHub when using the GitHub API or the command line.",
+    "host_name": "docs.github.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://stackoverflow.com/questions/72296775/git-push-https-with-personal-access-token-asking-for-password",
+    "name": "Git push HTTPS with Personal access token asking for password",
+    "snippet": "I want to push commit changes to my remote repository, git is asking for password. I searched around here and I found help in setting my origin URL from SSH to ...",
+    "host_name": "stackoverflow.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/git/comments/p4b2og/cant_push_to_my_own_github_repo_via_cmd_line_ive",
+    "name": "Can't push to my own github repo via cmd line. I've created  - Reddit",
+    "snippet": "When I try to push all I get is remote: Support for password authentication was removed on August 13, 2021. Please use a personal access token instead.",
+    "host_name": "www.reddit.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://happygitwithr.com/https-pat",
+    "name": "Chapter 9 Personal access token for HTTPS",
+    "snippet": "9 Personal access token for HTTPS. When we interact with a remote Git server, such as GitHub, we have to include credentials in the request.",
+    "host_name": "happygitwithr.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  }
+]

@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">import type { NextConfig } from \"next\";\n\nconst nextConfig: NextConfig = {\n  output: 'standalone',\n  typescript: { ignoreBuildErrors: true },\n  reactStrictMode: false,\n  allowedDevOrigins: ['.space.chatglm.site', '.space-z.ai', 'mclub.space-z.ai'],\n  async headers() {\n    return [\n      {\n        source: '/api/:path*',\n        headers: [\n          { key: 'Access-Control-Allow-Origin', value: '*' },\n          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, PATCH, DELETE, OPTIONS' },\n          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, x-user-id, x-user-role, Authorization' },\n          { key: 'Access-Control-Max-Age', value: '86400' },\n          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },\n        ],\n      },\n      {\n        source: '/(.*)',\n        headers: [\n          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },\n        ],\n      },\n    ];\n  },\n};\n\nexport default nextConfig;\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/next.config.ts",
+    "usage": {
+      "tokens": 297
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 297
+    }
+  },
+  "status": 20000
+}

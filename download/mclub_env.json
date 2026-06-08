@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\"># Database URL (SQLite)\nDATABASE_URL=\"file:./dev.db?connection_limit=1\"\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/.env.example",
+    "usage": {
+      "tokens": 62
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 62
+    }
+  },
+  "status": 20000
+}

@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">[\n  {\n    \"name\": \"use-mobile.ts\",\n    \"path\": \"src/hooks/use-mobile.ts\",\n    \"sha\": \"2b0fe1dfef3b17850bbac040665f514a8ffd0f15\",\n    \"size\": 565,\n    \"url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/hooks/use-mobile.ts?ref=main\",\n    \"html_url\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/src/hooks/use-mobile.ts\",\n    \"git_url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/2b0fe1dfef3b17850bbac040665f514a8ffd0f15\",\n    \"download_url\": \"https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/src/hooks/use-mobile.ts\",\n    \"type\": \"file\",\n    \"_links\": {\n      \"self\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/hooks/use-mobile.ts?ref=main\",\n      \"git\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/2b0fe1dfef3b17850bbac040665f514a8ffd0f15\",\n      \"html\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/src/hooks/use-mobile.ts\"\n    }\n  },\n  {\n    \"name\": \"use-toast.ts\",\n    \"path\": \"src/hooks/use-toast.ts\",\n    \"sha\": \"b559959226c5b17b8a719d29a2cafe1ff5f935ef\",\n    \"size\": 3917,\n    \"url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/hooks/use-toast.ts?ref=main\",\n    \"html_url\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/src/hooks/use-toast.ts\",\n    \"git_url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/b559959226c5b17b8a719d29a2cafe1ff5f935ef\",\n    \"download_url\": \"https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/src/hooks/use-toast.ts\",\n    \"type\": \"file\",\n    \"_links\": {\n      \"self\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/hooks/use-toast.ts?ref=main\",\n      \"git\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/b559959226c5b17b8a719d29a2cafe1ff5f935ef\",\n      \"html\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/src/hooks/use-toast.ts\"\n    }\n  }\n]\n</pre></body></html>",
+    "publishedTime": "Fri, 05 Jun 2026 10:39:04 GMT",
+    "title": "",
+    "url": "https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/hooks",
+    "usage": {
+      "tokens": 690
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 690
+    }
+  },
+  "status": 20000
+}

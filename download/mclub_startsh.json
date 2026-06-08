@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">#!/bin/bash\nwhile true; do\n  echo \"Starting Next.js dev server...\"\n  npx next dev -p 3000 -H 0.0.0.0 2>&1\n  echo \"Server exited with code $?. Restarting in 3 seconds...\"\n  sleep 3\ndone\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/start.sh",
+    "usage": {
+      "tokens": 108
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 108
+    }
+  },
+  "status": 20000
+}

@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">[\n  {\n    \"name\": \"[role]\",\n    \"path\": \"src/app/api/dashboard/[role]\",\n    \"sha\": \"b93002333777e39da7f21a4b601a83748348bca3\",\n    \"size\": 0,\n    \"url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/app/api/dashboard/[role]?ref=main\",\n    \"html_url\": \"https://github.com/mypathtravel101-cyber/mclub/tree/main/src/app/api/dashboard/[role]\",\n    \"git_url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/trees/b93002333777e39da7f21a4b601a83748348bca3\",\n    \"download_url\": null,\n    \"type\": \"dir\",\n    \"_links\": {\n      \"self\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/app/api/dashboard/[role]?ref=main\",\n      \"git\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/trees/b93002333777e39da7f21a4b601a83748348bca3\",\n      \"html\": \"https://github.com/mypathtravel101-cyber/mclub/tree/main/src/app/api/dashboard/[role]\"\n    }\n  },\n  {\n    \"name\": \"route.ts\",\n    \"path\": \"src/app/api/dashboard/route.ts\",\n    \"sha\": \"93370c50e8abf7906f3d4079faedb3e9e1a25b30\",\n    \"size\": 3175,\n    \"url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/app/api/dashboard/route.ts?ref=main\",\n    \"html_url\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/src/app/api/dashboard/route.ts\",\n    \"git_url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/93370c50e8abf7906f3d4079faedb3e9e1a25b30\",\n    \"download_url\": \"https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/src/app/api/dashboard/route.ts\",\n    \"type\": \"file\",\n    \"_links\": {\n      \"self\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/app/api/dashboard/route.ts?ref=main\",\n      \"git\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/93370c50e8abf7906f3d4079faedb3e9e1a25b30\",\n      \"html\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/src/app/api/dashboard/route.ts\"\n    }\n  }\n]\n</pre></body></html>",
+    "publishedTime": "Fri, 05 Jun 2026 10:39:04 GMT",
+    "title": "",
+    "url": "https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/app/api/dashboard",
+    "usage": {
+      "tokens": 686
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 686
+    }
+  },
+  "status": 20000
+}

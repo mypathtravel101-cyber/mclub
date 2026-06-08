@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">[\n  {\n    \"name\": \"websocket\",\n    \"path\": \"examples/websocket\",\n    \"sha\": \"cb3cf77a2e22665b2f92ac25f9eeb877dbae282e\",\n    \"size\": 0,\n    \"url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/examples/websocket?ref=main\",\n    \"html_url\": \"https://github.com/mypathtravel101-cyber/mclub/tree/main/examples/websocket\",\n    \"git_url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/trees/cb3cf77a2e22665b2f92ac25f9eeb877dbae282e\",\n    \"download_url\": null,\n    \"type\": \"dir\",\n    \"_links\": {\n      \"self\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/examples/websocket?ref=main\",\n      \"git\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/trees/cb3cf77a2e22665b2f92ac25f9eeb877dbae282e\",\n      \"html\": \"https://github.com/mypathtravel101-cyber/mclub/tree/main/examples/websocket\"\n    }\n  }\n]\n</pre></body></html>",
+    "publishedTime": "Fri, 05 Jun 2026 10:39:04 GMT",
+    "title": "",
+    "url": "https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/examples",
+    "usage": {
+      "tokens": 336
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 336
+    }
+  },
+  "status": 20000
+}

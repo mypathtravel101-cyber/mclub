@@ -58,6 +58,27 @@ enum TaskStatus {
   DONE        // 已完成
 }
 
+// ── FX Risk Modelling ──
+
+enum StressScenario {
+  MILD      // 溫和波動 5%
+  MODERATE  // 中度壓力 15%
+  EXTREME   // 極端衝擊 30%+
+}
+
+enum AlertStatus {
+  ACTIVE    // 生效中
+  TRIGGERED // 已觸發
+  DISMISSED // 已關閉
+}
+
+enum HedgingStatus {
+  PENDING    // 待配對
+  MATCHED    // 已配對
+  COMPLETED  // 已完成
+  CANCELLED  // 已取消
+}
+
 model User {
   id          String    @id @default(cuid())
   email       String    @unique
@@ -96,6 +117,11 @@ model User {
   
   // Event tasks assigned to this user
   assignedTasks EventTask[] @relation("TaskAssignee")
+  
+  // FX Risk
+  stressTests      FXStressTest[]     @relation("UserStressTests")
+  currencyAlerts   CurrencyAlert[]    @relation("UserCurrencyAlerts")
+  hedgingMatches   HedgingMatch[]     @relation("UserHedgingMatches")
   
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -298,4 +324,103 @@ model TimelineEvent {
   createdBy   User?    @relation("EventCreator", fields: [createdById], references: [id])
   
   createdAt   DateTime @default(now())
+}
+
+// ── FX Risk Modelling Models ──
+
+model FXStressTest {
+  id            String         @id @default(cuid())
+  userId        String         // 測試所屬用戶
+  user          User           @relation("UserStressTests", fields: [userId], references: [id])
+  
+  // 資產組合 (JSON string: [{productId, productName, currency, amount, weight}])
+  portfolio     String
+  
+  // 基準貨幣
+  baseCurrency  String         @default("HKD")
+  
+  // 三個情境結果 (JSON string: {mild: {totalLoss, items[]}, moderate: {totalLoss, items[]}, extreme: {totalLoss, items[]}})
+  results       String
+  
+  // 總資產值（基準貨幣）
+  totalAssetValue Float
+  
+  // 最大損失金額
+  maxLossAmount  Float
+  
+  // 報告 PDF URL
+  reportUrl     String?
+  
+  // 對沖配對
+  hedgingMatches HedgingMatch[]
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model CurrencyAlert {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation("UserCurrencyAlerts", fields: [userId], references: [id])
+  
+  // 貨幣對
+  fromCurrency  String       // e.g. "JPY"
+  toCurrency    String       // e.g. "HKD"
+  
+  // 觸發條件
+  threshold     Float        // 變動百分比 (e.g. 5.0 = 5%)
+  direction     String       @default("down") // "up" or "down"
+  
+  status        AlertStatus  @default(ACTIVE)
+  triggeredAt   DateTime?    // 觸發時間
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model HedgingMatch {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation("UserHedgingMatches", fields: [userId], references: [id])
+  
+  // 關聯的壓力測試
+  stressTestId  String?
+  stressTest    FXStressTest? @relation(fields: [stressTestId], references: [id])
+  
+  // 對沖工具類型
+  hedgingType   String        // "forward" | "option" | "natural" | "other"
+  fromCurrency  String        // 需要對沖的貨幣
+  toCurrency    String        // 目標貨幣
+  
+  // 金額
+  amount        Float         // 對沖金額
+  
+  // 配對狀態
+  status        HedgingStatus @default(PENDING)
+  
+  // 配對的金融機構 (JSON string)
+  matchedProvider String?     // {name, type, contact}
+  
+  // 報價信息 (JSON string)
+  quote         String?       // {rate, fee, expiryDate}
+  
+  // 佣金
+  commissionRate Float        @default(0)
+  commissionAmount Float      @default(0)
+  
+  notes         String?
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model CurrencyRate {
+  id            String   @id @default(cuid())
+  fromCurrency  String   // e.g. "USD"
+  toCurrency    String   // e.g. "HKD"
+  rate          Float    // 匯率
+  source        String   @default("api") // 數據來源
+  date          DateTime // 匯率日期
+  
+  @@unique([fromCurrency, toCurrency, date])
 }

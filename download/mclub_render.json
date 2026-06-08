@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">services:\n  - type: web\n    name: mclub\n    runtime: node\n    plan: free\n    buildCommand: npm ci && npx prisma generate && npm run build\n    startCommand: node server.js\n    envVars:\n      - key: NODE_ENV\n        value: production\n      - key: DATABASE_URL\n        value: file:./db/custom.db\n      - key: PORT\n        value: 3000\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/render.yaml",
+    "usage": {
+      "tokens": 137
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 137
+    }
+  },
+  "status": 20000
+}

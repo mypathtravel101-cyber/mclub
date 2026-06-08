@@ -148,6 +148,102 @@ export async function POST() {
       ],
     });
 
+    // ── FX Risk Seed Data ──
+
+    // Currency rates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    await db.currencyRate.createMany({
+      data: [
+        { fromCurrency: 'USD', toCurrency: 'HKD', rate: 7.82, source: 'demo', date: today },
+        { fromCurrency: 'USD', toCurrency: 'JPY', rate: 155.5, source: 'demo', date: today },
+        { fromCurrency: 'USD', toCurrency: 'RMB', rate: 7.25, source: 'demo', date: today },
+      ],
+    });
+
+    // FX Stress tests
+    const stressTest1 = await db.fXStressTest.create({
+      data: {
+        userId: endUser2.id,
+        portfolio: JSON.stringify([
+          { productId: 'demo1', productName: '香港物業', currency: 'HKD', amount: 5000000, weight: 0.5 },
+          { productId: 'demo2', productName: 'NPC基金', currency: 'USD', amount: 200000, weight: 0.2 },
+          { productId: 'demo3', productName: '日本物業', currency: 'JPY', amount: 50000000, weight: 0.2 },
+          { productId: 'demo4', productName: 'VFK健康產品', currency: 'RMB', amount: 3000000, weight: 0.1 },
+        ]),
+        baseCurrency: 'HKD',
+        results: JSON.stringify({
+          mild: { totalLoss: 378000, lossPercent: '2.5', items: [{ currency: 'USD', loss: 78200, percent: 5 }, { currency: 'JPY', loss: 251500, percent: 5 }, { currency: 'RMB', loss: 48300, percent: 5 }] },
+          moderate: { totalLoss: 1134000, lossPercent: '7.5', items: [{ currency: 'USD', loss: 234600, percent: 15 }, { currency: 'JPY', loss: 754500, percent: 15 }, { currency: 'RMB', loss: 144900, percent: 15 }] },
+          extreme: { totalLoss: 2268000, lossPercent: '15.0', items: [{ currency: 'USD', loss: 469200, percent: 30 }, { currency: 'JPY', loss: 1509000, percent: 30 }, { currency: 'RMB', loss: 289800, percent: 30 }] },
+        }),
+        totalAssetValue: 15120000,
+        maxLossAmount: 2268000,
+      },
+    });
+
+    const stressTest2 = await db.fXStressTest.create({
+      data: {
+        userId: endUser.id,
+        portfolio: JSON.stringify([
+          { productId: 'demo1', productName: 'VFK健康產品', currency: 'RMB', amount: 500000, weight: 0.6 },
+          { productId: 'demo2', productName: '日本物業', currency: 'JPY', amount: 10000000, weight: 0.4 },
+        ]),
+        baseCurrency: 'HKD',
+        results: JSON.stringify({
+          mild: { totalLoss: 91700, lossPercent: '2.5', items: [{ currency: 'RMB', loss: 16125, percent: 5 }, { currency: 'JPY', loss: 75575, percent: 5 }] },
+          moderate: { totalLoss: 275100, lossPercent: '7.5', items: [{ currency: 'RMB', loss: 48375, percent: 15 }, { currency: 'JPY', loss: 226725, percent: 15 }] },
+          extreme: { totalLoss: 550200, lossPercent: '15.0', items: [{ currency: 'RMB', loss: 96750, percent: 30 }, { currency: 'JPY', loss: 453450, percent: 30 }] },
+        }),
+        totalAssetValue: 3668000,
+        maxLossAmount: 550200,
+      },
+    });
+
+    // Currency alerts
+    await db.currencyAlert.createMany({
+      data: [
+        { userId: endUser2.id, fromCurrency: 'JPY', toCurrency: 'HKD', threshold: 5.0, direction: 'down', status: 'ACTIVE' },
+        { userId: endUser2.id, fromCurrency: 'USD', toCurrency: 'RMB', threshold: 3.0, direction: 'down', status: 'ACTIVE' },
+        { userId: endUser.id, fromCurrency: 'JPY', toCurrency: 'USD', threshold: 10.0, direction: 'down', status: 'TRIGGERED', triggeredAt: new Date() },
+      ],
+    });
+
+    // Hedging matches
+    await db.hedgingMatch.create({
+      data: {
+        userId: endUser2.id,
+        stressTestId: stressTest1.id,
+        hedgingType: 'forward',
+        fromCurrency: 'JPY',
+        toCurrency: 'HKD',
+        amount: 50000000,
+        status: 'PENDING',
+        matchedProvider: JSON.stringify({ name: '匯豐銀行', type: 'bank', contact: '+852-2233-3322' }),
+        quote: JSON.stringify({ rate: 0.0503, fee: 50000, expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() }),
+        commissionRate: 0.5,
+        commissionAmount: 250000,
+        notes: '對沖日圓下跌風險',
+      },
+    });
+
+    await db.hedgingMatch.create({
+      data: {
+        userId: endUser2.id,
+        stressTestId: stressTest1.id,
+        hedgingType: 'option',
+        fromCurrency: 'USD',
+        toCurrency: 'HKD',
+        amount: 200000,
+        status: 'MATCHED',
+        matchedProvider: JSON.stringify({ name: '中銀香港', type: 'bank', contact: '+852-2853-3322' }),
+        quote: JSON.stringify({ rate: 7.82, fee: 200, expiryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() }),
+        commissionRate: 0.3,
+        commissionAmount: 600,
+        notes: '美元看跌期權保護',
+      },
+    });
+
     return NextResponse.json({ message: '數據初始化成功', users: 8, products: 7, clients: 2, orders: 3 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

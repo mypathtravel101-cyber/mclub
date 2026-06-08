@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">[\n  {\n    \"name\": \"route.ts\",\n    \"path\": \"src/app/api/commissions/route.ts\",\n    \"sha\": \"7168faa0079ed7c8036d5cae700a59ed2e76d6ad\",\n    \"size\": 1078,\n    \"url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/app/api/commissions/route.ts?ref=main\",\n    \"html_url\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/src/app/api/commissions/route.ts\",\n    \"git_url\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/7168faa0079ed7c8036d5cae700a59ed2e76d6ad\",\n    \"download_url\": \"https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/src/app/api/commissions/route.ts\",\n    \"type\": \"file\",\n    \"_links\": {\n      \"self\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/app/api/commissions/route.ts?ref=main\",\n      \"git\": \"https://api.github.com/repos/mypathtravel101-cyber/mclub/git/blobs/7168faa0079ed7c8036d5cae700a59ed2e76d6ad\",\n      \"html\": \"https://github.com/mypathtravel101-cyber/mclub/blob/main/src/app/api/commissions/route.ts\"\n    }\n  }\n]\n</pre></body></html>",
+    "publishedTime": "Fri, 05 Jun 2026 10:39:04 GMT",
+    "title": "",
+    "url": "https://api.github.com/repos/mypathtravel101-cyber/mclub/contents/src/app/api/commissions",
+    "usage": {
+      "tokens": 387
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 387
+    }
+  },
+  "status": 20000
+}

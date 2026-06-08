@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">import { PrismaClient } from '@prisma/client'\n\nconst globalForPrisma = globalThis as unknown as {\n  prisma: PrismaClient | undefined\n}\n\n// In production, DATABASE_URL is set by start.sh (e.g. file:/app/db/custom.db)\n// In development, use the .env file value\nexport const db =\n  globalForPrisma.prisma ??\n  new PrismaClient({\n    log: ['error'],\n  })\n\nif (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db\nif (process.env.NODE_ENV === 'production') globalForPrisma.prisma = db\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/src/lib/db.ts",
+    "usage": {
+      "tokens": 178
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 178
+    }
+  },
+  "status": 20000
+}
