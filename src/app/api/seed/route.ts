@@ -244,6 +244,26 @@ export async function POST() {
       },
     });
 
+    // ── Notification Seed Data ──
+    await db.notification.createMany({
+      data: [
+        { userId: kenneth.id, type: 'ORDER_CREATED', title: '新訂單通知', message: '李太太已購買VFK健康產品，訂單金額HK$4,800', link: 'orders', read: false },
+        { userId: kenneth.id, type: 'COMMISSION_SETTLED', title: '佣金已分帳', message: 'VFK健康產品訂單佣金已分帳完成，共HK$2,640', read: true },
+        { userId: kenneth.id, type: 'SYSTEM_ANNOUNCEMENT', title: '系統更新', message: '報表分析功能已上線，歡迎使用', read: false },
+        { userId: calvin.id, type: 'ORDER_CREATED', title: '產品新訂單', message: '您的VFK健康產品收到新訂單', link: 'orders', read: false },
+        { userId: calvin.id, type: 'COMMISSION_SETTLED', title: '收入已發放', message: 'VFK健康產品佣金HK$1,920已發放', read: true },
+        { userId: agent.id, type: 'ORDER_CREATED', title: '客戶下單通知', message: '您推薦的李太太已購買VFK健康產品', link: 'clients', read: false },
+        { userId: agent.id, type: 'COMMISSION_SETTLED', title: '佣金已發放', message: 'VFK健康產品佣金HK$720已發放到您的帳戶', read: true },
+        { userId: agent.id, type: 'EVENT_INVITATION', title: '活動邀請', message: '您被邀請參加MCLUB 2026 夏季投資論壇', link: 'events', read: false },
+        { userId: agent.id, type: 'FX_ALERT_TRIGGERED', title: '匯率預警觸發', message: 'JPY/USD已下跌超過10%閾值', link: 'fx', read: false },
+        { userId: endUser.id, type: 'ORDER_STATUS_CHANGED', title: '訂單狀態更新', message: '您的VFK健康產品訂單已確認完成', link: 'orders', read: true },
+        { userId: endUser.id, type: 'EVENT_INVITATION', title: '活動邀請', message: 'MCLUB誠邀您參加2026夏季投資論壇', link: 'events', read: false },
+        { userId: endUser.id, type: 'EVENT_REMINDER', title: '活動提醒', message: '日本物業投資說明會即將開始', link: 'events', read: false },
+        { userId: endUser2.id, type: 'ORDER_CREATED', title: '訂單已建立', message: '您的NPC基金認購訂單已建立，待確認', link: 'orders', read: false },
+        { userId: endUser2.id, type: 'FX_ALERT_TRIGGERED', title: '匯率預警觸發', message: 'JPY/HKD下跌超過5%閾值，請注意風險', link: 'fx', read: false },
+      ],
+    });
+
     return NextResponse.json({ message: '數據初始化成功', users: 8, products: 7, clients: 2, orders: 3 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

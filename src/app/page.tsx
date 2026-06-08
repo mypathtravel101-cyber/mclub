@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 
 // ── Types ──
 type UserRole = 'MCLUB_STAFF' | 'SME_OWNER' | 'AGENT' | 'END_USER';
@@ -29,6 +30,10 @@ interface FXStressTest { id: string; userId: string; portfolio: string; baseCurr
 interface CurrencyAlert { id: string; userId: string; fromCurrency: string; toCurrency: string; threshold: number; direction: string; status: AlertStatus; triggeredAt?: string; createdAt: string; }
 interface HedgingMatch { id: string; userId: string; stressTestId?: string; hedgingType: string; fromCurrency: string; toCurrency: string; amount: number; status: HedgingStatus; matchedProvider?: string; quote?: string; commissionRate: number; commissionAmount: number; notes?: string; createdAt: string; }
 interface CurrencyRate { id: string; fromCurrency: string; toCurrency: string; rate: number; source: string; date: string; }
+
+// ── Notification Types ──
+type NotificationType = 'ORDER_CREATED' | 'ORDER_STATUS_CHANGED' | 'COMMISSION_SETTLED' | 'EVENT_INVITATION' | 'EVENT_REMINDER' | 'FX_ALERT_TRIGGERED' | 'SYSTEM_ANNOUNCEMENT';
+interface Notification { id: string; userId: string; type: NotificationType; title: string; message: string; read: boolean; link?: string; createdAt: string; }
 
 // ── API Helper ──
 const API_BASE = '/api';
@@ -153,22 +158,24 @@ function Sidebar({ current, onChange, role, onLogout }: { current: string; onCha
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '客戶', icon: '👥' },
       { key: 'orders', label: '訂單', icon: '📋' }, { key: 'products', label: '產品', icon: '📦' },
       { key: 'commissions', label: '佣金', icon: '💰' }, { key: 'events', label: '活動', icon: '🎉' },
-      { key: 'fx', label: 'FX風險', icon: '💱' },
+      { key: 'fx', label: 'FX風險', icon: '💱' }, { key: 'analytics', label: '報表', icon: '📈' },
     ],
     SME_OWNER: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'products', label: '產品', icon: '📦' },
       { key: 'orders', label: '訂單', icon: '📋' }, { key: 'commissions', label: '收入', icon: '💰' },
       { key: 'events', label: '活動', icon: '🎉' }, { key: 'fx', label: 'FX風險', icon: '💱' },
+      { key: 'analytics', label: '報表', icon: '📈' },
     ],
     AGENT: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '客戶', icon: '👥' },
       { key: 'commissions', label: '佣金', icon: '💰' }, { key: 'products', label: '產品', icon: '📦' },
       { key: 'events', label: '活動', icon: '🎉' }, { key: 'fx', label: 'FX風險', icon: '💱' },
+      { key: 'analytics', label: '報表', icon: '📈' },
     ],
     END_USER: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'orders', label: '產品', icon: '📦' },
       { key: 'events', label: '活動', icon: '🎉' }, { key: 'fx', label: 'FX風險', icon: '💱' },
-      { key: 'profile', label: '會員', icon: '⭐' },
+      { key: 'analytics', label: '報表', icon: '📈' }, { key: 'profile', label: '會員', icon: '⭐' },
     ],
   };
   const items = menus[role] || [];
@@ -1709,7 +1716,272 @@ function MemberProfile({ user }: { user: User }) {
   );
 }
 
+// ── Analytics View ──
+const CHART_COLORS = { gold: '#D4AF37', blue: '#4A90D9', green: '#27AE60', red: '#E74C3C', purple: '#8E44AD', teal: '#1ABC9C', yellow: '#E2B93B' };
+
+function AnalyticsView({ user }: { user: User }) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await apiFetch('/analytics', user);
+      if (res.error) { setError(true); } else { setData(res); }
+    } catch { setError(true); }
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  if (loading) return (
+    <div className="p-8 text-center">
+      <div className="inline-block w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mb-3"></div>
+      <p className="text-[#5a6a7a] text-sm">載入報表數據...</p>
+    </div>
+  );
+
+  if (error) return (
+    <div className="p-8 text-center">
+      <p className="text-red-400 mb-2">載入報表失敗</p>
+      <p className="text-xs text-[#5a6a7a] mb-4">請檢查網絡連接後重試</p>
+      <button onClick={loadData} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>重試</button>
+    </div>
+  );
+
+  const fmt = (n: number) => n?.toLocaleString() || '0';
+
+  // ── MCLUB_STAFF Analytics ──
+  if (user.role === 'MCLUB_STAFF') {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-xl font-bold">📊 報表分析</h2>
+
+        {/* Monthly Revenue Trend */}
+        <div className="mclub-card">
+          <h3 className="font-bold mb-4">月度營收趨勢</h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={data.monthlyRevenue || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
+              <XAxis dataKey="month" stroke="#8899aa" fontSize={12} />
+              <YAxis stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${(v / 1000).toFixed(0)}k`} />
+              <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '營收']} />
+              <Line type="monotone" dataKey="revenue" stroke={CHART_COLORS.gold} strokeWidth={3} dot={{ fill: CHART_COLORS.gold, r: 5 }} activeDot={{ r: 7 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Order Status Distribution */}
+          <div className="mclub-card">
+            <h3 className="font-bold mb-4">訂單狀態分佈</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie data={data.orderStatusDist || []} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  {(data.orderStatusDist || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Client Level Distribution */}
+          <div className="mclub-card">
+            <h3 className="font-bold mb-4">客戶等級分佈</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={data.clientLevelDist || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
+                <XAxis dataKey="name" stroke="#8899aa" fontSize={12} />
+                <YAxis stroke="#8899aa" fontSize={12} />
+                <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  {(data.clientLevelDist || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Commission Breakdown */}
+          <div className="mclub-card">
+            <h3 className="font-bold mb-4">佣金分帳（按角色）</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={data.commissionBreakdown || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
+                <XAxis dataKey="name" stroke="#8899aa" fontSize={12} />
+                <YAxis stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '佣金']} />
+                <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+                  {(data.commissionBreakdown || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Top Products */}
+          <div className="mclub-card">
+            <h3 className="font-bold mb-4">產品營收排名</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={(data.topProducts || []).map((p: any) => ({ ...p, name: p.name.length > 6 ? p.name.slice(0, 6) + '…' : p.name }))} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
+                <XAxis type="number" stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${(v / 1000).toFixed(0)}k`} />
+                <YAxis type="category" dataKey="name" stroke="#8899aa" fontSize={11} width={60} />
+                <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '營收']} />
+                <Bar dataKey="revenue" fill={CHART_COLORS.gold} radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── SME_OWNER Analytics ──
+  if (user.role === 'SME_OWNER') {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-xl font-bold">📊 報表分析</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <StatCard label="總營收" value={`HK$${fmt(data.totalRevenue)}`} gold />
+          <StatCard label="產品數" value={(data.productRevenue || []).length} />
+        </div>
+
+        {/* Monthly Revenue Trend */}
+        <div className="mclub-card">
+          <h3 className="font-bold mb-4">月度營收趨勢</h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={data.monthlyRevenue || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
+              <XAxis dataKey="month" stroke="#8899aa" fontSize={12} />
+              <YAxis stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${(v / 1000).toFixed(0)}k`} />
+              <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '營收']} />
+              <Line type="monotone" dataKey="revenue" stroke={CHART_COLORS.gold} strokeWidth={3} dot={{ fill: CHART_COLORS.gold, r: 5 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Product Revenue */}
+        <div className="mclub-card">
+          <h3 className="font-bold mb-4">產品營收分佈</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={(data.productRevenue || []).map((p: any) => ({ ...p, name: p.name.length > 6 ? p.name.slice(0, 6) + '…' : p.name }))} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
+              <XAxis type="number" stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${(v / 1000).toFixed(0)}k`} />
+              <YAxis type="category" dataKey="name" stroke="#8899aa" fontSize={11} width={60} />
+              <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '營收']} />
+              <Bar dataKey="revenue" fill={CHART_COLORS.teal} radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
+  }
+
+  // ── AGENT Analytics ──
+  if (user.role === 'AGENT') {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-xl font-bold">📊 報表分析</h2>
+        <div className="grid grid-cols-3 gap-4">
+          <StatCard label="客戶總數" value={data.totalClients} />
+          <StatCard label="轉化率" value={`${data.conversionRate}%`} gold />
+          <StatCard label="有消費客戶" value={data.totalClients ? Math.round(data.totalClients * data.conversionRate / 100) : 0} />
+        </div>
+
+        {/* Commission Trend */}
+        <div className="mclub-card">
+          <h3 className="font-bold mb-4">月度佣金趨勢</h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={data.monthlyCommission || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
+              <XAxis dataKey="month" stroke="#8899aa" fontSize={12} />
+              <YAxis stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${fmt(v)}`} />
+              <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '佣金']} />
+              <Line type="monotone" dataKey="commission" stroke={CHART_COLORS.gold} strokeWidth={3} dot={{ fill: CHART_COLORS.gold, r: 5 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Client Conversion */}
+        <div className="mclub-card">
+          <h3 className="font-bold mb-4">客戶等級轉化</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={data.clientConversion || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
+              <XAxis dataKey="name" stroke="#8899aa" fontSize={12} />
+              <YAxis stroke="#8899aa" fontSize={12} />
+              <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} />
+              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                {(data.clientConversion || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
+  }
+
+  // ── END_USER Analytics ──
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold">📊 消費分析</h2>
+      <div className="grid grid-cols-2 gap-4">
+        <StatCard label="總消費" value={`HK$${fmt(data.totalSpent)}`} gold />
+        <StatCard label="訂單數" value={data.orderCount} />
+      </div>
+
+      {/* Spending by Category */}
+      <div className="mclub-card">
+        <h3 className="font-bold mb-4">消費分類分佈</h3>
+        <ResponsiveContainer width="100%" height={280}>
+          <PieChart>
+            <Pie data={data.categorySpending || []} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>
+              {(data.categorySpending || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+            </Pie>
+            <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '金額']} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Category Breakdown Bar */}
+      <div className="mclub-card">
+        <h3 className="font-bold mb-4">分類消費金額</h3>
+        <ResponsiveContainer width="100%" height={250}>
+          <BarChart data={data.categorySpending || []}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
+            <XAxis dataKey="name" stroke="#8899aa" fontSize={12} />
+            <YAxis stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${(v / 1000).toFixed(0)}k`} />
+            <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '金額']} />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+              {(data.categorySpending || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ──
+const notificationIcon: Record<NotificationType, string> = {
+  ORDER_CREATED: '📋', ORDER_STATUS_CHANGED: '🔄', COMMISSION_SETTLED: '💰',
+  EVENT_INVITATION: '🎉', EVENT_REMINDER: '⏰', FX_ALERT_TRIGGERED: '💱', SYSTEM_ANNOUNCEMENT: '📢',
+};
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return '剛剛';
+  if (mins < 60) return `${mins}分鐘前`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}小時前`;
+  const days = Math.floor(hrs / 24);
+  return `${days}天前`;
+}
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(() => {
     if (typeof window === 'undefined') return null;
@@ -1720,6 +1992,12 @@ export default function Home() {
   const [dashboardError, setDashboardError] = useState(false);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const dashboardLoadedRef = useRef(false);
+
+  // ── Notification State ──
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const notifPanelRef = useRef<HTMLDivElement>(null);
 
   const loadDashboard = useCallback(async () => {
     if (!user) return;
@@ -1750,13 +2028,69 @@ export default function Home() {
     }
   }, [user, loadDashboard]);
 
+  // ── Notification Loading & Polling ──
+  const loadNotifications = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await apiFetch('/notifications', user);
+      if (res.notifications) {
+        setNotifications(res.notifications);
+        setUnreadCount(res.unreadCount || 0);
+      }
+    } catch {}
+  }, [user]);
+
+  useEffect(() => {
+    if (user) { loadNotifications(); }
+  }, [user, loadNotifications]);
+
+  // Poll every 30 seconds
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [user, loadNotifications]);
+
+  // Close notif panel when clicking outside
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (notifPanelRef.current && !notifPanelRef.current.contains(e.target as Node)) {
+        setShowNotifPanel(false);
+      }
+    };
+    if (showNotifPanel) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showNotifPanel]);
+
+  const markNotifRead = async (id: string) => {
+    if (!user) return;
+    await apiFetch(`/notifications/${id}`, user, { method: 'PATCH' });
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  const markAllRead = async () => {
+    if (!user) return;
+    await apiFetch('/notifications', user, { method: 'PATCH', body: JSON.stringify({ action: 'markAllRead' }) });
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setUnreadCount(0);
+  };
+
+  const deleteNotif = async (id: string) => {
+    if (!user) return;
+    await apiFetch(`/notifications/${id}`, user, { method: 'DELETE' });
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    const deleted = notifications.find(n => n.id === id);
+    if (deleted && !deleted.read) setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
   // Navigate between tabs
   const handleNavChange = useCallback((nav: string) => {
     setCurrentNav(nav);
   }, []);
 
   const handleLogin = (u: User) => { setUser(u); setCurrentNav('overview'); dashboardLoadedRef.current = false; };
-  const handleLogout = () => { setUser(null); localStorage.removeItem('mclub_user'); setDashboardData(null); dashboardLoadedRef.current = false; };
+  const handleLogout = () => { setUser(null); localStorage.removeItem('mclub_user'); setDashboardData(null); dashboardLoadedRef.current = false; setNotifications([]); setUnreadCount(0); };
 
   if (!user) return <LoginPage onLogin={handleLogin} />;
 
@@ -1769,6 +2103,7 @@ export default function Home() {
       case 'commissions': return <CommissionList user={user} />;
       case 'events': return <EventList user={user} />;
       case 'fx': return <FXRisk user={user} />;
+      case 'analytics': return <AnalyticsView user={user} />;
       case 'profile': return <MemberProfile user={user} />;
       default: return <OverviewDashboard user={user} data={dashboardData} error={dashboardError} loading={dashboardLoading} onRetry={loadDashboard} onNavigate={handleNavChange} />;
     }
@@ -1783,7 +2118,54 @@ export default function Home() {
             <p className="text-xs text-[#5a6a7a]">{roleLabel[user.role]}</p>
             <p className="font-bold">{user.name}</p>
           </div>
-          <button onClick={handleLogout} className="md:hidden text-xs text-[#5a6a7a]">登出</button>
+          <div className="flex items-center gap-3">
+            {/* Notification Bell */}
+            <div className="relative" ref={notifPanelRef}>
+              <button onClick={() => setShowNotifPanel(!showNotifPanel)} className="relative p-2 hover:bg-[#1f2b3d] rounded-lg transition-colors">
+                <span className="text-lg">🔔</span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                )}
+              </button>
+
+              {/* Notification Dropdown */}
+              {showNotifPanel && (
+                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto bg-[#1a2330] border border-[#2a3a4e] rounded-xl shadow-2xl z-50" style={{ scrollbarWidth: 'thin', scrollbarColor: '#2a3a4e transparent' }}>
+                  <div className="flex items-center justify-between p-3 border-b border-[#2a3a4e]">
+                    <h3 className="font-bold text-sm">通知</h3>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead} className="text-xs text-gold hover:underline">全部已讀</button>
+                    )}
+                  </div>
+                  <div className="divide-y divide-[#2a3a4e]">
+                    {notifications.length === 0 && (
+                      <div className="p-6 text-center">
+                        <p className="text-2xl mb-2">🔕</p>
+                        <p className="text-sm text-[#5a6a7a]">暫無通知</p>
+                      </div>
+                    )}
+                    {notifications.map(n => (
+                      <div key={n.id} onClick={() => { if (!n.read) markNotifRead(n.id); if (n.link) { handleNavChange(n.link); setShowNotifPanel(false); } }} className={`p-3 cursor-pointer hover:bg-[#1f2b3d] transition-colors ${!n.read ? 'bg-[#1f2b3d]/50' : ''}`}>
+                        <div className="flex items-start gap-2">
+                          <span className="text-lg mt-0.5 shrink-0">{notificationIcon[n.type]}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className={`text-sm font-medium truncate ${!n.read ? 'text-white' : 'text-[#8899aa]'}`}>{n.title}</p>
+                              {!n.read && <span className="w-2 h-2 rounded-full bg-gold shrink-0"></span>}
+                            </div>
+                            <p className="text-xs text-[#5a6a7a] mt-0.5 line-clamp-2">{n.message}</p>
+                            <p className="text-[10px] text-[#5a6a7a] mt-1">{timeAgo(n.createdAt)}</p>
+                          </div>
+                          <button onClick={(e) => { e.stopPropagation(); deleteNotif(n.id); }} className="text-[#5a6a7a] hover:text-red-400 text-xs shrink-0 p-1">✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <button onClick={handleLogout} className="md:hidden text-xs text-[#5a6a7a]">登出</button>
+          </div>
         </div>
         {renderContent()}
       </main>
