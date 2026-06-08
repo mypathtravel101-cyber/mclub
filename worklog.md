@@ -153,3 +153,90 @@ Stage Summary:
 - Global search across 3 entity types
 - Debounced search with results dropdown
 - Click-to-navigate integration
+
+---
+Task ID: 7
+Agent: full-stack-developer
+Task: Add Order Creation Flow
+
+Work Log:
+- Added "➕ 新增訂單" button to OrderList for MCLUB_STAFF and AGENT roles
+- Order creation form: Product dropdown (auto-fills amount), Client dropdown, Amount, Currency (HKD/USD/RMB/JPY), Agent field, Notes
+- Updated /api/orders POST to handle endUserId creation, auto-set agentId
+- Added /api/orders/[id] GET for single order detail
+- Committed and pushed as: feat: add order creation, product CRUD, client notes, enhanced dashboard, order detail
+
+Stage Summary:
+- Full order creation workflow with product/client selection
+- Commission preview on order detail
+- Backend: order creation with auto-timeline event
+
+---
+Task ID: 8
+Agent: full-stack-developer
+Task: Add Product CRUD management
+
+Work Log:
+- Added "+ 新增產品" button for MCLUB_STAFF and SME_OWNER
+- Edit (✏️) and Delete (🗑️) buttons per product with ownership checks
+- Product form: Name, Category (6 options), Description, Key Points, Min Investment, Icon, Color, Commission Rules (Agent/SME/MCLUB %)
+- Updated /api/products with POST, PATCH, DELETE handlers
+- SME Owner dropdown for MCLUB_STAFF when creating products
+- Committed and pushed as: feat: add order creation, product CRUD, client notes, enhanced dashboard, order detail
+
+Stage Summary:
+- Full product CRUD with ownership validation
+- Commission rules configuration per product
+- Category-based organization
+
+---
+Task ID: 9
+Agent: full-stack-developer
+Task: Add Client Notes & Follow-up
+
+Work Log:
+- Added "📝 新增備註" and "📞 快速跟進" buttons above timeline in client detail
+- Note form: Event Type dropdown (備註/跟進/升級/狀態變更), Title, Description
+- Quick follow-up: One-click creates a follow-up timeline event
+- Created /api/clients/[id]/timeline POST endpoint
+- Enhanced timeline display with event type badges
+- Committed and pushed as: feat: add order creation, product CRUD, client notes, enhanced dashboard, order detail
+
+Stage Summary:
+- Client note creation directly from UI
+- Quick follow-up one-click action
+- Timeline event type badges
+
+---
+Task ID: 10
+Agent: full-stack-developer
+Task: Enhanced Overview Dashboard with Mini Charts
+
+Work Log:
+- MCLUB_STAFF: Revenue sparkline (6 months) + order status donut chart
+- AGENT: Commission trend sparkline
+- SME_OWNER: Revenue trend sparkline
+- All charts at 120px height using Recharts, analytics data from /api/analytics
+- Committed and pushed as: feat: add order creation, product CRUD, client notes, enhanced dashboard, order detail
+
+Stage Summary:
+- Mini Recharts on overview dashboard for all roles
+- Sparkline and donut chart integrations
+
+---
+Task ID: 11
+Agent: full-stack-developer
+Task: Add Order Detail View with Commission Preview
+
+Work Log:
+- Clicking order card now shows detail view with back button
+- Commission Preview: calculated split (Agent/SME/MCLUB with % and amounts)
+- Commission History: actual Commission records when settled
+- Order Timeline of status changes
+- Status action buttons inline for MCLUB_STAFF
+- Committed and pushed as: feat: add order creation, product CRUD, client notes, enhanced dashboard, order detail
+
+Stage Summary:
+- Order detail view with full info
+- Commission split preview based on product rules
+- Commission history for settled orders
