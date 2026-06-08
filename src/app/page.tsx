@@ -9,9 +9,9 @@ type OrderStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'SETTLED';
 type MemberLevel = 'PLAN_A' | 'PLAN_B' | 'PLAN_C' | 'FULL';
 
 interface User { id: string; email: string; name: string; phone?: string; role: UserRole; avatar?: string; }
-interface Product { id: string; name: string; category: string; description: string; keyPoints: string; minInvestment?: string; icon?: string; color?: string; commissionRules?: string; smeOwnerId: string; smeOwner?: { name: string }; }
+interface Product { id: string; name: string; category: string; description: string; keyPoints: string; minInvestment?: string; icon?: string; color?: string; commissionRules?: string; smeOwnerId: string; smeOwner?: { id?: string; name: string }; }
 interface Client { id: string; name: string; phone?: string; email?: string; source?: string; memberLevel: MemberLevel; agentId: string; totalSpent: number; agent?: { id: string; name: string }; orders?: Order[]; timelineEvents?: TimelineEvent[]; }
-interface Order { id: string; productId: string; endUserId: string; clientId: string; agentId?: string; status: OrderStatus; amount: number; currency: string; notes?: string; commissionSettled: boolean; product?: Product; client?: { name: string; memberLevel?: string }; endUser?: { name: string }; commissions?: Commission[]; }
+interface Order { id: string; productId: string; endUserId: string; clientId: string; agentId?: string; status: OrderStatus; amount: number; currency: string; notes?: string; commissionSettled: boolean; product?: Product; client?: { name: string; memberLevel?: string }; endUser?: { name: string }; agent?: { id: string; name: string }; commissions?: Commission[]; timelineEvents?: TimelineEvent[]; }
 interface Commission { id: string; orderId: string; recipientId: string; role: UserRole; amount: number; status: 'PENDING' | 'PAID'; order?: { product?: { name: string; icon: string }; client?: { name: string } }; recipient?: { name: string; role: string }; }
 interface TimelineEvent { id: string; clientId: string; orderId?: string; eventType: string; title: string; description?: string; createdById?: string; createdBy?: { name: string }; createdAt: string; }
 
@@ -228,7 +228,7 @@ function StatCard({ label, value, sub, gold }: { label: string; value: string | 
 }
 
 // ── Overview Dashboard ──
-function OverviewDashboard({ user, data, error, loading, onRetry, onNavigate }: { user: User; data: any; error: boolean; loading: boolean; onRetry: () => void; onNavigate: (v: string) => void }) {
+function OverviewDashboard({ user, data, error, loading, onRetry, onNavigate, analyticsData }: { user: User; data: any; error: boolean; loading: boolean; onRetry: () => void; onNavigate: (v: string) => void; analyticsData: any }) {
   if (error) return (
     <div className="p-8 text-center">
       <p className="text-red-400 mb-2">載入失敗</p>
@@ -243,6 +243,7 @@ function OverviewDashboard({ user, data, error, loading, onRetry, onNavigate }: 
     </div>
   );
   const fmt = (n: number) => n?.toLocaleString() || '0';
+  const a = analyticsData;
 
   if (user.role === 'MCLUB_STAFF') {
     return (
@@ -254,6 +255,32 @@ function OverviewDashboard({ user, data, error, loading, onRetry, onNavigate }: 
           <StatCard label="總營收" value={`HK$${fmt(data.totalRevenue)}`} gold />
           <StatCard label="已完成/已分帳" value={`${data.completedOrders} / ${data.settledOrders}`} />
         </div>
+        {/* Mini Charts Row */}
+        {a && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mclub-card">
+              <h4 className="font-bold text-sm mb-2">📈 月度營收趨勢</h4>
+              <ResponsiveContainer width="100%" height={120}>
+                <LineChart data={a.monthlyRevenue || []}>
+                  <XAxis dataKey="month" stroke="#5a6a7a" fontSize={10} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '營收']} />
+                  <Line type="monotone" dataKey="revenue" stroke="#D4AF37" strokeWidth={2} dot={{ fill: '#D4AF37', r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mclub-card">
+              <h4 className="font-bold text-sm mb-2">📊 訂單狀態</h4>
+              <ResponsiveContainer width="100%" height={120}>
+                <PieChart>
+                  <Pie data={a.orderStatusDist || []} cx="50%" cy="50%" outerRadius={45} innerRadius={25} dataKey="value">
+                    {(a.orderStatusDist || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
         <div className="mclub-card">
           <h3 className="font-bold mb-4">產品銷售概覽</h3>
           <div className="space-y-3">
@@ -292,6 +319,19 @@ function OverviewDashboard({ user, data, error, loading, onRetry, onNavigate }: 
           <StatCard label="我的收入" value={`HK$${fmt(data.myCommissions)}`} gold />
           <StatCard label="待發放" value={`HK$${fmt(data.myPendingCommissions)}`} />
         </div>
+        {/* Mini Revenue Trend Chart */}
+        {a && a.monthlyRevenue && (
+          <div className="mclub-card">
+            <h4 className="font-bold text-sm mb-2">📈 月度營收趨勢</h4>
+            <ResponsiveContainer width="100%" height={120}>
+              <LineChart data={a.monthlyRevenue || []}>
+                <XAxis dataKey="month" stroke="#5a6a7a" fontSize={10} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '營收']} />
+                <Line type="monotone" dataKey="revenue" stroke="#1ABC9C" strokeWidth={2} dot={{ fill: '#1ABC9C', r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
         <div className="mclub-card">
           <h3 className="font-bold mb-4">最近訂單</h3>
           {(data.smeProductOrders || []).map((o: any) => (
@@ -319,6 +359,19 @@ function OverviewDashboard({ user, data, error, loading, onRetry, onNavigate }: 
           <StatCard label="我的客戶" value={data.totalClients} />
           <StatCard label="總訂單" value={data.totalOrders} />
         </div>
+        {/* Mini Commission Trend Chart */}
+        {a && a.monthlyCommission && (
+          <div className="mclub-card">
+            <h4 className="font-bold text-sm mb-2">📈 佣金趨勢</h4>
+            <ResponsiveContainer width="100%" height={120}>
+              <LineChart data={a.monthlyCommission || []}>
+                <XAxis dataKey="month" stroke="#5a6a7a" fontSize={10} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '佣金']} />
+                <Line type="monotone" dataKey="commission" stroke="#D4AF37" strokeWidth={2} dot={{ fill: '#D4AF37', r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
         <div className="mclub-card">
           <h3 className="font-bold mb-4">我的客戶</h3>
           {(data.myClients || []).map((c: any) => (
@@ -379,6 +432,8 @@ function ClientList({ user }: { user: User }) {
   const [showAdd, setShowAdd] = useState(false);
   const [clientDetail, setClientDetail] = useState<any>(null);
   const [newClient, setNewClient] = useState({ name: '', phone: '', email: '', source: '', memberLevel: 'PLAN_A' as MemberLevel });
+  const [showAddNote, setShowAddNote] = useState(false);
+  const [newNote, setNewNote] = useState({ eventType: 'note' as string, title: '', description: '' });
 
   const loadClients = useCallback(async () => {
     const res = await apiFetch('/clients', user);
@@ -404,7 +459,28 @@ function ClientList({ user }: { user: User }) {
     loadClients();
   };
 
+  const addNote = async () => {
+    if (!selected || !newNote.title) return;
+    await apiFetch(`/clients/${selected}/timeline`, user, {
+      method: 'POST',
+      body: JSON.stringify({ eventType: newNote.eventType, title: newNote.title, description: newNote.description }),
+    });
+    setShowAddNote(false);
+    setNewNote({ eventType: 'note', title: '', description: '' });
+    loadDetail(selected);
+  };
+
+  const quickFollowUp = async () => {
+    if (!selected) return;
+    await apiFetch(`/clients/${selected}/timeline`, user, {
+      method: 'POST',
+      body: JSON.stringify({ eventType: 'followup', title: '📞 快速跟進', description: '已進行電話跟進' }),
+    });
+    loadDetail(selected);
+  };
+
   if (selected && clientDetail) {
+    const eventTypeLabel: Record<string, string> = { purchase: '🛒 購買', upgrade: '⬆️ 升級', followup: '📞 跟進', note: '📝 備註', status_change: '🔄 狀態變更' };
     return (
       <div className="space-y-4">
         <button onClick={() => { setSelected(null); setClientDetail(null); }} className="text-sm text-gold hover:underline">← 返回客戶列表</button>
@@ -425,15 +501,54 @@ function ClientList({ user }: { user: User }) {
         </div>
 
         <div className="mclub-card">
-          <h4 className="font-bold mb-4">📋 客戶Timeline</h4>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-bold">📋 客戶Timeline</h4>
+            <div className="flex items-center gap-2">
+              <button onClick={quickFollowUp} className="px-3 py-1.5 rounded-lg text-xs border border-[#2a3a4e] hover:border-gold hover:text-gold transition-colors">
+                📞 快速跟進
+              </button>
+              <button onClick={() => setShowAddNote(!showAddNote)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>
+                📝 新增備註
+              </button>
+            </div>
+          </div>
+
+          {showAddNote && (
+            <div className="bg-[#0f1923] rounded-lg p-3 mb-4 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs text-[#5a6a7a] mb-1">事件類型</label>
+                  <select value={newNote.eventType} onChange={e => setNewNote({ ...newNote, eventType: e.target.value })} className="w-full p-2 text-sm">
+                    <option value="note">📝 備註</option>
+                    <option value="followup">📞 跟進</option>
+                    <option value="upgrade">⬆️ 升級</option>
+                    <option value="status_change">🔄 狀態變更</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-[#5a6a7a] mb-1">標題 *</label>
+                  <input value={newNote.title} onChange={e => setNewNote({ ...newNote, title: e.target.value })} className="w-full p-2 text-sm" placeholder="輸入標題" />
+                </div>
+              </div>
+              <textarea value={newNote.description} onChange={e => setNewNote({ ...newNote, description: e.target.value })} className="w-full p-2 text-sm" rows={2} placeholder="描述（選填）" />
+              <div className="flex gap-2">
+                <button onClick={addNote} className="px-3 py-1.5 rounded-lg text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>確認</button>
+                <button onClick={() => setShowAddNote(false)} className="px-3 py-1.5 rounded-lg text-xs text-[#8899aa] border border-[#2a3a4e]">取消</button>
+              </div>
+            </div>
+          )}
+
           <div className="relative pl-8 space-y-4">
             <div className="timeline-line" />
             {(clientDetail.timelineEvents || []).map((e: TimelineEvent) => (
               <div key={e.id} className="relative">
                 <div className="timeline-dot" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium">{e.title}</p>
-                  {e.description && <p className="text-xs text-[#8899aa]">{e.description}</p>}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#2a3a4e] text-[#8899aa]">{eventTypeLabel[e.eventType] || e.eventType}</span>
+                    <p className="text-sm font-medium">{e.title}</p>
+                  </div>
+                  {e.description && <p className="text-xs text-[#8899aa] mt-0.5">{e.description}</p>}
                   <p className="text-[10px] text-[#5a6a7a]">{new Date(e.createdAt).toLocaleDateString('zh-HK')} {e.createdBy?.name && `— ${e.createdBy.name}`}</p>
                 </div>
               </div>
@@ -523,6 +638,13 @@ function ClientList({ user }: { user: User }) {
 // ── Order List ──
 function OrderList({ user }: { user: User }) {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [formProducts, setFormProducts] = useState<Product[]>([]);
+  const [formClients, setFormClients] = useState<Client[]>([]);
+  const [formAgents, setFormAgents] = useState<User[]>([]);
+  const [newOrder, setNewOrder] = useState({ productId: '', clientId: '', amount: '', currency: 'HKD', notes: '', agentId: '' });
+  const [submitting, setSubmitting] = useState(false);
 
   const loadOrders = useCallback(async () => {
     const res = await apiFetch('/orders', user);
@@ -533,9 +655,21 @@ function OrderList({ user }: { user: User }) {
     loadOrders();
   }, [loadOrders]);
 
+  // Load form data when create form opens
+  useEffect(() => {
+    if (showCreate) {
+      apiFetch('/products', user).then(res => { if (res.products) setFormProducts(res.products); });
+      apiFetch('/clients', user).then(res => { if (res.clients) setFormClients(res.clients); });
+      if (user.role === 'MCLUB_STAFF') {
+        apiFetch('/users', user).then(res => { if (res.users) setFormAgents(res.users.filter((u: User) => u.role === 'AGENT')); });
+      }
+    }
+  }, [showCreate, user]);
+
   const updateStatus = async (id: string, status: OrderStatus) => {
     await apiFetch(`/orders/${id}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
     loadOrders();
+    if (selectedOrder) loadOrderDetail(id);
   };
 
   const settleOrder = async (id: string) => {
@@ -543,6 +677,36 @@ function OrderList({ user }: { user: User }) {
     const res = await apiFetch(`/orders/${id}/settle`, user, { method: 'POST' });
     if (res.message) alert(res.message);
     loadOrders();
+    if (selectedOrder) loadOrderDetail(id);
+  };
+
+  const loadOrderDetail = async (id: string) => {
+    const res = await apiFetch(`/orders/${id}`, user);
+    if (res.order) setSelectedOrder(res.order);
+  };
+
+  const createOrder = async () => {
+    if (!newOrder.productId || !newOrder.clientId || !newOrder.amount) return;
+    setSubmitting(true);
+    try {
+      const body: any = {
+        productId: newOrder.productId,
+        clientId: newOrder.clientId,
+        amount: newOrder.amount,
+        currency: newOrder.currency,
+        notes: newOrder.notes || undefined,
+      };
+      if (user.role === 'AGENT') {
+        body.agentId = user.id;
+      } else if (newOrder.agentId) {
+        body.agentId = newOrder.agentId;
+      }
+      await apiFetch('/orders', user, { method: 'POST', body: JSON.stringify(body) });
+      setShowCreate(false);
+      setNewOrder({ productId: '', clientId: '', amount: '', currency: 'HKD', notes: '', agentId: '' });
+      loadOrders();
+    } catch { alert('建立訂單失敗'); }
+    setSubmitting(false);
   };
 
   const exportCSV = async () => {
@@ -557,17 +721,199 @@ function OrderList({ user }: { user: User }) {
     window.URL.revokeObjectURL(url);
   };
 
+  // ── Order Detail View (Feature 11) ──
+  if (selectedOrder) {
+    const o = selectedOrder;
+    let rules = { agentRate: 0, smeRate: 0, mclubRate: 0 };
+    try { rules = JSON.parse(o.product?.commissionRules || '{}'); } catch {}
+    const currSymbol = o.currency === 'USD' ? 'US$' : o.currency === 'RMB' ? '¥' : o.currency === 'JPY' ? '¥' : 'HK$';
+    const agentComm = o.amount * rules.agentRate / 100;
+    const smeComm = o.amount * rules.smeRate / 100;
+    const mclubComm = o.amount * rules.mclubRate / 100;
+
+    return (
+      <div className="space-y-4">
+        <button onClick={() => setSelectedOrder(null)} className="text-sm text-gold hover:underline">← 返回訂單列表</button>
+
+        <div className="mclub-card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl" style={{ background: o.product?.color || '#2a3a4e' }}>{o.product?.icon}</div>
+              <div>
+                <h3 className="text-lg font-bold">{o.product?.name}</h3>
+                <p className="text-xs text-[#5a6a7a]">{o.product?.category} · {o.product?.smeOwner?.name || '-'}</p>
+              </div>
+            </div>
+            <span className={orderStatusBadge(o.status)}>{statusLabel[o.status]}</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div><span className="text-[#5a6a7a]">客戶：</span>{o.client?.name || '-'}</div>
+            <div><span className="text-[#5a6a7a]">Agent：</span>{o.agent?.name || '-'}</div>
+            <div><span className="text-[#5a6a7a]">金額：</span><span className="text-gold font-bold">{currSymbol}{o.amount?.toLocaleString()}</span></div>
+            <div><span className="text-[#5a6a7a]">貨幣：</span>{o.currency}</div>
+            <div><span className="text-[#5a6a7a]">建立日期：</span>{new Date(o.createdAt).toLocaleDateString('zh-HK')}</div>
+            <div><span className="text-[#5a6a7a]">更新日期：</span>{new Date(o.updatedAt).toLocaleDateString('zh-HK')}</div>
+          </div>
+
+          {o.notes && (
+            <div className="mt-3 pt-3 border-t border-[#2a3a4e]">
+              <span className="text-[#5a6a7a] text-sm">備註：</span>
+              <p className="text-sm mt-1">{o.notes}</p>
+            </div>
+          )}
+
+          {user.role === 'MCLUB_STAFF' && (
+            <div className="flex gap-2 mt-4 pt-3 border-t border-[#2a3a4e]">
+              {o.status === 'PENDING' && <button onClick={() => updateStatus(o.id, 'IN_PROGRESS')} className="px-3 py-1.5 rounded text-xs bg-blue-900 text-blue-300 hover:bg-blue-800">確認 → 進行中</button>}
+              {o.status === 'IN_PROGRESS' && <button onClick={() => updateStatus(o.id, 'COMPLETED')} className="px-3 py-1.5 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">完成 → 已完成</button>}
+              {o.status === 'COMPLETED' && !o.commissionSettled && <button onClick={() => settleOrder(o.id)} className="px-3 py-1.5 rounded text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>💰 分帳</button>}
+            </div>
+          )}
+        </div>
+
+        {/* Commission Preview */}
+        <div className="mclub-card">
+          <h4 className="font-bold mb-4">💰 佣金預覽</h4>
+          {!o.commissionSettled ? (
+            <div className="space-y-3">
+              <p className="text-xs text-[#5a6a7a] mb-2">按產品佣金規則計算（尚未分帳）</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-[#0f1923] rounded-lg p-3 text-center">
+                  <p className="text-xs text-[#5a6a7a]">Agent</p>
+                  <p className="text-lg font-bold text-blue-400">{currSymbol}{agentComm.toLocaleString()}</p>
+                  <p className="text-[10px] text-[#5a6a7a]">{rules.agentRate}% · {o.agent?.name || '-'}</p>
+                </div>
+                <div className="bg-[#0f1923] rounded-lg p-3 text-center">
+                  <p className="text-xs text-[#5a6a7a]">SME老闆</p>
+                  <p className="text-lg font-bold text-teal-400">{currSymbol}{smeComm.toLocaleString()}</p>
+                  <p className="text-[10px] text-[#5a6a7a]">{rules.smeRate}% · {o.product?.smeOwner?.name || '-'}</p>
+                </div>
+                <div className="bg-[#0f1923] rounded-lg p-3 text-center">
+                  <p className="text-xs text-[#5a6a7a]">MCLUB</p>
+                  <p className="text-lg font-bold text-gold">{currSymbol}{mclubComm.toLocaleString()}</p>
+                  <p className="text-[10px] text-[#5a6a7a]">{rules.mclubRate}%</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-green-400 mb-2">✅ 佣金已分帳</p>
+              {(o.commissions || []).map((c: Commission) => (
+                <div key={c.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
+                  <div>
+                    <span className="text-sm">{c.recipient?.name || '-'}</span>
+                    <span className="text-xs text-[#5a6a7a] ml-2">({roleLabel[c.recipient?.role as UserRole] || c.role})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-gold">{currSymbol}{c.amount.toLocaleString()}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${c.status === 'PAID' ? 'status-completed' : 'status-pending'}`}>{c.status === 'PAID' ? '已發放' : '待發放'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Order Timeline */}
+        <div className="mclub-card">
+          <h4 className="font-bold mb-4">📋 訂單時間軸</h4>
+          <div className="relative pl-8 space-y-4">
+            <div className="timeline-line" />
+            {(o.timelineEvents || []).map((e: TimelineEvent) => (
+              <div key={e.id} className="relative">
+                <div className="timeline-dot" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium">{e.title}</p>
+                  {e.description && <p className="text-xs text-[#8899aa]">{e.description}</p>}
+                  <p className="text-[10px] text-[#5a6a7a]">{new Date(e.createdAt).toLocaleDateString('zh-HK')} {e.createdBy?.name && `— ${e.createdBy.name}`}</p>
+                </div>
+              </div>
+            ))}
+            {(!o.timelineEvents || o.timelineEvents.length === 0) && <p className="text-[#5a6a7a] text-sm">暫無記錄</p>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">訂單管理</h2>
-        <button onClick={exportCSV} className="px-3 py-2 rounded-lg text-sm border border-[#2a3a4e] hover:border-gold hover:text-gold transition-colors">
-          📥 匯出CSV
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={exportCSV} className="px-3 py-2 rounded-lg text-sm border border-[#2a3a4e] hover:border-gold hover:text-gold transition-colors">
+            📥 匯出CSV
+          </button>
+          {(user.role === 'MCLUB_STAFF' || user.role === 'AGENT') && (
+            <button onClick={() => setShowCreate(!showCreate)} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+              ➕ 新增訂單
+            </button>
+          )}
+        </div>
       </div>
+
+      {showCreate && (
+        <div className="mclub-card space-y-3">
+          <h4 className="font-bold text-sm">新增訂單</h4>
+          <div>
+            <label className="block text-xs text-[#5a6a7a] mb-1">產品 *</label>
+            <select value={newOrder.productId} onChange={e => {
+              const pid = e.target.value;
+              const prod = formProducts.find(p => p.id === pid);
+              setNewOrder({ ...newOrder, productId: pid, amount: prod?.minInvestment?.replace(/[^0-9.]/g, '') || newOrder.amount });
+            }} className="w-full p-2 text-sm">
+              <option value="">選擇產品</option>
+              {formProducts.map(p => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-[#5a6a7a] mb-1">客戶 *</label>
+            <select value={newOrder.clientId} onChange={e => setNewOrder({ ...newOrder, clientId: e.target.value })} className="w-full p-2 text-sm">
+              <option value="">選擇客戶</option>
+              {formClients.map(c => <option key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ''}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-[#5a6a7a] mb-1">金額 *</label>
+              <input type="number" value={newOrder.amount} onChange={e => setNewOrder({ ...newOrder, amount: e.target.value })} className="w-full p-2 text-sm" placeholder="訂單金額" />
+            </div>
+            <div>
+              <label className="block text-xs text-[#5a6a7a] mb-1">貨幣</label>
+              <select value={newOrder.currency} onChange={e => setNewOrder({ ...newOrder, currency: e.target.value })} className="w-full p-2 text-sm">
+                <option value="HKD">HKD</option><option value="USD">USD</option><option value="RMB">RMB</option><option value="JPY">JPY</option>
+              </select>
+            </div>
+          </div>
+          {user.role === 'MCLUB_STAFF' && formAgents.length > 0 && (
+            <div>
+              <label className="block text-xs text-[#5a6a7a] mb-1">負責Agent</label>
+              <select value={newOrder.agentId} onChange={e => setNewOrder({ ...newOrder, agentId: e.target.value })} className="w-full p-2 text-sm">
+                <option value="">選擇Agent（可選）</option>
+                {formAgents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+          )}
+          {user.role === 'AGENT' && (
+            <p className="text-xs text-[#5a6a7a]">Agent：{user.name}（自動填入）</p>
+          )}
+          <div>
+            <label className="block text-xs text-[#5a6a7a] mb-1">備註</label>
+            <textarea value={newOrder.notes} onChange={e => setNewOrder({ ...newOrder, notes: e.target.value })} className="w-full p-2 text-sm" rows={2} placeholder="選填" />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={createOrder} disabled={submitting} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+              {submitting ? '提交中...' : '確認新增'}
+            </button>
+            <button onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg text-sm text-[#8899aa] border border-[#2a3a4e]">取消</button>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
         {orders.map(o => (
-          <div key={o.id} className="mclub-card">
+          <div key={o.id} onClick={() => loadOrderDetail(o.id)} className="mclub-card mclub-card-hover cursor-pointer">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="text-lg">{o.product?.icon}</span>
@@ -577,10 +923,10 @@ function OrderList({ user }: { user: User }) {
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs text-[#8899aa] mb-2">
               <div>客戶：{o.client?.name || '-'}</div>
-              <div>金額：<span className="text-gold font-bold">{o.currency === 'USD' ? 'US$' : 'HK$'}{o.amount.toLocaleString()}</span></div>
+              <div>金額：<span className="text-gold font-bold">{o.currency === 'USD' ? 'US$' : o.currency === 'RMB' ? '¥' : o.currency === 'JPY' ? '¥' : 'HK$'}{o.amount.toLocaleString()}</span></div>
             </div>
             {user.role === 'MCLUB_STAFF' && (
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-2 mt-2" onClick={e => e.stopPropagation()}>
                 {o.status === 'PENDING' && <button onClick={() => updateStatus(o.id, 'IN_PROGRESS')} className="px-3 py-1 rounded text-xs bg-blue-900 text-blue-300 hover:bg-blue-800">確認 → 進行中</button>}
                 {o.status === 'IN_PROGRESS' && <button onClick={() => updateStatus(o.id, 'COMPLETED')} className="px-3 py-1 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">完成 → 已完成</button>}
                 {o.status === 'COMPLETED' && !o.commissionSettled && <button onClick={() => settleOrder(o.id)} className="px-3 py-1 rounded text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>💰 分帳</button>}
@@ -597,30 +943,205 @@ function OrderList({ user }: { user: User }) {
 // ── Product List ──
 function ProductList({ user }: { user: User }) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [formSmeOwners, setFormSmeOwners] = useState<User[]>([]);
+  const [newProduct, setNewProduct] = useState({ name: '', category: '保險', description: '', keyPoints: '', minInvestment: '', icon: '📦', color: '#2a3a4e', agentRate: '10', smeRate: '15', mclubRate: '5', smeOwnerId: '' });
+
+  const loadProducts = useCallback(async () => {
+    const res = await apiFetch('/products', user);
+    if (res.products) setProducts(res.products);
+  }, [user]);
 
   useEffect(() => {
-    apiFetch('/products', user).then(res => { if (res.products) setProducts(res.products); });
-  }, [user]);
+    loadProducts();
+  }, [loadProducts]);
+
+  useEffect(() => {
+    if (showCreate && user.role === 'MCLUB_STAFF') {
+      apiFetch('/users', user).then(res => { if (res.users) setFormSmeOwners(res.users.filter((u: User) => u.role === 'SME_OWNER')); });
+    }
+  }, [showCreate, user]);
+
+  const canEdit = (p: Product) => user.role === 'MCLUB_STAFF' || (user.role === 'SME_OWNER' && p.smeOwnerId === user.id);
+
+  const createProduct = async () => {
+    if (!newProduct.name) return;
+    const commissionRules = JSON.stringify({ agentRate: parseFloat(newProduct.agentRate) || 0, smeRate: parseFloat(newProduct.smeRate) || 0, mclubRate: parseFloat(newProduct.mclubRate) || 0, type: 'percent' });
+    const body: any = {
+      name: newProduct.name, category: newProduct.category, description: newProduct.description,
+      keyPoints: JSON.stringify(newProduct.keyPoints.split(',').map(s => s.trim()).filter(Boolean)),
+      minInvestment: newProduct.minInvestment || null, icon: newProduct.icon, color: newProduct.color,
+      commissionRules,
+    };
+    if (user.role === 'MCLUB_STAFF' && newProduct.smeOwnerId) body.smeOwnerId = newProduct.smeOwnerId;
+    await apiFetch('/products', user, { method: 'POST', body: JSON.stringify(body) });
+    setShowCreate(false);
+    setNewProduct({ name: '', category: '保險', description: '', keyPoints: '', minInvestment: '', icon: '📦', color: '#2a3a4e', agentRate: '10', smeRate: '15', mclubRate: '5', smeOwnerId: '' });
+    loadProducts();
+  };
+
+  const updateProduct = async () => {
+    if (!editProduct || !newProduct.name) return;
+    const commissionRules = JSON.stringify({ agentRate: parseFloat(newProduct.agentRate) || 0, smeRate: parseFloat(newProduct.smeRate) || 0, mclubRate: parseFloat(newProduct.mclubRate) || 0, type: 'percent' });
+    const body: any = {
+      id: editProduct.id,
+      name: newProduct.name, category: newProduct.category, description: newProduct.description,
+      keyPoints: JSON.stringify(newProduct.keyPoints.split(',').map(s => s.trim()).filter(Boolean)),
+      minInvestment: newProduct.minInvestment || null, icon: newProduct.icon, color: newProduct.color,
+      commissionRules,
+    };
+    if (user.role === 'MCLUB_STAFF' && newProduct.smeOwnerId) body.smeOwnerId = newProduct.smeOwnerId;
+    await apiFetch('/products', user, { method: 'PATCH', body: JSON.stringify(body) });
+    setEditProduct(null);
+    setNewProduct({ name: '', category: '保險', description: '', keyPoints: '', minInvestment: '', icon: '📦', color: '#2a3a4e', agentRate: '10', smeRate: '15', mclubRate: '5', smeOwnerId: '' });
+    loadProducts();
+  };
+
+  const deleteProduct = async (id: string) => {
+    if (!confirm('確認刪除此產品？此操作無法撤銷。')) return;
+    await apiFetch(`/products?id=${id}`, user, { method: 'DELETE' });
+    loadProducts();
+  };
+
+  const startEdit = (p: Product) => {
+    let rules = { agentRate: 0, smeRate: 0, mclubRate: 0 };
+    try { rules = JSON.parse(p.commissionRules || '{}'); } catch {}
+    let kp = '';
+    try { kp = JSON.parse(p.keyPoints || '[]').join(', '); } catch { kp = p.keyPoints; }
+    setNewProduct({
+      name: p.name, category: p.category, description: p.description, keyPoints: kp,
+      minInvestment: p.minInvestment || '', icon: p.icon || '📦', color: p.color || '#2a3a4e',
+      agentRate: String(rules.agentRate), smeRate: String(rules.smeRate), mclubRate: String(rules.mclubRate),
+      smeOwnerId: p.smeOwnerId,
+    });
+    setEditProduct(p);
+  };
+
+  const cancelForm = () => {
+    setShowCreate(false);
+    setEditProduct(null);
+    setNewProduct({ name: '', category: '保險', description: '', keyPoints: '', minInvestment: '', icon: '📦', color: '#2a3a4e', agentRate: '10', smeRate: '15', mclubRate: '5', smeOwnerId: '' });
+  };
+
+  const productForm = (
+    <div className="mclub-card space-y-3">
+      <h4 className="font-bold text-sm">{editProduct ? '編輯產品' : '新增產品'}</h4>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-xs text-[#5a6a7a] mb-1">產品名稱 *</label>
+          <input value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} className="w-full p-2 text-sm" placeholder="名稱" />
+        </div>
+        <div>
+          <label className="block text-xs text-[#5a6a7a] mb-1">分類</label>
+          <select value={newProduct.category} onChange={e => setNewProduct({ ...newProduct, category: e.target.value })} className="w-full p-2 text-sm">
+            <option value="保險">保險</option><option value="投資">投資</option><option value="移民">移民</option>
+            <option value="教育">教育</option><option value="醫療">醫療</option><option value="其他">其他</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs text-[#5a6a7a] mb-1">描述</label>
+        <textarea value={newProduct.description} onChange={e => setNewProduct({ ...newProduct, description: e.target.value })} className="w-full p-2 text-sm" rows={2} placeholder="產品描述" />
+      </div>
+      <div>
+        <label className="block text-xs text-[#5a6a7a] mb-1">重點賣點（逗號分隔）</label>
+        <input value={newProduct.keyPoints} onChange={e => setNewProduct({ ...newProduct, keyPoints: e.target.value })} className="w-full p-2 text-sm" placeholder="重點1, 重點2, 重點3" />
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <label className="block text-xs text-[#5a6a7a] mb-1">最低投資額</label>
+          <input value={newProduct.minInvestment} onChange={e => setNewProduct({ ...newProduct, minInvestment: e.target.value })} className="w-full p-2 text-sm" placeholder="HK$100,000" />
+        </div>
+        <div>
+          <label className="block text-xs text-[#5a6a7a] mb-1">圖標 Emoji</label>
+          <input value={newProduct.icon} onChange={e => setNewProduct({ ...newProduct, icon: e.target.value })} className="w-full p-2 text-sm text-center" />
+        </div>
+        <div>
+          <label className="block text-xs text-[#5a6a7a] mb-1">主題色</label>
+          <div className="flex items-center gap-2">
+            <input type="color" value={newProduct.color} onChange={e => setNewProduct({ ...newProduct, color: e.target.value })} className="w-8 h-8 rounded cursor-pointer" />
+            <input value={newProduct.color} onChange={e => setNewProduct({ ...newProduct, color: e.target.value })} className="w-full p-2 text-sm" />
+          </div>
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs text-[#5a6a7a] mb-1">佣金規則（百分比）</label>
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <span className="text-[10px] text-[#5a6a7a]">Agent %</span>
+            <input type="number" value={newProduct.agentRate} onChange={e => setNewProduct({ ...newProduct, agentRate: e.target.value })} className="w-full p-2 text-sm" />
+          </div>
+          <div>
+            <span className="text-[10px] text-[#5a6a7a]">SME %</span>
+            <input type="number" value={newProduct.smeRate} onChange={e => setNewProduct({ ...newProduct, smeRate: e.target.value })} className="w-full p-2 text-sm" />
+          </div>
+          <div>
+            <span className="text-[10px] text-[#5a6a7a]">MCLUB %</span>
+            <input type="number" value={newProduct.mclubRate} onChange={e => setNewProduct({ ...newProduct, mclubRate: e.target.value })} className="w-full p-2 text-sm" />
+          </div>
+        </div>
+      </div>
+      {user.role === 'MCLUB_STAFF' && formSmeOwners.length > 0 && (
+        <div>
+          <label className="block text-xs text-[#5a6a7a] mb-1">SME老闆</label>
+          <select value={newProduct.smeOwnerId} onChange={e => setNewProduct({ ...newProduct, smeOwnerId: e.target.value })} className="w-full p-2 text-sm">
+            <option value="">選擇SME老闆</option>
+            {formSmeOwners.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
+        </div>
+      )}
+      <div className="flex gap-2">
+        <button onClick={editProduct ? updateProduct : createProduct} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+          {editProduct ? '確認更新' : '確認新增'}
+        </button>
+        <button onClick={cancelForm} className="px-4 py-2 rounded-lg text-sm text-[#8899aa] border border-[#2a3a4e]">取消</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold">產品資訊</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">產品管理</h2>
+        {(user.role === 'MCLUB_STAFF' || user.role === 'SME_OWNER') && (
+          <button onClick={() => { setShowCreate(!showCreate); setEditProduct(null); setNewProduct({ name: '', category: '保險', description: '', keyPoints: '', minInvestment: '', icon: '📦', color: '#2a3a4e', agentRate: '10', smeRate: '15', mclubRate: '5', smeOwnerId: '' }); }} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+            + 新增產品
+          </button>
+        )}
+      </div>
+
+      {showCreate && productForm}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {products.map(p => {
           let rules = { agentRate: 0, smeRate: 0, mclubRate: 0 };
           try { rules = JSON.parse(p.commissionRules || '{}'); } catch {}
+          let keyPointsArr: string[] = [];
+          try { keyPointsArr = JSON.parse(p.keyPoints || '[]'); } catch { keyPointsArr = p.keyPoints ? [p.keyPoints] : []; }
           return (
             <div key={p.id} className="mclub-card">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl" style={{ background: p.color || '#2a3a4e' }}>{p.icon}</div>
-                <div>
+                <div className="flex-1">
                   <h3 className="font-bold text-sm">{p.name}</h3>
                   <p className="text-xs text-[#5a6a7a]">{p.category} {p.smeOwner && `· ${p.smeOwner.name}`}</p>
                 </div>
+                {canEdit(p) && (
+                  <div className="flex gap-1">
+                    <button onClick={() => { startEdit(p); setShowCreate(false); }} className="px-2 py-1 rounded text-xs text-[#8899aa] hover:text-gold hover:bg-[#1f2b3d]">✏️</button>
+                    <button onClick={() => deleteProduct(p.id)} className="px-2 py-1 rounded text-xs text-[#8899aa] hover:text-red-400 hover:bg-[#1f2b3d]">🗑️</button>
+                  </div>
+                )}
               </div>
               <p className="text-xs text-[#8899aa] mb-2">{p.description}</p>
+              {keyPointsArr.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {keyPointsArr.map((kp, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#2a3a4e] text-[#8899aa]">{kp}</span>)}
+                </div>
+              )}
               {p.minInvestment && <p className="text-xs text-gold mb-2">入場：{p.minInvestment}</p>}
-              {(user.role === 'MCLUB_STAFF' || user.role === 'AGENT') && (
+              {(user.role === 'MCLUB_STAFF' || user.role === 'AGENT' || user.role === 'SME_OWNER') && (
                 <div className="flex gap-2 text-[10px] text-[#5a6a7a]">
                   <span>Agent: {rules.agentRate}%</span>
                   <span>SME: {rules.smeRate}%</span>
@@ -631,6 +1152,7 @@ function ProductList({ user }: { user: User }) {
           );
         })}
       </div>
+      {editProduct && productForm}
     </div>
   );
 }
@@ -2222,6 +2744,7 @@ export default function Home() {
   const [dashboardError, setDashboardError] = useState(false);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const dashboardLoadedRef = useRef(false);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
 
   // ── Notification State ──
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -2252,6 +2775,11 @@ export default function Home() {
     } finally {
       setDashboardLoading(false);
     }
+    // Also load analytics for mini charts
+    try {
+      const aRes = await apiFetch('/analytics', user);
+      if (!aRes.error) setAnalyticsData(aRes);
+    } catch {}
   }, [user]);
 
   // Load dashboard on login (only once per login)
@@ -2367,7 +2895,7 @@ export default function Home() {
 
   const renderContent = () => {
     switch (currentNav) {
-      case 'overview': return <OverviewDashboard user={user} data={dashboardData} error={dashboardError} loading={dashboardLoading} onRetry={loadDashboard} onNavigate={handleNavChange} />;
+      case 'overview': return <OverviewDashboard user={user} data={dashboardData} error={dashboardError} loading={dashboardLoading} onRetry={loadDashboard} onNavigate={handleNavChange} analyticsData={analyticsData} />;
       case 'clients': return <ClientList user={user} />;
       case 'orders': return <OrderList user={user} />;
       case 'products': return <ProductList user={user} />;

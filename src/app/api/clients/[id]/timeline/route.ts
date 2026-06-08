@@ -9,7 +9,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { userId } = auth;
     const { id } = await params;
     const data = await req.json();
-    const event = await db.timelineEvent.create({ data: { clientId: id, orderId: data.orderId, eventType: data.eventType || 'note', title: data.title, description: data.description, createdById: userId } });
+    const event = await db.timelineEvent.create({
+      data: {
+        clientId: id,
+        orderId: data.orderId || null,
+        eventType: data.eventType || 'note',
+        title: data.title,
+        description: data.description || null,
+        createdById: userId,
+      },
+      include: { createdBy: { select: { name: true } } },
+    });
     return NextResponse.json({ event });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
