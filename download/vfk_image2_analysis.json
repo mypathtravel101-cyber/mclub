@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "場方案，七階無限晉升 大小區各累積 500,000 BV，分數無限期累積。 (1 BV = $8) ,980 50BV) $8,800 (750BV) ,800 00BV) $33,800 (3000BV) P VP ED D SM M S",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1780917703,
+  "id": "202606081921356d7578f752044bc5",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202606081921356d7578f752044bc5",
+  "usage": {
+    "completion_tokens": 76,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 6111,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 6187
+  }
+}

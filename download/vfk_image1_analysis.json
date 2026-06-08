@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "四種進場方案，七階無限營\n(1 BV = $8)\n$1,980\n(150BV)\n$8,800\n(750BV)\n$16,800\n(1500BV)\n$33,800\n(3000BV)",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1780917694,
+  "id": "202606081921281af5ff3050034478",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202606081921281af5ff3050034478",
+  "usage": {
+    "completion_tokens": 62,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 6112,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 6174
+  }
+}
