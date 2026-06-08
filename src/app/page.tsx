@@ -159,23 +159,24 @@ function Sidebar({ current, onChange, role, onLogout }: { current: string; onCha
       { key: 'orders', label: '訂單', icon: '📋' }, { key: 'products', label: '產品', icon: '📦' },
       { key: 'commissions', label: '佣金', icon: '💰' }, { key: 'events', label: '活動', icon: '🎉' },
       { key: 'fx', label: 'FX風險', icon: '💱' }, { key: 'analytics', label: '報表', icon: '📈' },
+      { key: 'profile', label: '設定', icon: '⚙️' },
     ],
     SME_OWNER: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'products', label: '產品', icon: '📦' },
       { key: 'orders', label: '訂單', icon: '📋' }, { key: 'commissions', label: '收入', icon: '💰' },
       { key: 'events', label: '活動', icon: '🎉' }, { key: 'fx', label: 'FX風險', icon: '💱' },
-      { key: 'analytics', label: '報表', icon: '📈' },
+      { key: 'analytics', label: '報表', icon: '📈' }, { key: 'profile', label: '設定', icon: '⚙️' },
     ],
     AGENT: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '客戶', icon: '👥' },
       { key: 'commissions', label: '佣金', icon: '💰' }, { key: 'products', label: '產品', icon: '📦' },
       { key: 'events', label: '活動', icon: '🎉' }, { key: 'fx', label: 'FX風險', icon: '💱' },
-      { key: 'analytics', label: '報表', icon: '📈' },
+      { key: 'analytics', label: '報表', icon: '📈' }, { key: 'profile', label: '設定', icon: '⚙️' },
     ],
     END_USER: [
       { key: 'overview', label: '總覽', icon: '📊' }, { key: 'orders', label: '產品', icon: '📦' },
       { key: 'events', label: '活動', icon: '🎉' }, { key: 'fx', label: 'FX風險', icon: '💱' },
-      { key: 'analytics', label: '報表', icon: '📈' }, { key: 'profile', label: '會員', icon: '⭐' },
+      { key: 'analytics', label: '報表', icon: '📈' }, { key: 'profile', label: '設定', icon: '⚙️' },
     ],
   };
   const items = menus[role] || [];
@@ -460,15 +461,34 @@ function ClientList({ user }: { user: User }) {
     );
   }
 
+  const exportCSV = async () => {
+    const path = appendAuthParams(`/export?type=clients`, user);
+    const res = await fetch(`${API_BASE}${path}`);
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `clients_export_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">客戶管理</h2>
-        {(user.role === 'MCLUB_STAFF' || user.role === 'AGENT') && (
-          <button onClick={() => setShowAdd(!showAdd)} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-            + 新增客戶
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {(user.role === 'MCLUB_STAFF' || user.role === 'AGENT') && (
+            <button onClick={exportCSV} className="px-3 py-2 rounded-lg text-sm border border-[#2a3a4e] hover:border-gold hover:text-gold transition-colors">
+              📥 匯出CSV
+            </button>
+          )}
+          {(user.role === 'MCLUB_STAFF' || user.role === 'AGENT') && (
+            <button onClick={() => setShowAdd(!showAdd)} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+              + 新增客戶
+            </button>
+          )}
+        </div>
       </div>
       {showAdd && (
         <div className="mclub-card space-y-3">
@@ -525,9 +545,26 @@ function OrderList({ user }: { user: User }) {
     loadOrders();
   };
 
+  const exportCSV = async () => {
+    const path = appendAuthParams(`/export?type=orders`, user);
+    const res = await fetch(`${API_BASE}${path}`);
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `orders_export_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold">訂單管理</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">訂單管理</h2>
+        <button onClick={exportCSV} className="px-3 py-2 rounded-lg text-sm border border-[#2a3a4e] hover:border-gold hover:text-gold transition-colors">
+          📥 匯出CSV
+        </button>
+      </div>
       <div className="space-y-3">
         {orders.map(o => (
           <div key={o.id} className="mclub-card">
@@ -609,9 +646,26 @@ function CommissionList({ user }: { user: User }) {
   const total = commissions.reduce((s, c) => s + c.amount, 0);
   const paid = commissions.filter(c => c.status === 'PAID').reduce((s, c) => s + c.amount, 0);
 
+  const exportCSV = async () => {
+    const path = appendAuthParams(`/export?type=commissions`, user);
+    const res = await fetch(`${API_BASE}${path}`);
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `commissions_export_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold">{user.role === 'MCLUB_STAFF' ? '佣金管理' : '我的收入'}</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">{user.role === 'MCLUB_STAFF' ? '佣金管理' : '我的收入'}</h2>
+        <button onClick={exportCSV} className="px-3 py-2 rounded-lg text-sm border border-[#2a3a4e] hover:border-gold hover:text-gold transition-colors">
+          📥 匯出CSV
+        </button>
+      </div>
       <div className="grid grid-cols-2 gap-4">
         <StatCard label="總計" value={`HK$${total.toLocaleString()}`} gold />
         <StatCard label="已發放" value={`HK$${paid.toLocaleString()}`} />
@@ -1691,27 +1745,203 @@ function FXRisk({ user }: { user: User }) {
   );
 }
 
-function MemberProfile({ user }: { user: User }) {
+function EnhancedProfile({ user, onUpdateUser }: { user: User; onUpdateUser: (u: User) => void }) {
+  const [tab, setTab] = useState<'info' | 'settings'>('info');
+  const [profileData, setProfileData] = useState<any>(null);
+  const [editName, setEditName] = useState(user.name);
+  const [editPhone, setEditPhone] = useState(user.phone || '');
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+
+  // Password change state
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwMsg, setPwMsg] = useState('');
+
+  // Notification preferences
+  const [notifPrefs, setNotifPrefs] = useState({
+    orderNotif: true,
+    commissionNotif: true,
+    eventInvite: true,
+    fxAlert: true,
+  });
+
+  useEffect(() => {
+    apiFetch(`/users/${user.id}`, user).then(res => {
+      if (res.user) setProfileData(res.user);
+    });
+  }, [user]);
+
+  const saveProfile = async () => {
+    setSaving(true);
+    setSaveMsg('');
+    try {
+      const res = await apiFetch(`/users/${user.id}`, user, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: editName, phone: editPhone }),
+      });
+      if (res.user) {
+        setSaveMsg('✅ 儲存成功');
+        onUpdateUser({ ...user, name: res.user.name, phone: res.user.phone });
+        setTimeout(() => setSaveMsg(''), 3000);
+      } else {
+        setSaveMsg('❌ 儲存失敗');
+      }
+    } catch {
+      setSaveMsg('❌ 網絡錯誤');
+    }
+    setSaving(false);
+  };
+
+  const changePassword = async () => {
+    if (newPw !== confirmPw) {
+      setPwMsg('❌ 新密碼與確認密碼不一致');
+      return;
+    }
+    if (newPw.length < 6) {
+      setPwMsg('❌ 新密碼至少需要6個字符');
+      return;
+    }
+    setPwSaving(true);
+    setPwMsg('');
+    try {
+      const res = await apiFetch('/auth/change-password', user, {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+      });
+      if (res.message) {
+        setPwMsg('✅ 密碼已更新');
+        setCurrentPw(''); setNewPw(''); setConfirmPw('');
+        setTimeout(() => setPwMsg(''), 3000);
+      } else {
+        setPwMsg(`❌ ${res.error || '更新失敗'}`);
+      }
+    } catch {
+      setPwMsg('❌ 網絡錯誤');
+    }
+    setPwSaving(false);
+  };
+
+  const initials = (user.name || '?').slice(0, 2).toUpperCase();
+  const createdAt = profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString('zh-HK', { year: 'numeric', month: 'long', day: 'numeric' }) : '-';
+
+  const roleBadgeColor: Record<UserRole, string> = {
+    MCLUB_STAFF: 'bg-gold/20 text-gold',
+    SME_OWNER: 'bg-blue-900/50 text-blue-300',
+    AGENT: 'bg-green-900/50 text-green-300',
+    END_USER: 'bg-purple-900/50 text-purple-300',
+  };
+
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold">會員等級</h2>
-      <div className="mclub-card text-center py-8">
-        <div className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl" style={{ background: 'linear-gradient(135deg, #d4af37, #b8962e)' }}>👑</div>
-        <h3 className="text-xl font-bold text-gold mb-1">{user.name}</h3>
-        <p className="text-sm text-[#8899aa] mb-4">{user.email}</p>
-        <p className="text-xs text-[#5a6a7a]">升級方案將由您的Agent為您推薦</p>
+      <h2 className="text-xl font-bold">👤 帳戶設定</h2>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-[#1a2330] rounded-lg p-1">
+        <button onClick={() => setTab('info')} className={`flex-1 py-2 text-sm rounded-md transition-colors ${tab === 'info' ? 'bg-[#2a3a4e] text-gold font-bold' : 'text-[#8899aa]'}`}>個人資料</button>
+        <button onClick={() => setTab('settings')} className={`flex-1 py-2 text-sm rounded-md transition-colors ${tab === 'settings' ? 'bg-[#2a3a4e] text-gold font-bold' : 'text-[#8899aa]'}`}>帳戶設定</button>
       </div>
-      <div className="mclub-card">
-        <h4 className="font-bold mb-3">會員升級路徑</h4>
-        <div className="space-y-2">
-          {(['Plan A 入門', 'Plan B 進階', 'Plan C 高端', 'MCLUB全會員'] as const).map((label, i) => (
-            <div key={i} className="flex items-center gap-3 py-2 border-b border-[#2a3a4e] last:border-0">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-gold/20 text-gold' : 'bg-[#2a3a4e] text-[#5a6a7a]'}`}>{i + 1}</div>
-              <span className={`text-sm ${i === 0 ? 'text-gold' : 'text-[#8899aa]'}`}>{label}</span>
+
+      {tab === 'info' && (
+        <div className="space-y-4">
+          {/* Avatar & Role */}
+          <div className="mclub-card text-center">
+            <div className="w-20 h-20 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl font-bold" style={{ background: 'linear-gradient(135deg, #d4af37, #b8962e)', color: '#000' }}>
+              {user.avatar ? <img src={user.avatar} alt="avatar" className="w-full h-full rounded-full object-cover" /> : initials}
             </div>
-          ))}
+            <span className={`text-xs px-3 py-1 rounded-full ${roleBadgeColor[user.role]}`}>{roleLabel[user.role]}</span>
+            {user.role === 'END_USER' && profileData && (
+              <p className="text-xs text-[#8899aa] mt-2">會員等級將由您的Agent為您升級</p>
+            )}
+            <p className="text-[10px] text-[#5a6a7a] mt-2">加入日期：{createdAt}</p>
+          </div>
+
+          {/* Editable fields */}
+          <div className="mclub-card space-y-4">
+            <div>
+              <label className="block text-xs text-[#5a6a7a] mb-1">姓名</label>
+              <input value={editName} onChange={e => setEditName(e.target.value)} className="w-full p-2.5 text-sm bg-[#1a2330] border border-[#2a3a4e] rounded-lg focus:border-gold focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-[#5a6a7a] mb-1">電郵地址</label>
+              <input value={user.email} readOnly className="w-full p-2.5 text-sm bg-[#141d28] border border-[#2a3a4e] rounded-lg text-[#5a6a7a] cursor-not-allowed" />
+              <p className="text-[10px] text-[#5a6a7a] mt-1">電郵地址無法更改</p>
+            </div>
+            <div>
+              <label className="block text-xs text-[#5a6a7a] mb-1">電話</label>
+              <input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="輸入電話號碼" className="w-full p-2.5 text-sm bg-[#1a2330] border border-[#2a3a4e] rounded-lg focus:border-gold focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-[#5a6a7a] mb-1">角色</label>
+              <div className={`inline-block text-xs px-3 py-1 rounded-full ${roleBadgeColor[user.role]}`}>{roleLabel[user.role]}</div>
+            </div>
+            {saveMsg && <p className="text-sm">{saveMsg}</p>}
+            <button onClick={saveProfile} disabled={saving} className="w-full py-2.5 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+              {saving ? '儲存中...' : '儲存變更'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {tab === 'settings' && (
+        <div className="space-y-4">
+          {/* Change Password */}
+          <div className="mclub-card space-y-4">
+            <h3 className="font-bold">🔒 更改密碼</h3>
+            <div>
+              <label className="block text-xs text-[#5a6a7a] mb-1">目前密碼</label>
+              <input type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} className="w-full p-2.5 text-sm bg-[#1a2330] border border-[#2a3a4e] rounded-lg focus:border-gold focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-[#5a6a7a] mb-1">新密碼</label>
+              <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} className="w-full p-2.5 text-sm bg-[#1a2330] border border-[#2a3a4e] rounded-lg focus:border-gold focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-[#5a6a7a] mb-1">確認新密碼</label>
+              <input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} className="w-full p-2.5 text-sm bg-[#1a2330] border border-[#2a3a4e] rounded-lg focus:border-gold focus:outline-none" />
+            </div>
+            {pwMsg && <p className="text-sm">{pwMsg}</p>}
+            <button onClick={changePassword} disabled={pwSaving} className="w-full py-2.5 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
+              {pwSaving ? '更新中...' : '更新密碼'}
+            </button>
+          </div>
+
+          {/* Language preference */}
+          <div className="mclub-card space-y-3">
+            <h3 className="font-bold">🌐 語言偏好</h3>
+            <div className="flex items-center justify-between py-2">
+              <span className="text-sm">界面語言</span>
+              <span className="text-sm text-[#8899aa]">繁體中文</span>
+            </div>
+          </div>
+
+          {/* Notification preferences */}
+          <div className="mclub-card space-y-3">
+            <h3 className="font-bold">🔔 通知偏好</h3>
+            {[
+              { key: 'orderNotif' as const, label: '訂單通知', desc: '當訂單狀態變更時接收通知' },
+              { key: 'commissionNotif' as const, label: '佣金通知', desc: '當佣金發放時接收通知' },
+              { key: 'eventInvite' as const, label: '活動邀請', desc: '當有新活動邀請時接收通知' },
+              { key: 'fxAlert' as const, label: 'FX預警', desc: '當匯率預警觸發時接收通知' },
+            ].map(item => (
+              <div key={item.key} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
+                <div>
+                  <p className="text-sm">{item.label}</p>
+                  <p className="text-[10px] text-[#5a6a7a]">{item.desc}</p>
+                </div>
+                <button
+                  onClick={() => setNotifPrefs(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
+                  className={`relative w-10 h-6 rounded-full transition-colors ${notifPrefs[item.key] ? 'bg-gold' : 'bg-[#2a3a4e]'}`}
+                >
+                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${notifPrefs[item.key] ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1999,6 +2229,13 @@ export default function Home() {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const notifPanelRef = useRef<HTMLDivElement>(null);
 
+  // ── Search State ──
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{ clients: any[]; orders: any[]; events: any[] }>({ clients: [], orders: [], events: [] });
+  const [showSearch, setShowSearch] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const loadDashboard = useCallback(async () => {
     if (!user) return;
     setDashboardError(false);
@@ -2090,7 +2327,41 @@ export default function Home() {
   }, []);
 
   const handleLogin = (u: User) => { setUser(u); setCurrentNav('overview'); dashboardLoadedRef.current = false; };
-  const handleLogout = () => { setUser(null); localStorage.removeItem('mclub_user'); setDashboardData(null); dashboardLoadedRef.current = false; setNotifications([]); setUnreadCount(0); };
+  const handleLogout = () => { setUser(null); localStorage.removeItem('mclub_user'); setDashboardData(null); dashboardLoadedRef.current = false; setNotifications([]); setUnreadCount(0); setSearchQuery(''); };
+
+  const handleUpdateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+    localStorage.setItem('mclub_user', JSON.stringify(updatedUser));
+  };
+
+  // ── Search Logic ──
+  const doSearch = useCallback(async (q: string) => {
+    if (!user || q.length < 1) { setSearchResults({ clients: [], orders: [], events: [] }); return; }
+    try {
+      const res = await apiFetch(`/search?q=${encodeURIComponent(q)}`, user);
+      if (res.clients || res.orders || res.events) {
+        setSearchResults({ clients: res.clients || [], orders: res.orders || [], events: res.events || [] });
+        setShowSearch(true);
+      }
+    } catch {}
+  }, [user]);
+
+  const onSearchChange = (val: string) => {
+    setSearchQuery(val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (val.length < 1) { setSearchResults({ clients: [], orders: [], events: [] }); setShowSearch(false); return; }
+    searchTimerRef.current = setTimeout(() => doSearch(val), 300);
+  };
+
+  // Close search dropdown on click outside or Escape
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSearch(false);
+    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowSearch(false); };
+    if (showSearch) { document.addEventListener('mousedown', handleClick); document.addEventListener('keydown', handleKey); }
+    return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
+  }, [showSearch]);
 
   if (!user) return <LoginPage onLogin={handleLogin} />;
 
@@ -2104,7 +2375,7 @@ export default function Home() {
       case 'events': return <EventList user={user} />;
       case 'fx': return <FXRisk user={user} />;
       case 'analytics': return <AnalyticsView user={user} />;
-      case 'profile': return <MemberProfile user={user} />;
+      case 'profile': return <EnhancedProfile user={user} onUpdateUser={handleUpdateUser} />;
       default: return <OverviewDashboard user={user} data={dashboardData} error={dashboardError} loading={dashboardLoading} onRetry={loadDashboard} onNavigate={handleNavChange} />;
     }
   };
@@ -2113,12 +2384,76 @@ export default function Home() {
     <div className="min-h-screen flex flex-col md:flex-row">
       <Sidebar current={currentNav} onChange={handleNavChange} role={user.role} onLogout={handleLogout} />
       <main className="flex-1 p-4 md:p-6 pb-24 md:pb-6 max-w-4xl">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <p className="text-xs text-[#5a6a7a]">{roleLabel[user.role]}</p>
-            <p className="font-bold">{user.name}</p>
+        <div className="flex items-center justify-between mb-6 gap-3">
+          {/* Search Bar */}
+          <div className="relative flex-1 max-w-xs md:max-w-sm" ref={searchRef}>
+            <div className="flex items-center bg-[#1a2330] border border-[#2a3a4e] rounded-lg overflow-hidden">
+              <span className="pl-3 text-sm">🔍</span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => onSearchChange(e.target.value)}
+                onFocus={() => { if (searchQuery.length >= 1 && (searchResults.clients.length || searchResults.orders.length || searchResults.events.length)) setShowSearch(true); }}
+                placeholder="搜尋客戶、訂單、活動..."
+                className="w-full px-2 py-2 text-sm bg-transparent border-none focus:outline-none placeholder:text-[#5a6a7a]"
+              />
+              {searchQuery && (
+                <button onClick={() => { setSearchQuery(''); setSearchResults({ clients: [], orders: [], events: [] }); setShowSearch(false); }} className="pr-3 text-[#5a6a7a] hover:text-white text-xs">✕</button>
+              )}
+            </div>
+            {/* Search Results Dropdown */}
+            {showSearch && searchQuery.length >= 1 && (
+              <div className="absolute left-0 top-full mt-1 w-full min-w-[280px] bg-[#1a2330] border border-[#2a3a4e] rounded-xl shadow-2xl z-50 max-h-80 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#2a3a4e transparent' }}>
+                {/* Clients */}
+                {searchResults.clients.length > 0 && (
+                  <div>
+                    <div className="px-3 py-2 text-xs text-[#5a6a7a] font-bold border-b border-[#2a3a4e]">👥 客戶</div>
+                    {searchResults.clients.map((c: any) => (
+                      <div key={c.id} onClick={() => { handleNavChange('clients'); setShowSearch(false); setSearchQuery(''); }} className="px-3 py-2 hover:bg-[#1f2b3d] cursor-pointer transition-colors border-b border-[#2a3a4e] last:border-0">
+                        <p className="text-sm font-medium">{c.name}</p>
+                        <p className="text-[10px] text-[#5a6a7a]">{c.phone || c.email || memberLabel[c.memberLevel as MemberLevel]}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Orders */}
+                {searchResults.orders.length > 0 && (
+                  <div>
+                    <div className="px-3 py-2 text-xs text-[#5a6a7a] font-bold border-b border-[#2a3a4e]">📋 訂單</div>
+                    {searchResults.orders.map((o: any) => (
+                      <div key={o.id} onClick={() => { handleNavChange('orders'); setShowSearch(false); setSearchQuery(''); }} className="px-3 py-2 hover:bg-[#1f2b3d] cursor-pointer transition-colors border-b border-[#2a3a4e] last:border-0">
+                        <p className="text-sm font-medium">{o.product?.icon} {o.product?.name}</p>
+                        <p className="text-[10px] text-[#5a6a7a]">{o.client?.name} · {o.currency === 'USD' ? 'US$' : 'HK$'}{o.amount?.toLocaleString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Events */}
+                {searchResults.events.length > 0 && (
+                  <div>
+                    <div className="px-3 py-2 text-xs text-[#5a6a7a] font-bold border-b border-[#2a3a4e]">🎉 活動</div>
+                    {searchResults.events.map((e: any) => (
+                      <div key={e.id} onClick={() => { handleNavChange('events'); setShowSearch(false); setSearchQuery(''); }} className="px-3 py-2 hover:bg-[#1f2b3d] cursor-pointer transition-colors border-b border-[#2a3a4e] last:border-0">
+                        <p className="text-sm font-medium">{e.title}</p>
+                        <p className="text-[10px] text-[#5a6a7a]">{e.venue || ''} {e.eventDate ? `· ${new Date(e.eventDate).toLocaleDateString('zh-HK')}` : ''}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* No results */}
+                {searchResults.clients.length === 0 && searchResults.orders.length === 0 && searchResults.events.length === 0 && (
+                  <div className="p-4 text-center">
+                    <p className="text-sm text-[#5a6a7a]">無搜尋結果</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3">
+            <div className="hidden md:block">
+              <p className="text-xs text-[#5a6a7a]">{roleLabel[user.role]}</p>
+              <p className="font-bold text-sm">{user.name}</p>
+            </div>
             {/* Notification Bell */}
             <div className="relative" ref={notifPanelRef}>
               <button onClick={() => setShowNotifPanel(!showNotifPanel)} className="relative p-2 hover:bg-[#1f2b3d] rounded-lg transition-colors">
