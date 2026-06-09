@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\"># MCLUB 百盛大通家族辦公室 CRM\n\n**PZC Group — MCLUB Family Office | VFK Health Products**\n\n---\n\n## 項目簡介\n\nMCLUB 是百盛大通家族辦公室（PZC Group）的客戶關係管理平台，整合 VFK 健康食品推廣計劃與家族辦公室服務，提供從健康管理到財富管理的完整生態圈。\n\n**核心邏輯：健康產品 → 團隊推廣 → 家族辦公室**\n\n---\n\n## 技術棧\n\n- **前端**: Next.js 16 + React 19 + TypeScript + Tailwind CSS 4 + shadcn/ui\n- **後端**: Next.js API Routes + Prisma ORM + SQLite\n- **認證**: NextAuth.js\n- **狀態管理**: Zustand\n- **圖表**: Recharts\n- **國際化**: next-intl\n\n---\n\n## 項目結構\n\n```\nmclub/\n├── src/                    # Next.js 源碼\n│   ├── app/               # App Router + API Routes\n│   ├── components/        # React 組件\n│   └── lib/               # 工具函數\n├── prisma/                # 數據庫 Schema\n├── vfk/                   # VFK 健康食品推廣計劃\n│   ├── data/              # 結構化數據 (plans.json)\n│   ├── docs/              # 推廣計劃文檔\n│   └── images/            # 方案及晉升機制圖片\n├── upload/                # 上傳文件\n├── download/              # 下載文件\n└── agent-ctx/             # Agent 上下文文檔\n```\n\n---\n\n## VFK 健康食品 × MCLUB 會員制\n\nVFK 四種進場方案與 MCLUB 會員制為統一體系：\n\n| 方案 | 投資金額 | BV 積分 | MCLUB 會員定位 |\n|------|---------|---------|---------------|\n| 方案一 | $1,980 | 150 BV | Plan A 入門級 |\n| 方案二 | $8,800 | 750 BV | Plan B 進階級 |\n| 方案三 | $16,800 | 1,500 BV | Plan B+ 中高級 |\n| 方案四 | $33,800 | 3,000 BV | Plan C 高端 + 家族辦公室 ⭐ |\n\n詳細資料見 `vfk/` 目錄。\n\n---\n\n## CRM 功能\n\n- Dashboard 儀表板\n- 客戶管理\n- 訂單管理\n- 產品管理\n- 佣金管理\n- 活動管理\n- 數據分析\n- 通知系統\n- 個人設定\n- 全局搜索\n\n---\n\n**© 2026 PZC Group | MCLUB Family Office**\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/mypathtravel101-cyber/mclub/main/README.md",
+    "usage": {
+      "tokens": 854
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 854
+    }
+  },
+  "status": 20000
+}

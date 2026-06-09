@@ -1,0 +1,23 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "external": {},
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">400: Invalid request</pre></body></html>",
+    "metadata": {
+      "color-scheme": "light dark"
+    },
+    "title": "",
+    "url": "https://raw.githubusercontent.com/mypathtravel101-cyber/main/README.md",
+    "usage": {
+      "tokens": 46
+    },
+    "warning": "Target URL returned error 400: Bad Request"
+  },
+  "meta": {
+    "usage": {
+      "tokens": 46
+    }
+  },
+  "status": 20000
+}
