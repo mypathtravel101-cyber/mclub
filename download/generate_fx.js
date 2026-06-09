@@ -43,7 +43,7 @@ const items = [
   {
     name: "Stress Testing\n\u58d3\u529b\u6e2c\u8a66",
     desc: "\u6a21\u64ec\u6975\u7aef\u5e02\u5834\u60c5\u6cc1\uff08\u5982\u5e63\u503c\u6025\u8dcc 10%-20%\u3001\u5229\u7387\u5287\u8b8a\u3001\u5730\u7de3\u653f\u6cbb\u4e8b\u4ef6\uff09\uff0c\u6e2c\u8a66\u5ba2\u6236\u7684\u5916\u5706\u8cc7\u7522\u7d44\u5408\u5728\u5404\u7a2e\u60c5\u5883\u4e0b\u7684\u640d\u5931\u98a8\u96aa\u3002\u5e6b\u52a9\u5ba2\u6236\u63d0\u524d\u77e5\u6653\u6700\u58de\u60c5\u6cc1\u4e0b\u7684\u6f5c\u5728\u5f71\u97ff\uff0c\u4e26\u5236\u5b9a\u61c9\u5c0d\u65b9\u6848\u3002",
-    target: "\u6709\u5926\u5916\u5706\u8ca0\u50b5\u7684\u5bb6\u65cf\u5ba2\u6236",
+    target: "\u6709\u5927\u91cf\u5916\u5706\u8ca0\u50b5\u7684\u5bb6\u65cf\u5ba2\u6236",
     output: "\u58d3\u529b\u6e2c\u8a66\u5831\u544a\uff08\u5305\u542b\u60c5\u666f\u5206\u6790\u3001\u640d\u5931\u4f30\u7b97\u3001\u5efa\u8b70\uff09",
   },
   {
@@ -134,7 +134,7 @@ const doc = new Document({
         alignment: AlignmentType.CENTER,
         spacing: { before: 250 },
         border: { top: { style: BorderStyle.SINGLE, size: 2, color: "E0E0E0", space: 10 } },
-        children: [new TextRun({ text: "PZC Group  |  FX Risk Modelling  |  \u4e13業外圓風險管理服務", size: 18, color: "999999", font: { ascii: "Calibri", eastAsia: "Microsoft YaHei" } })],
+        children: [new TextRun({ text: "PZC Group  |  FX Risk Modelling  |  \u5c08\u696d\u5916\u5706\u98a8\u96aa\u7ba1\u7406\u670d\u52d9", size: 18, color: "999999", font: { ascii: "Calibri", eastAsia: "Microsoft YaHei" } })],
       }),
     ],
   }],
