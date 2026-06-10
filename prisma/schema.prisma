@@ -22,6 +22,7 @@ model User {
   commissions   Commission[]
   events        EventParticipant[]
   notifications Notification[]
+  notices       Notice[]
   referrals     Customer[] @relation("Referrals")
 }
 
@@ -134,4 +135,19 @@ model Notification {
   createdAt     DateTime @default(now())
 
   user          User     @relation(fields: [userId], references: [id])
+}
+
+model Notice {
+  id            String   @id @default(cuid())
+  title         String
+  content       String
+  category      String   @default("announcement") // announcement, urgent, policy
+  targetRoles   String   @default("admin,sme,agent,client") // comma separated roles
+  authorId      String
+  isPinned      Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  author        User     @relation(fields: [authorId], references: [id])
 }

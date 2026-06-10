@@ -144,6 +144,7 @@ async function seed() {
 
   // Clear existing data
   await db.notification.deleteMany();
+  await db.notice.deleteMany();
   await db.eventParticipant.deleteMany();
   await db.event.deleteMany();
   await db.commission.deleteMany();
@@ -259,6 +260,41 @@ async function seed() {
     }
   }
 
+  // Create notices
+  console.log('Creating notices...');
+  const notices = [
+    {
+      title: 'MCLUB系統維護通知',
+      content: '系統將於2025年7月20日（星期日）凌晨2:00至6:00進行例行維護。屆時系統將暫時無法訪問，請提前做好相關安排。維護完成後系統將自動恢復正常運行。如有疑問，請聯繫IT支援團隊。',
+      category: 'announcement',
+      targetRoles: 'admin,sme,agent,client',
+      authorId: users[0].id,
+      isPinned: true,
+      isActive: true,
+    },
+    {
+      title: '緊急：佣金發放流程變更',
+      content: '即日起，所有佣金發放申請需附上客戶簽署確認書方可處理。請各代理確保在提交佣金申求前，已取得客戶的書面確認。詳情請參閱更新後的佣金管理手冊，或聯繫財務部門查詢。',
+      category: 'urgent',
+      targetRoles: 'admin,sme,agent',
+      authorId: users[0].id,
+      isPinned: false,
+      isActive: true,
+    },
+    {
+      title: '2025年第三季度KPI調整',
+      content: '經管理層審議，2025年第三季度的KPI指標將進行以下調整：\n1. 新增客戶數量目標：每代理每月不少於3名新客\n2. 客戶滿意度目標：維持在90%以上\n3. 產品成交轉化率目標：提升至15%\n4. 活動參與率目標：每月至少參加1場活動\n\n新的KPI將於7月1日正式生效，請各位同事先做好準備。',
+      category: 'policy',
+      targetRoles: 'admin,sme,agent',
+      authorId: users[0].id,
+      isPinned: false,
+      isActive: true,
+    },
+  ];
+  for (const n of notices) {
+    await db.notice.create({ data: n });
+  }
+
   // Create notifications
   console.log('Creating notifications...');
   const notifications = [
@@ -278,6 +314,7 @@ async function seed() {
   console.log(`   - ${customers.length} customers created`);
   console.log(`   - ${SAMPLE_ORDERS.length} orders created`);
   console.log(`   - ${SAMPLE_EVENTS.length} events created`);
+  console.log(`   - ${notices.length} notices created`);
 }
 
 seed()

@@ -68,3 +68,72 @@ Stage Summary:
 - Download scripts updated: generate_overview.js, generate_cert.js, generate_cert_proposal.js
 - Database seeded with 8 products, 4 users, 5 customers, 7 orders, 3 events
 - Lint passes with zero errors in src/
+
+---
+Task ID: 2
+Agent: full-stack-developer
+Task: Add "Group Notice" (群組公告) feature to MCLUB CRM
+
+Work Log:
+- Read all existing source files to understand code patterns (schema, page.tsx, Sidebar, Dashboard, EventsPage, NotificationsPage, api-helpers, store, seed, API routes)
+- Followed existing patterns: shadcn/ui components, fetchWithAuth, cn() utility, dark card styling, amber accent colors
+
+Changes Made:
+
+1. **prisma/schema.prisma** — Added Notice model
+   - Fields: id, title, content, category (announcement/urgent/policy), targetRoles (comma-separated), authorId (→User), isPinned, isActive, createdAt, updatedAt
+   - Added `notices Notice[]` relation to User model
+   - Ran `bunx prisma@6 db push` to sync schema
+
+2. **src/app/api/notices/route.ts** — New API route (CRUD)
+   - GET: List active notices, filter by user role (non-admin only sees targeted), pinned first then by date desc, supports `?limit=N`
+   - POST: Create notice (admin only, verifies admin role), auto-creates Notification records for all targeted users
+   - PATCH: Update notice (admin only, verifies admin role)
+   - DELETE: Soft-delete notice by setting isActive=false (admin only)
+
+3. **src/components/crm/NoticesPage.tsx** — New frontend component
+   - Notice list with expandable cards (click to expand/collapse content)
+   - Pinned notices at top with gold Pin icon and amber left border
+   - Category badges: 公告(announcement/blue), 緊急(urgent/red), 政策(policy/amber)
+   - Target role tags with role-specific colors (admin/sme/agent/client)
+   - Admin actions: create, edit, pin/unpin, delete buttons
+   - Non-admin users: view-only with expand/collapse
+   - "New Notice" Dialog: title, content (Textarea), category Select, target roles Checkboxes
+   - Empty state: "暫無公告"
+   - Follows existing EventsPage pattern
+
+4. **src/store/app.ts** — Added 'notices' to Page type union
+
+5. **src/components/crm/Sidebar.tsx** — Added "📢 公告" nav item
+   - Placed between "活動管理" and "通知中心"
+   - Uses Megaphone icon from lucide-react
+   - Visible to all roles (no role-based filtering)
+
+6. **src/app/page.tsx** — Updated for notices page
+   - Imported NoticesPage component
+   - Added 'notices': '📢 群組公告' to PAGE_TITLES
+   - Added case 'notices' → NoticesPage() in PageContent switch
+
+7. **src/components/crm/DashboardPage.tsx** — Added "最新公告" section
+   - Fetches 3 most recent notices via API
+   - Shows pinned notices with amber left border
+   - Displays title, category badge, content preview (line-clamp-1), date
+   - "查看全部" button navigates to notices page
+   - Empty state when no notices exist
+
+8. **src/lib/seed.ts** — Added 3 sample notices
+   - "MCLUB系統維護通知" (announcement, pinned, all roles)
+   - "緊急：佣金發放流程變更" (urgent, admin/sme/agent)
+   - "2025年第三季度KPI調整" (policy, admin/sme/agent)
+   - Added db.notice.deleteMany() to cleanup
+   - Updated seed completion log
+
+9. **Notification Integration** — Built into API POST handler
+   - When admin creates a notice, Notification records are auto-created for all users matching targetRoles
+   - Urgent notices create 'warning' type notifications; others create 'info' type
+   - Author is excluded from receiving their own notification
+
+Stage Summary:
+- Created 2 new files: src/app/api/notices/route.ts, src/components/crm/NoticesPage.tsx
+- Modified 7 files: prisma/schema.prisma, src/store/app.ts, src/components/crm/Sidebar.tsx, src/app/page.tsx, src/components/crm/DashboardPage.tsx, src/lib/seed.ts
+- All lint errors in modified src/ files resolved (pre-existing errors in download/ and ui/carousel.tsx remain unchanged)

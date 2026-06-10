@@ -9,6 +9,7 @@ import { CustomersPage } from '@/components/crm/CustomersPage';
 import { OrdersPage } from '@/components/crm/OrdersPage';
 import { CommissionsPage } from '@/components/crm/CommissionsPage';
 import { EventsPage } from '@/components/crm/EventsPage';
+import { NoticesPage } from '@/components/crm/NoticesPage';
 import { NotificationsPage } from '@/components/crm/NotificationsPage';
 import { SettingsPage } from '@/components/crm/SettingsPage';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ function Header() {
     orders: '訂單管理',
     commissions: '佣金管理',
     events: '活動管理',
+    notices: '📢 群組公告',
     notifications: '通知中心',
     settings: '系統設定',
   };
@@ -93,6 +95,8 @@ function PageContent() {
       return <CommissionsPage />;
     case 'events':
       return <EventsPage />;
+    case 'notices':
+      return <NoticesPage />;
     case 'notifications':
       return <NotificationsPage />;
     case 'settings':

@@ -11,6 +11,7 @@ import {
   ShoppingCart,
   DollarSign,
   Calendar,
+  Megaphone,
   Bell,
   Settings,
   LogOut,
@@ -27,6 +28,7 @@ const NAV_ITEMS: { page: Page; label: string; icon: React.ReactNode }[] = [
   { page: 'orders', label: '訂單管理', icon: <ShoppingCart className="h-5 w-5" /> },
   { page: 'commissions', label: '佣金管理', icon: <DollarSign className="h-5 w-5" /> },
   { page: 'events', label: '活動管理', icon: <Calendar className="h-5 w-5" /> },
+  { page: 'notices', label: '📢 公告', icon: <Megaphone className="h-5 w-5" /> },
   { page: 'notifications', label: '通知中心', icon: <Bell className="h-5 w-5" /> },
   { page: 'settings', label: '系統設定', icon: <Settings className="h-5 w-5" /> },
 ];

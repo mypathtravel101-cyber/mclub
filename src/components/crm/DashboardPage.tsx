@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { fetchWithAuth } from '@/lib/api-helpers';
+import { useAppStore } from '@/store/app';
 import {
   Package,
   Users,
@@ -11,6 +14,9 @@ import {
   TrendingUp,
   Calendar,
   ArrowUpRight,
+  Megaphone,
+  Pin,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +46,27 @@ interface DashboardData {
   }[];
 }
 
+interface NoticeItem {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  isPinned: boolean;
+  createdAt: string;
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  announcement: 'bg-blue-100 text-blue-800',
+  urgent: 'bg-red-100 text-red-800',
+  policy: 'bg-amber-100 text-amber-800',
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  announcement: '公告',
+  urgent: '緊急',
+  policy: '政策',
+};
+
 function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat('zh-HK', {
     style: 'currency',
@@ -56,15 +83,21 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function DashboardPage() {
+  const { user, setCurrentPage } = useAppStore();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [recentNotices, setRecentNotices] = useState<NoticeItem[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     fetchWithAuth('/api/dashboard').then((d) => {
       if (!cancelled) setData(d);
     });
+    // Fetch recent notices
+    fetchWithAuth(`/api/notices?role=${user?.role || ''}&limit=3`).then((notices) => {
+      if (!cancelled) setRecentNotices(notices);
+    });
     return () => { cancelled = true; };
-  }, []);
+  }, [user]);
 
   if (!data) {
     return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[...Array(4)].map((_, i) => <Card key={i} className="animate-pulse"><CardContent className="p-6"><div className="h-4 w-24 rounded bg-muted" /><div className="mt-2 h-8 w-16 rounded bg-muted" /></CardContent></Card>)}</div>;
@@ -198,6 +231,68 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Latest Notices section */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Megaphone className="h-5 w-5 text-amber-600" />
+            <CardTitle className="text-lg">最新公告</CardTitle>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-amber-600 hover:text-amber-700"
+            onClick={() => setCurrentPage('notices')}
+          >
+            查看全部
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {recentNotices.length > 0 ? (
+            <div className="space-y-3">
+              {recentNotices.map((notice) => (
+                <div
+                  key={notice.id}
+                  className={cn(
+                    'flex items-start justify-between rounded-lg border p-3',
+                    notice.isPinned && 'border-l-4 border-l-amber-500'
+                  )}
+                >
+                  <div className="flex items-start gap-3 min-w-0">
+                    {notice.isPinned && (
+                      <Pin className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">{notice.title}</p>
+                        <Badge
+                          variant="outline"
+                          className={cn('text-[10px] shrink-0', CATEGORY_COLORS[notice.category])}
+                        >
+                          {CATEGORY_LABELS[notice.category]}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
+                        {notice.content}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground shrink-0 ml-3">
+                    {new Date(notice.createdAt).toLocaleDateString('zh-HK')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              <Megaphone className="h-8 w-8 mx-auto mb-2 opacity-20" />
+              <p className="text-sm">暫無公告</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

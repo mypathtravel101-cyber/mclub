@@ -7,6 +7,7 @@ export type Page =
   | 'orders'
   | 'commissions'
   | 'events'
+  | 'notices'
   | 'notifications'
   | 'settings';
 
