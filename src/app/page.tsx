@@ -1,3037 +1,950 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Search,
+  Target,
+  Package,
+  MessageSquare,
+  ChevronRight,
+  ChevronDown,
+  Copy,
+  Check,
+  RotateCcw,
+  ArrowRight,
+  AlertTriangle,
+  Shield,
+  Lightbulb,
+  Building2,
+  User,
+} from 'lucide-react';
+import {
+  clientTypes,
+  products,
+  talkTracksByScenario,
+  talkTracksByType,
+  objectionHandlers,
+  getDifficultyColor,
+  getDifficultyDot,
+  getClientTypeByCode,
+  getProductsForType,
+  getTypeColor,
+  type ClientTypeCode,
+  type Difficulty,
+  type ClientType,
+} from '@/lib/handbook-data';
 
-// ── Types ──
-type UserRole = 'MCLUB_STAFF' | 'SME_OWNER' | 'AGENT' | 'END_USER';
-type OrderStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'SETTLED';
-type MemberLevel = 'PLAN_A' | 'PLAN_B' | 'PLAN_C' | 'FULL';
+// ─── Tab Definitions ───
+const tabs = [
+  { key: 'identify', label: '識別', icon: Search },
+  { key: 'strategy', label: '攻略', icon: Target },
+  { key: 'products', label: '產品', icon: Package },
+  { key: 'talks', label: '話術', icon: MessageSquare },
+] as const;
 
-interface User { id: string; email: string; name: string; phone?: string; role: UserRole; avatar?: string; }
-interface Product { id: string; name: string; category: string; description: string; keyPoints: string; minInvestment?: string; icon?: string; color?: string; commissionRules?: string; smeOwnerId: string; smeOwner?: { id?: string; name: string }; }
-interface Client { id: string; name: string; phone?: string; email?: string; source?: string; memberLevel: MemberLevel; agentId: string; totalSpent: number; agent?: { id: string; name: string }; orders?: Order[]; timelineEvents?: TimelineEvent[]; }
-interface Order { id: string; productId: string; endUserId: string; clientId: string; agentId?: string; status: OrderStatus; amount: number; currency: string; notes?: string; commissionSettled: boolean; product?: Product; client?: { name: string; memberLevel?: string }; endUser?: { name: string }; agent?: { id: string; name: string }; commissions?: Commission[]; timelineEvents?: TimelineEvent[]; }
-interface Commission { id: string; orderId: string; recipientId: string; role: UserRole; amount: number; status: 'PENDING' | 'PAID'; order?: { product?: { name: string; icon: string }; client?: { name: string } }; recipient?: { name: string; role: string }; }
-interface TimelineEvent { id: string; clientId: string; orderId?: string; eventType: string; title: string; description?: string; createdById?: string; createdBy?: { name: string }; createdAt: string; }
+type TabKey = (typeof tabs)[number]['key'];
 
-type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED';
-type RSVPStatus = 'PENDING' | 'CONFIRMED' | 'DECLINED' | 'CHECKED_IN';
-type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
-interface ClubEvent { id: string; title: string; description?: string; category?: string; venue?: string; eventDate: string; endDate?: string; status: EventStatus; maxAttendees?: number; isPublic: boolean; fee: number; currency: string; coverImage?: string; contactPerson?: string; sponsor?: string; createdById: string; createdBy?: { id: string; name: string; role: string }; rsvps?: RSVP[]; tasks?: EventTask[]; budgetItems?: EventBudgetItem[]; _count?: { rsvps: number; tasks: number; budgetItems: number }; }
-interface RSVP { id: string; eventId: string; userId: string; status: RSVPStatus; notes?: string; guests: number; user?: { id: string; name: string; email?: string; role?: string }; }
-interface EventTask { id: string; eventId: string; title: string; description?: string; status: TaskStatus; dueDate?: string; priority: string; assigneeId?: string; assignee?: { id: string; name: string; role?: string }; createdAt: string; }
-interface EventBudgetItem { id: string; eventId: string; category: string; description: string; estimatedCost: number; actualCost?: number; }
-
-// ── FX Risk Types ──
-type AlertStatus = 'ACTIVE' | 'TRIGGERED' | 'DISMISSED';
-type HedgingStatus = 'PENDING' | 'MATCHED' | 'COMPLETED' | 'CANCELLED';
-interface FXStressTest { id: string; userId: string; portfolio: string; baseCurrency: string; results: string; totalAssetValue: number; maxLossAmount: number; reportUrl?: string; createdAt: string; }
-interface CurrencyAlert { id: string; userId: string; fromCurrency: string; toCurrency: string; threshold: number; direction: string; status: AlertStatus; triggeredAt?: string; createdAt: string; }
-interface HedgingMatch { id: string; userId: string; stressTestId?: string; hedgingType: string; fromCurrency: string; toCurrency: string; amount: number; status: HedgingStatus; matchedProvider?: string; quote?: string; commissionRate: number; commissionAmount: number; notes?: string; createdAt: string; }
-interface CurrencyRate { id: string; fromCurrency: string; toCurrency: string; rate: number; source: string; date: string; }
-
-// ── Notification Types ──
-type NotificationType = 'ORDER_CREATED' | 'ORDER_STATUS_CHANGED' | 'COMMISSION_SETTLED' | 'EVENT_INVITATION' | 'EVENT_REMINDER' | 'FX_ALERT_TRIGGERED' | 'SYSTEM_ANNOUNCEMENT';
-interface Notification { id: string; userId: string; type: NotificationType; title: string; message: string; read: boolean; link?: string; createdAt: string; }
-
-// ── API Helper ──
-const API_BASE = '/api';
-
-function appendAuthParams(path: string, user: User | null): string {
-  if (!user) return path;
-  const sep = path.includes('?') ? '&' : '?';
-  return `${path}${sep}userId=${encodeURIComponent(user.id)}&userRole=${encodeURIComponent(user.role)}`;
+// ─── Difficulty Badge ───
+function DifficultyBadge({ difficulty }: { difficulty: Difficulty }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getDifficultyColor(difficulty)}`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full ${getDifficultyDot(difficulty)}`} />
+      {difficulty}級
+    </span>
+  );
 }
 
-async function apiFetch(path: string, user: User | null, opts?: RequestInit) {
-  const authPath = appendAuthParams(path, user);
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
-  try {
-    const res = await fetch(`${API_BASE}${authPath}`, { ...opts, signal: controller.signal, headers: { ...headers, ...(opts?.headers as Record<string, string> || {}) } });
-    return res.json();
-  } finally {
-    clearTimeout(timeout);
-  }
+// ─── Client Type Badge ───
+function ClientTypeBadge({ code }: { code: ClientTypeCode }) {
+  const ct = getClientTypeByCode(code);
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getTypeColor(code)}`}>
+      {code} {ct.name}
+    </span>
+  );
 }
 
-// ── Status helpers ──
-const statusLabel: Record<OrderStatus, string> = { PENDING: '待確認', IN_PROGRESS: '進行中', COMPLETED: '已完成', SETTLED: '已分帳' };
-const statusClass: Record<OrderStatus, string> = { PENDING: 'status-pending', IN_PROGRESS: 'status-in_progress', COMPLETED: 'status-completed', SETTLED: 'status-settled' };
-const memberLabel: Record<MemberLevel, string> = { PLAN_A: 'Plan A 入門', PLAN_B: 'Plan B 進階', PLAN_C: 'Plan C 高端', FULL: 'MCLUB全會員' };
-const roleLabel: Record<UserRole, string> = { MCLUB_STAFF: 'MCLUB Admin', SME_OWNER: 'SME老闆', AGENT: 'Agent經紀', END_USER: '客戶' };
-const eventStatusLabel: Record<EventStatus, string> = { DRAFT: '草稿', PUBLISHED: '已發佈', CANCELLED: '已取消', COMPLETED: '已完成' };
-const eventStatusClass: Record<EventStatus, string> = { DRAFT: 'status-pending', PUBLISHED: 'status-completed', CANCELLED: 'status-pending', COMPLETED: 'status-settled' };
-const rsvpStatusLabel: Record<RSVPStatus, string> = { PENDING: '待確認', CONFIRMED: '已確認', DECLINED: '已拒絕', CHECKED_IN: '已簽到' };
-const taskStatusLabel: Record<TaskStatus, string> = { TODO: '待辦', IN_PROGRESS: '進行中', DONE: '已完成' };
-const taskStatusClass: Record<TaskStatus, string> = { TODO: 'status-pending', IN_PROGRESS: 'status-in_progress', DONE: 'status-completed' };
-const priorityLabel: Record<string, string> = { high: '高', medium: '中', low: '低' };
-const priorityColor: Record<string, string> = { high: 'text-red-400', medium: 'text-yellow-400', low: 'text-green-400' };
-const budgetCategoryLabel: Record<string, string> = { venue: '場地', catering: '餐飲', decoration: '佈置', av: '影音', marketing: '宣傳', staff: '人員', other: '其他' };
-const eventCategoryLabel: Record<string, string> = { networking: '交流', seminar: '研討會', dinner: '晚宴', workshop: '工作坊', celebration: '慶典' };
+// ─── Copy Button ───
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
 
-function rsvpStatusClass(s: RSVPStatus): string {
-  return s === 'CONFIRMED' || s === 'CHECKED_IN' ? 'status-completed' : s === 'DECLINED' ? 'status-pending' : 'status-in_progress';
-}
-
-function eventStatusBadge(s: EventStatus): string {
-  return 'text-xs px-2 py-0.5 rounded-full ' + eventStatusClass[s];
-}
-
-function orderStatusBadge(s: OrderStatus): string {
-  return 'text-xs px-2 py-0.5 rounded-full ' + statusClass[s];
-}
-
-// ── Login Page ──
-function LoginPage({ onLogin }: { onLogin: (user: User) => void }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  const handleCopy = useCallback(async () => {
     try {
-      // Seed first
-      await fetch(`${API_BASE}/seed`, { method: 'POST' });
-      const res = await fetch(`${API_BASE}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-      const data = await res.json();
-      if (data.error) { setError(data.error); } else { onLogin(data.user); }
-    } catch { setError('連線失敗'); }
-    setLoading(false);
-  };
-
-  const demoAccounts = [
-    { email: 'kenneth@parkzeman.com', label: 'MCLUB Admin', icon: '👤' },
-    { email: 'calvin@mclub.com', label: 'SME老闆', icon: '🏢' },
-    { email: 'agent@mclub.com', label: 'Agent經紀', icon: '🤝' },
-    { email: 'user@mclub.com', label: '客戶', icon: '🎯' },
-  ];
-
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #0f1923 0%, #1a2330 50%, #0f1923 100%)' }}>
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gold mb-2">MCLUB</h1>
-          <p className="text-[#8899aa] text-sm">百盛家族辦公室 · 客戶關係管理系統</p>
-        </div>
-        <div className="mclub-card">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm text-[#8899aa] mb-1">電郵地址</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-3 text-sm" placeholder="輸入電郵" required />
-            </div>
-            <div>
-              <label className="block text-sm text-[#8899aa] mb-1">密碼</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-3 text-sm" placeholder="輸入密碼" required />
-            </div>
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-            <button type="submit" disabled={loading} className="w-full p-3 rounded-lg font-bold text-black" style={{ background: 'var(--gold)' }}>
-              {loading ? '登入中...' : '登入'}
-            </button>
-          </form>
-          <div className="mt-6 pt-4 border-t border-[#2a3a4e]">
-            <p className="text-xs text-[#5a6a7a] mb-3">示範帳號（密碼：demo123）</p>
-            <div className="grid grid-cols-2 gap-2">
-              {demoAccounts.map(a => (
-                <button key={a.email} onClick={() => { setEmail(a.email); setPassword('demo123'); }}
-                  className="p-2 rounded-lg text-xs text-left hover:bg-[#1f2b3d] border border-[#2a3a4e] transition-colors">
-                  <span className="mr-1">{a.icon}</span>{a.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Sidebar Nav ──
-function Sidebar({ current, onChange, role, onLogout }: { current: string; onChange: (v: string) => void; role: UserRole; onLogout: () => void }) {
-  const menus: Record<UserRole, { key: string; label: string; icon: string }[]> = {
-    MCLUB_STAFF: [
-      { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '客戶', icon: '👥' },
-      { key: 'orders', label: '訂單', icon: '📋' }, { key: 'products', label: '產品', icon: '📦' },
-      { key: 'commissions', label: '佣金', icon: '💰' }, { key: 'events', label: '活動', icon: '🎉' },
-      { key: 'fx', label: 'FX風險', icon: '💱' }, { key: 'analytics', label: '報表', icon: '📈' },
-      { key: 'profile', label: '設定', icon: '⚙️' },
-    ],
-    SME_OWNER: [
-      { key: 'overview', label: '總覽', icon: '📊' }, { key: 'products', label: '產品', icon: '📦' },
-      { key: 'orders', label: '訂單', icon: '📋' }, { key: 'commissions', label: '收入', icon: '💰' },
-      { key: 'events', label: '活動', icon: '🎉' }, { key: 'fx', label: 'FX風險', icon: '💱' },
-      { key: 'analytics', label: '報表', icon: '📈' }, { key: 'profile', label: '設定', icon: '⚙️' },
-    ],
-    AGENT: [
-      { key: 'overview', label: '總覽', icon: '📊' }, { key: 'clients', label: '客戶', icon: '👥' },
-      { key: 'commissions', label: '佣金', icon: '💰' }, { key: 'products', label: '產品', icon: '📦' },
-      { key: 'events', label: '活動', icon: '🎉' }, { key: 'fx', label: 'FX風險', icon: '💱' },
-      { key: 'analytics', label: '報表', icon: '📈' }, { key: 'profile', label: '設定', icon: '⚙️' },
-    ],
-    END_USER: [
-      { key: 'overview', label: '總覽', icon: '📊' }, { key: 'orders', label: '產品', icon: '📦' },
-      { key: 'events', label: '活動', icon: '🎉' }, { key: 'fx', label: 'FX風險', icon: '💱' },
-      { key: 'analytics', label: '報表', icon: '📈' }, { key: 'profile', label: '設定', icon: '⚙️' },
-    ],
-  };
-  const items = menus[role] || [];
-  const itemCount = items.length;
-
-  return (
-    <>
-      {/* Desktop sidebar */}
-      <div className="hidden md:flex flex-col w-56 border-r border-[#2a3a4e] min-h-screen">
-        <div className="p-4 border-b border-[#2a3a4e]">
-          <h2 className="text-gold font-bold text-lg">MCLUB</h2>
-          <p className="text-[10px] text-[#5a6a7a]">百盛家族辦公室</p>
-        </div>
-        <nav className="flex-1 p-2 space-y-1">
-          {items.map(item => (
-            <button key={item.key} onClick={() => onChange(item.key)}
-              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-colors ${current === item.key ? 'nav-active' : 'hover:bg-[#1f2b3d] text-[#8899aa]'}`}>
-              <span>{item.icon}</span>{item.label}
-            </button>
-          ))}
-        </nav>
-        <div className="p-4 border-t border-[#2a3a4e]">
-          <button onClick={onLogout} className="text-[#5a6a7a] text-sm hover:text-red-400 transition-colors">← 登出</button>
-        </div>
-      </div>
-      {/* Mobile bottom nav — show ALL items with compact layout */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#1a2330] border-t border-[#2a3a4e] flex z-50 safe-area-pb">
-        {items.map(item => (
-          <button key={item.key} onClick={() => onChange(item.key)}
-            className={`flex-1 py-2 text-center ${itemCount > 5 ? 'text-[10px]' : 'text-xs'} ${current === item.key ? 'text-gold' : 'text-[#5a6a7a]'}`}>
-            <div className={itemCount > 5 ? 'text-base' : 'text-lg'}>{item.icon}</div>
-            <div className="truncate leading-tight">{item.label}</div>
-          </button>
-        ))}
-      </div>
-    </>
-  );
-}
-
-// ── Stat Card ──
-function StatCard({ label, value, sub, gold }: { label: string; value: string | number; sub?: string; gold?: boolean }) {
-  return (
-    <div className="mclub-card">
-      <p className="text-xs text-[#5a6a7a] mb-1">{label}</p>
-      <p className={`text-2xl font-bold ${gold ? 'text-gold' : ''}`}>{value}</p>
-      {sub && <p className="text-xs text-[#5a6a7a] mt-1">{sub}</p>}
-    </div>
-  );
-}
-
-// ── Overview Dashboard ──
-function OverviewDashboard({ user, data, error, loading, onRetry, onNavigate, analyticsData }: { user: User; data: any; error: boolean; loading: boolean; onRetry: () => void; onNavigate: (v: string) => void; analyticsData: any }) {
-  if (error) return (
-    <div className="p-8 text-center">
-      <p className="text-red-400 mb-2">載入失敗</p>
-      <p className="text-xs text-[#5a6a7a] mb-4">請檢查網絡連接後重試</p>
-      <button onClick={onRetry} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>重試</button>
-    </div>
-  );
-  if (!data) return (
-    <div className="p-8 text-center">
-      <div className="inline-block w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mb-3"></div>
-      <p className="text-[#5a6a7a] text-sm">載入中...</p>
-    </div>
-  );
-  const fmt = (n: number) => n?.toLocaleString() || '0';
-  const a = analyticsData;
-
-  if (user.role === 'MCLUB_STAFF') {
-    return (
-      <div className="space-y-6">
-        <h2 className="text-xl font-bold">總覽</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard label="總客戶數" value={data.totalClients} />
-          <StatCard label="總訂單數" value={data.totalOrders} sub={`待確認 ${data.pendingOrders}`} />
-          <StatCard label="總營收" value={`HK$${fmt(data.totalRevenue)}`} gold />
-          <StatCard label="已完成/已分帳" value={`${data.completedOrders} / ${data.settledOrders}`} />
-        </div>
-        {/* Mini Charts Row */}
-        {a && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="mclub-card">
-              <h4 className="font-bold text-sm mb-2">📈 月度營收趨勢</h4>
-              <ResponsiveContainer width="100%" height={120}>
-                <LineChart data={a.monthlyRevenue || []}>
-                  <XAxis dataKey="month" stroke="#5a6a7a" fontSize={10} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '營收']} />
-                  <Line type="monotone" dataKey="revenue" stroke="#D4AF37" strokeWidth={2} dot={{ fill: '#D4AF37', r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mclub-card">
-              <h4 className="font-bold text-sm mb-2">📊 訂單狀態</h4>
-              <ResponsiveContainer width="100%" height={120}>
-                <PieChart>
-                  <Pie data={a.orderStatusDist || []} cx="50%" cy="50%" outerRadius={45} innerRadius={25} dataKey="value">
-                    {(a.orderStatusDist || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-        <div className="mclub-card">
-          <h3 className="font-bold mb-4">產品銷售概覽</h3>
-          <div className="space-y-3">
-            {(data.products || []).map((p: any) => (
-              <div key={p.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{p.icon}</span>
-                  <span className="text-sm">{p.name}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-[#5a6a7a]">SME: {p.smeOwner?.name}</span>
-                  <span className="text-sm font-bold text-gold">{p._count?.orders || 0} 單</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="mclub-card">
-          <h3 className="font-bold mb-4">Agent業績排名</h3>
-          {(data.agents || []).map((a: any, i: number) => (
-            <div key={a.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
-              <span className="text-sm">#{i + 1} {a.name}</span>
-              <span className="text-sm text-gold">{a._count?.clients || 0} 客戶</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (user.role === 'SME_OWNER') {
-    return (
-      <div className="space-y-6">
-        <h2 className="text-xl font-bold">總覽</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <StatCard label="我的收入" value={`HK$${fmt(data.myCommissions)}`} gold />
-          <StatCard label="待發放" value={`HK$${fmt(data.myPendingCommissions)}`} />
-        </div>
-        {/* Mini Revenue Trend Chart */}
-        {a && a.monthlyRevenue && (
-          <div className="mclub-card">
-            <h4 className="font-bold text-sm mb-2">📈 月度營收趨勢</h4>
-            <ResponsiveContainer width="100%" height={120}>
-              <LineChart data={a.monthlyRevenue || []}>
-                <XAxis dataKey="month" stroke="#5a6a7a" fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '營收']} />
-                <Line type="monotone" dataKey="revenue" stroke="#1ABC9C" strokeWidth={2} dot={{ fill: '#1ABC9C', r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-        <div className="mclub-card">
-          <h3 className="font-bold mb-4">最近訂單</h3>
-          {(data.smeProductOrders || []).map((o: any) => (
-            <div key={o.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
-              <div>
-                <span className="text-sm">{o.product?.icon} {o.product?.name}</span>
-                <span className="text-xs text-[#5a6a7a] ml-2">— {o.client?.name}</span>
-              </div>
-              <span className={orderStatusBadge(o.status)}>{statusLabel[o.status]}</span>
-            </div>
-          ))}
-          {(!data.smeProductOrders || data.smeProductOrders.length === 0) && <p className="text-[#5a6a7a] text-sm">暫無訂單</p>}
-        </div>
-      </div>
-    );
-  }
-
-  if (user.role === 'AGENT') {
-    return (
-      <div className="space-y-6">
-        <h2 className="text-xl font-bold">總覽</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <StatCard label="我的佣金" value={`HK$${fmt(data.myCommissions)}`} gold />
-          <StatCard label="待發放" value={`HK$${fmt(data.myPendingCommissions)}`} />
-          <StatCard label="我的客戶" value={data.totalClients} />
-          <StatCard label="總訂單" value={data.totalOrders} />
-        </div>
-        {/* Mini Commission Trend Chart */}
-        {a && a.monthlyCommission && (
-          <div className="mclub-card">
-            <h4 className="font-bold text-sm mb-2">📈 佣金趨勢</h4>
-            <ResponsiveContainer width="100%" height={120}>
-              <LineChart data={a.monthlyCommission || []}>
-                <XAxis dataKey="month" stroke="#5a6a7a" fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '佣金']} />
-                <Line type="monotone" dataKey="commission" stroke="#D4AF37" strokeWidth={2} dot={{ fill: '#D4AF37', r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-        <div className="mclub-card">
-          <h3 className="font-bold mb-4">我的客戶</h3>
-          {(data.myClients || []).map((c: any) => (
-            <div key={c.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
-              <div>
-                <span className="text-sm font-medium">{c.name}</span>
-                <span className="text-xs text-[#5a6a7a] ml-2">{memberLabel[c.memberLevel as MemberLevel]}</span>
-              </div>
-              <div className="text-xs text-gold">{c.orders?.length || 0} 訂單</div>
-            </div>
-          ))}
-        </div>
-        <button onClick={() => onNavigate('clients')} className="w-full p-3 rounded-lg border border-[#2a3a4e] text-sm text-[#8899aa] hover:text-gold hover:border-gold transition-colors">
-          查看所有客戶 →
-        </button>
-      </div>
-    );
-  }
-
-  // END_USER
-  return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold">歡迎，{user.name}</h2>
-      <div className="mclub-card">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-full bg-[#2a3a4e] flex items-center justify-center text-xl">👤</div>
-          <div>
-            <p className="font-bold">{user.name}</p>
-            <p className="text-xs text-[#5a6a7a]">{user.email}</p>
-          </div>
-        </div>
-      </div>
-      <div className="mclub-card">
-        <h3 className="font-bold mb-4">我的購買記錄</h3>
-        {(data.myOrders || []).map((o: any) => (
-          <div key={o.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
-            <div className="flex items-center gap-2">
-              <span>{o.product?.icon}</span>
-              <span className="text-sm">{o.product?.name}</span>
-            </div>
-            <span className={orderStatusBadge(o.status)}>{statusLabel[o.status]}</span>
-          </div>
-        ))}
-        {(!data.myOrders || data.myOrders.length === 0) && <p className="text-[#5a6a7a] text-sm">暫無購買記錄</p>}
-      </div>
-      <div className="mclub-card">
-        <h3 className="font-bold mb-2">升級推薦</h3>
-        <p className="text-sm text-[#8899aa]">您的Agent會為您推薦適合的升級方案，敬請期待！</p>
-      </div>
-    </div>
-  );
-}
-
-// ── Client List ──
-function ClientList({ user }: { user: User }) {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [showAdd, setShowAdd] = useState(false);
-  const [clientDetail, setClientDetail] = useState<any>(null);
-  const [newClient, setNewClient] = useState({ name: '', phone: '', email: '', source: '', memberLevel: 'PLAN_A' as MemberLevel });
-  const [showAddNote, setShowAddNote] = useState(false);
-  const [newNote, setNewNote] = useState({ eventType: 'note' as string, title: '', description: '' });
-
-  const loadClients = useCallback(async () => {
-    const res = await apiFetch('/clients', user);
-    if (res.clients) setClients(res.clients);
-  }, [user]);
-
-  // Load clients on mount
-  useEffect(() => {
-    loadClients();
-  }, [loadClients]);
-
-  const loadDetail = async (id: string) => {
-    setSelected(id);
-    const res = await apiFetch(`/clients/${id}`, user);
-    if (res.client) setClientDetail(res.client);
-  };
-
-  const addClient = async () => {
-    if (!newClient.name) return;
-    await apiFetch('/clients', user, { method: 'POST', body: JSON.stringify(newClient) });
-    setShowAdd(false);
-    setNewClient({ name: '', phone: '', email: '', source: '', memberLevel: 'PLAN_A' });
-    loadClients();
-  };
-
-  const addNote = async () => {
-    if (!selected || !newNote.title) return;
-    await apiFetch(`/clients/${selected}/timeline`, user, {
-      method: 'POST',
-      body: JSON.stringify({ eventType: newNote.eventType, title: newNote.title, description: newNote.description }),
-    });
-    setShowAddNote(false);
-    setNewNote({ eventType: 'note', title: '', description: '' });
-    loadDetail(selected);
-  };
-
-  const quickFollowUp = async () => {
-    if (!selected) return;
-    await apiFetch(`/clients/${selected}/timeline`, user, {
-      method: 'POST',
-      body: JSON.stringify({ eventType: 'followup', title: '📞 快速跟進', description: '已進行電話跟進' }),
-    });
-    loadDetail(selected);
-  };
-
-  if (selected && clientDetail) {
-    const eventTypeLabel: Record<string, string> = { purchase: '🛒 購買', upgrade: '⬆️ 升級', followup: '📞 跟進', note: '📝 備註', status_change: '🔄 狀態變更' };
-    return (
-      <div className="space-y-4">
-        <button onClick={() => { setSelected(null); setClientDetail(null); }} className="text-sm text-gold hover:underline">← 返回客戶列表</button>
-        <div className="mclub-card">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-bold">{clientDetail.name}</h3>
-              <p className="text-xs text-[#5a6a7a]">{clientDetail.phone} · {clientDetail.email}</p>
-            </div>
-            <span className="text-xs px-2 py-1 rounded-full bg-[#2a3a4e] text-gold">{memberLabel[clientDetail.memberLevel as MemberLevel]}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><span className="text-[#5a6a7a]">來源：</span>{clientDetail.source || '-'}</div>
-            <div><span className="text-[#5a6a7a]">Agent：</span>{clientDetail.agent?.name || '-'}</div>
-            <div><span className="text-[#5a6a7a]">總消費：</span><span className="text-gold">HK${clientDetail.totalSpent?.toLocaleString()}</span></div>
-            <div><span className="text-[#5a6a7a]">訂單數：</span>{clientDetail.orders?.length || 0}</div>
-          </div>
-        </div>
-
-        <div className="mclub-card">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-bold">📋 客戶Timeline</h4>
-            <div className="flex items-center gap-2">
-              <button onClick={quickFollowUp} className="px-3 py-1.5 rounded-lg text-xs border border-[#2a3a4e] hover:border-gold hover:text-gold transition-colors">
-                📞 快速跟進
-              </button>
-              <button onClick={() => setShowAddNote(!showAddNote)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>
-                📝 新增備註
-              </button>
-            </div>
-          </div>
-
-          {showAddNote && (
-            <div className="bg-[#0f1923] rounded-lg p-3 mb-4 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs text-[#5a6a7a] mb-1">事件類型</label>
-                  <select value={newNote.eventType} onChange={e => setNewNote({ ...newNote, eventType: e.target.value })} className="w-full p-2 text-sm">
-                    <option value="note">📝 備註</option>
-                    <option value="followup">📞 跟進</option>
-                    <option value="upgrade">⬆️ 升級</option>
-                    <option value="status_change">🔄 狀態變更</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-[#5a6a7a] mb-1">標題 *</label>
-                  <input value={newNote.title} onChange={e => setNewNote({ ...newNote, title: e.target.value })} className="w-full p-2 text-sm" placeholder="輸入標題" />
-                </div>
-              </div>
-              <textarea value={newNote.description} onChange={e => setNewNote({ ...newNote, description: e.target.value })} className="w-full p-2 text-sm" rows={2} placeholder="描述（選填）" />
-              <div className="flex gap-2">
-                <button onClick={addNote} className="px-3 py-1.5 rounded-lg text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>確認</button>
-                <button onClick={() => setShowAddNote(false)} className="px-3 py-1.5 rounded-lg text-xs text-[#8899aa] border border-[#2a3a4e]">取消</button>
-              </div>
-            </div>
-          )}
-
-          <div className="relative pl-8 space-y-4">
-            <div className="timeline-line" />
-            {(clientDetail.timelineEvents || []).map((e: TimelineEvent) => (
-              <div key={e.id} className="relative">
-                <div className="timeline-dot" />
-                <div className="ml-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#2a3a4e] text-[#8899aa]">{eventTypeLabel[e.eventType] || e.eventType}</span>
-                    <p className="text-sm font-medium">{e.title}</p>
-                  </div>
-                  {e.description && <p className="text-xs text-[#8899aa] mt-0.5">{e.description}</p>}
-                  <p className="text-[10px] text-[#5a6a7a]">{new Date(e.createdAt).toLocaleDateString('zh-HK')} {e.createdBy?.name && `— ${e.createdBy.name}`}</p>
-                </div>
-              </div>
-            ))}
-            {(!clientDetail.timelineEvents || clientDetail.timelineEvents.length === 0) && <p className="text-[#5a6a7a] text-sm">暫無記錄</p>}
-          </div>
-        </div>
-
-        <div className="mclub-card">
-          <h4 className="font-bold mb-3">📝 訂單記錄</h4>
-          {(clientDetail.orders || []).map((o: Order) => (
-            <div key={o.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
-              <div className="flex items-center gap-2">
-                <span>{o.product?.icon}</span>
-                <span className="text-sm">{o.product?.name}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gold">{o.currency === 'USD' ? 'US$' : 'HK$'}{o.amount.toLocaleString()}</span>
-                <span className={orderStatusBadge(o.status)}>{statusLabel[o.status]}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  const exportCSV = async () => {
-    const path = appendAuthParams(`/export?type=clients`, user);
-    const res = await fetch(`${API_BASE}${path}`);
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `clients_export_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">客戶管理</h2>
-        <div className="flex items-center gap-2">
-          {(user.role === 'MCLUB_STAFF' || user.role === 'AGENT') && (
-            <button onClick={exportCSV} className="px-3 py-2 rounded-lg text-sm border border-[#2a3a4e] hover:border-gold hover:text-gold transition-colors">
-              📥 匯出CSV
-            </button>
-          )}
-          {(user.role === 'MCLUB_STAFF' || user.role === 'AGENT') && (
-            <button onClick={() => setShowAdd(!showAdd)} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-              + 新增客戶
-            </button>
-          )}
-        </div>
-      </div>
-      {showAdd && (
-        <div className="mclub-card space-y-3">
-          <input placeholder="姓名 *" value={newClient.name} onChange={e => setNewClient({ ...newClient, name: e.target.value })} className="w-full p-2 text-sm" />
-          <input placeholder="電話" value={newClient.phone} onChange={e => setNewClient({ ...newClient, phone: e.target.value })} className="w-full p-2 text-sm" />
-          <input placeholder="電郵" value={newClient.email} onChange={e => setNewClient({ ...newClient, email: e.target.value })} className="w-full p-2 text-sm" />
-          <select value={newClient.memberLevel} onChange={e => setNewClient({ ...newClient, memberLevel: e.target.value as MemberLevel })} className="w-full p-2 text-sm">
-            <option value="PLAN_A">Plan A 入門</option><option value="PLAN_B">Plan B 進階</option><option value="PLAN_C">Plan C 高端</option>
-          </select>
-          <button onClick={addClient} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>確認新增</button>
-        </div>
-      )}
-      <div className="space-y-2">
-        {clients.map(c => (
-          <div key={c.id} onClick={() => loadDetail(c.id)} className="mclub-card mclub-card-hover cursor-pointer flex items-center justify-between">
-            <div>
-              <span className="font-medium">{c.name}</span>
-              <span className="text-xs text-[#5a6a7a] ml-2">{c.phone || ''}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs px-2 py-0.5 rounded-full bg-[#2a3a4e] text-[#8899aa]">{memberLabel[c.memberLevel]}</span>
-              <span className="text-xs text-gold">HK${c.totalSpent?.toLocaleString()}</span>
-            </div>
-          </div>
-        ))}
-        {clients.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無客戶</p>}
-      </div>
-    </div>
-  );
-}
-
-// ── Order List ──
-function OrderList({ user }: { user: User }) {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [showCreate, setShowCreate] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [formProducts, setFormProducts] = useState<Product[]>([]);
-  const [formClients, setFormClients] = useState<Client[]>([]);
-  const [formAgents, setFormAgents] = useState<User[]>([]);
-  const [newOrder, setNewOrder] = useState({ productId: '', clientId: '', amount: '', currency: 'HKD', notes: '', agentId: '' });
-  const [submitting, setSubmitting] = useState(false);
-
-  const loadOrders = useCallback(async () => {
-    const res = await apiFetch('/orders', user);
-    if (res.orders) setOrders(res.orders);
-  }, [user]);
-
-  useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
-
-  // Load form data when create form opens
-  useEffect(() => {
-    if (showCreate) {
-      apiFetch('/products', user).then(res => { if (res.products) setFormProducts(res.products); });
-      apiFetch('/clients', user).then(res => { if (res.clients) setFormClients(res.clients); });
-      if (user.role === 'MCLUB_STAFF') {
-        apiFetch('/users', user).then(res => { if (res.users) setFormAgents(res.users.filter((u: User) => u.role === 'AGENT')); });
-      }
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
-  }, [showCreate, user]);
-
-  const updateStatus = async (id: string, status: OrderStatus) => {
-    await apiFetch(`/orders/${id}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
-    loadOrders();
-    if (selectedOrder) loadOrderDetail(id);
-  };
-
-  const settleOrder = async (id: string) => {
-    if (!confirm('確認分帳？此操作將自動計算佣金。')) return;
-    const res = await apiFetch(`/orders/${id}/settle`, user, { method: 'POST' });
-    if (res.message) alert(res.message);
-    loadOrders();
-    if (selectedOrder) loadOrderDetail(id);
-  };
-
-  const loadOrderDetail = async (id: string) => {
-    const res = await apiFetch(`/orders/${id}`, user);
-    if (res.order) setSelectedOrder(res.order);
-  };
-
-  const createOrder = async () => {
-    if (!newOrder.productId || !newOrder.clientId || !newOrder.amount) return;
-    setSubmitting(true);
-    try {
-      const body: any = {
-        productId: newOrder.productId,
-        clientId: newOrder.clientId,
-        amount: newOrder.amount,
-        currency: newOrder.currency,
-        notes: newOrder.notes || undefined,
-      };
-      if (user.role === 'AGENT') {
-        body.agentId = user.id;
-      } else if (newOrder.agentId) {
-        body.agentId = newOrder.agentId;
-      }
-      await apiFetch('/orders', user, { method: 'POST', body: JSON.stringify(body) });
-      setShowCreate(false);
-      setNewOrder({ productId: '', clientId: '', amount: '', currency: 'HKD', notes: '', agentId: '' });
-      loadOrders();
-    } catch { alert('建立訂單失敗'); }
-    setSubmitting(false);
-  };
-
-  const exportCSV = async () => {
-    const path = appendAuthParams(`/export?type=orders`, user);
-    const res = await fetch(`${API_BASE}${path}`);
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `orders_export_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  // ── Order Detail View (Feature 11) ──
-  if (selectedOrder) {
-    const o = selectedOrder;
-    let rules = { agentRate: 0, smeRate: 0, mclubRate: 0 };
-    try { rules = JSON.parse(o.product?.commissionRules || '{}'); } catch {}
-    const currSymbol = o.currency === 'USD' ? 'US$' : o.currency === 'RMB' ? '¥' : o.currency === 'JPY' ? '¥' : 'HK$';
-    const agentComm = o.amount * rules.agentRate / 100;
-    const smeComm = o.amount * rules.smeRate / 100;
-    const mclubComm = o.amount * rules.mclubRate / 100;
-
-    return (
-      <div className="space-y-4">
-        <button onClick={() => setSelectedOrder(null)} className="text-sm text-gold hover:underline">← 返回訂單列表</button>
-
-        <div className="mclub-card">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl" style={{ background: o.product?.color || '#2a3a4e' }}>{o.product?.icon}</div>
-              <div>
-                <h3 className="text-lg font-bold">{o.product?.name}</h3>
-                <p className="text-xs text-[#5a6a7a]">{o.product?.category} · {o.product?.smeOwner?.name || '-'}</p>
-              </div>
-            </div>
-            <span className={orderStatusBadge(o.status)}>{statusLabel[o.status]}</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><span className="text-[#5a6a7a]">客戶：</span>{o.client?.name || '-'}</div>
-            <div><span className="text-[#5a6a7a]">Agent：</span>{o.agent?.name || '-'}</div>
-            <div><span className="text-[#5a6a7a]">金額：</span><span className="text-gold font-bold">{currSymbol}{o.amount?.toLocaleString()}</span></div>
-            <div><span className="text-[#5a6a7a]">貨幣：</span>{o.currency}</div>
-            <div><span className="text-[#5a6a7a]">建立日期：</span>{new Date(o.createdAt).toLocaleDateString('zh-HK')}</div>
-            <div><span className="text-[#5a6a7a]">更新日期：</span>{new Date(o.updatedAt).toLocaleDateString('zh-HK')}</div>
-          </div>
-
-          {o.notes && (
-            <div className="mt-3 pt-3 border-t border-[#2a3a4e]">
-              <span className="text-[#5a6a7a] text-sm">備註：</span>
-              <p className="text-sm mt-1">{o.notes}</p>
-            </div>
-          )}
-
-          {user.role === 'MCLUB_STAFF' && (
-            <div className="flex gap-2 mt-4 pt-3 border-t border-[#2a3a4e]">
-              {o.status === 'PENDING' && <button onClick={() => updateStatus(o.id, 'IN_PROGRESS')} className="px-3 py-1.5 rounded text-xs bg-blue-900 text-blue-300 hover:bg-blue-800">確認 → 進行中</button>}
-              {o.status === 'IN_PROGRESS' && <button onClick={() => updateStatus(o.id, 'COMPLETED')} className="px-3 py-1.5 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">完成 → 已完成</button>}
-              {o.status === 'COMPLETED' && !o.commissionSettled && <button onClick={() => settleOrder(o.id)} className="px-3 py-1.5 rounded text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>💰 分帳</button>}
-            </div>
-          )}
-        </div>
-
-        {/* Commission Preview */}
-        <div className="mclub-card">
-          <h4 className="font-bold mb-4">💰 佣金預覽</h4>
-          {!o.commissionSettled ? (
-            <div className="space-y-3">
-              <p className="text-xs text-[#5a6a7a] mb-2">按產品佣金規則計算（尚未分帳）</p>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-[#0f1923] rounded-lg p-3 text-center">
-                  <p className="text-xs text-[#5a6a7a]">Agent</p>
-                  <p className="text-lg font-bold text-blue-400">{currSymbol}{agentComm.toLocaleString()}</p>
-                  <p className="text-[10px] text-[#5a6a7a]">{rules.agentRate}% · {o.agent?.name || '-'}</p>
-                </div>
-                <div className="bg-[#0f1923] rounded-lg p-3 text-center">
-                  <p className="text-xs text-[#5a6a7a]">SME老闆</p>
-                  <p className="text-lg font-bold text-teal-400">{currSymbol}{smeComm.toLocaleString()}</p>
-                  <p className="text-[10px] text-[#5a6a7a]">{rules.smeRate}% · {o.product?.smeOwner?.name || '-'}</p>
-                </div>
-                <div className="bg-[#0f1923] rounded-lg p-3 text-center">
-                  <p className="text-xs text-[#5a6a7a]">MCLUB</p>
-                  <p className="text-lg font-bold text-gold">{currSymbol}{mclubComm.toLocaleString()}</p>
-                  <p className="text-[10px] text-[#5a6a7a]">{rules.mclubRate}%</p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-xs text-green-400 mb-2">✅ 佣金已分帳</p>
-              {(o.commissions || []).map((c: Commission) => (
-                <div key={c.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
-                  <div>
-                    <span className="text-sm">{c.recipient?.name || '-'}</span>
-                    <span className="text-xs text-[#5a6a7a] ml-2">({roleLabel[c.recipient?.role as UserRole] || c.role})</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-gold">{currSymbol}{c.amount.toLocaleString()}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${c.status === 'PAID' ? 'status-completed' : 'status-pending'}`}>{c.status === 'PAID' ? '已發放' : '待發放'}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Order Timeline */}
-        <div className="mclub-card">
-          <h4 className="font-bold mb-4">📋 訂單時間軸</h4>
-          <div className="relative pl-8 space-y-4">
-            <div className="timeline-line" />
-            {(o.timelineEvents || []).map((e: TimelineEvent) => (
-              <div key={e.id} className="relative">
-                <div className="timeline-dot" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium">{e.title}</p>
-                  {e.description && <p className="text-xs text-[#8899aa]">{e.description}</p>}
-                  <p className="text-[10px] text-[#5a6a7a]">{new Date(e.createdAt).toLocaleDateString('zh-HK')} {e.createdBy?.name && `— ${e.createdBy.name}`}</p>
-                </div>
-              </div>
-            ))}
-            {(!o.timelineEvents || o.timelineEvents.length === 0) && <p className="text-[#5a6a7a] text-sm">暫無記錄</p>}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  }, [text]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">訂單管理</h2>
-        <div className="flex items-center gap-2">
-          <button onClick={exportCSV} className="px-3 py-2 rounded-lg text-sm border border-[#2a3a4e] hover:border-gold hover:text-gold transition-colors">
-            📥 匯出CSV
-          </button>
-          {(user.role === 'MCLUB_STAFF' || user.role === 'AGENT') && (
-            <button onClick={() => setShowCreate(!showCreate)} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-              ➕ 新增訂單
-            </button>
-          )}
-        </div>
-      </div>
+    <button
+      onClick={handleCopy}
+      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all min-h-[36px] ${
+        copied
+          ? 'bg-green-100 text-green-700 border border-green-200'
+          : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 active:scale-95'
+      }`}
+    >
+      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+      {copied ? '已複製' : '複製'}
+    </button>
+  );
+}
 
-      {showCreate && (
-        <div className="mclub-card space-y-3">
-          <h4 className="font-bold text-sm">新增訂單</h4>
-          <div>
-            <label className="block text-xs text-[#5a6a7a] mb-1">產品 *</label>
-            <select value={newOrder.productId} onChange={e => {
-              const pid = e.target.value;
-              const prod = formProducts.find(p => p.id === pid);
-              setNewOrder({ ...newOrder, productId: pid, amount: prod?.minInvestment?.replace(/[^0-9.]/g, '') || newOrder.amount });
-            }} className="w-full p-2 text-sm">
-              <option value="">選擇產品</option>
-              {formProducts.map(p => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-[#5a6a7a] mb-1">客戶 *</label>
-            <select value={newOrder.clientId} onChange={e => setNewOrder({ ...newOrder, clientId: e.target.value })} className="w-full p-2 text-sm">
-              <option value="">選擇客戶</option>
-              {formClients.map(c => <option key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ''}</option>)}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs text-[#5a6a7a] mb-1">金額 *</label>
-              <input type="number" value={newOrder.amount} onChange={e => setNewOrder({ ...newOrder, amount: e.target.value })} className="w-full p-2 text-sm" placeholder="訂單金額" />
-            </div>
-            <div>
-              <label className="block text-xs text-[#5a6a7a] mb-1">貨幣</label>
-              <select value={newOrder.currency} onChange={e => setNewOrder({ ...newOrder, currency: e.target.value })} className="w-full p-2 text-sm">
-                <option value="HKD">HKD</option><option value="USD">USD</option><option value="RMB">RMB</option><option value="JPY">JPY</option>
-              </select>
-            </div>
-          </div>
-          {user.role === 'MCLUB_STAFF' && formAgents.length > 0 && (
-            <div>
-              <label className="block text-xs text-[#5a6a7a] mb-1">負責Agent</label>
-              <select value={newOrder.agentId} onChange={e => setNewOrder({ ...newOrder, agentId: e.target.value })} className="w-full p-2 text-sm">
-                <option value="">選擇Agent（可選）</option>
-                {formAgents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-            </div>
-          )}
-          {user.role === 'AGENT' && (
-            <p className="text-xs text-[#5a6a7a]">Agent：{user.name}（自動填入）</p>
-          )}
-          <div>
-            <label className="block text-xs text-[#5a6a7a] mb-1">備註</label>
-            <textarea value={newOrder.notes} onChange={e => setNewOrder({ ...newOrder, notes: e.target.value })} className="w-full p-2 text-sm" rows={2} placeholder="選填" />
-          </div>
-          <div className="flex gap-2">
-            <button onClick={createOrder} disabled={submitting} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-              {submitting ? '提交中...' : '確認新增'}
-            </button>
-            <button onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg text-sm text-[#8899aa] border border-[#2a3a4e]">取消</button>
-          </div>
-        </div>
-      )}
+// ─── Tab 1: 識別 (Client Type Identifier) ───
+function IdentifyTab({ onViewStrategy }: { onViewStrategy: (code: ClientTypeCode) => void }) {
+  const [step, setStep] = useState(0);
+  const [category, setCategory] = useState<'機構' | '個人' | null>(null);
+  const [result, setResult] = useState<ClientType | null>(null);
 
-      <div className="space-y-3">
-        {orders.map(o => (
-          <div key={o.id} onClick={() => loadOrderDetail(o.id)} className="mclub-card mclub-card-hover cursor-pointer">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{o.product?.icon}</span>
-                <span className="font-medium text-sm">{o.product?.name}</span>
-              </div>
-              <span className={orderStatusBadge(o.status)}>{statusLabel[o.status]}</span>
+  const handleCategorySelect = (cat: '機構' | '個人') => {
+    setCategory(cat);
+    setStep(1);
+  };
+
+  const handleSubTypeSelect = (code: ClientTypeCode) => {
+    setResult(getClientTypeByCode(code));
+    setStep(2);
+  };
+
+  const handleReset = () => {
+    setStep(0);
+    setCategory(null);
+    setResult(null);
+  };
+
+  const institutionTypes = clientTypes.filter(c => c.category === '機構');
+  const individualTypes = clientTypes.filter(c => c.category === '個人');
+  const currentTypes = category === '機構' ? institutionTypes : individualTypes;
+
+  return (
+    <div className="tab-content-enter px-4 py-4 space-y-4">
+      {/* Progress Indicator */}
+      <div className="flex items-center gap-2 mb-2">
+        {[0, 1, 2].map((s) => (
+          <div key={s} className="flex items-center gap-2">
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                step > s
+                  ? 'bg-teal-600 text-white'
+                  : step === s
+                  ? 'bg-teal-100 text-teal-700 border-2 border-teal-500'
+                  : 'bg-slate-100 text-slate-400'
+              }`}
+            >
+              {step > s ? '✓' : s + 1}
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs text-[#8899aa] mb-2">
-              <div>客戶：{o.client?.name || '-'}</div>
-              <div>金額：<span className="text-gold font-bold">{o.currency === 'USD' ? 'US$' : o.currency === 'RMB' ? '¥' : o.currency === 'JPY' ? '¥' : 'HK$'}{o.amount.toLocaleString()}</span></div>
-            </div>
-            {user.role === 'MCLUB_STAFF' && (
-              <div className="flex gap-2 mt-2" onClick={e => e.stopPropagation()}>
-                {o.status === 'PENDING' && <button onClick={() => updateStatus(o.id, 'IN_PROGRESS')} className="px-3 py-1 rounded text-xs bg-blue-900 text-blue-300 hover:bg-blue-800">確認 → 進行中</button>}
-                {o.status === 'IN_PROGRESS' && <button onClick={() => updateStatus(o.id, 'COMPLETED')} className="px-3 py-1 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">完成 → 已完成</button>}
-                {o.status === 'COMPLETED' && !o.commissionSettled && <button onClick={() => settleOrder(o.id)} className="px-3 py-1 rounded text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>💰 分帳</button>}
-              </div>
+            {s < 2 && (
+              <div
+                className={`w-8 h-0.5 transition-all ${
+                  step > s ? 'bg-teal-500' : 'bg-slate-200'
+                }`}
+              />
             )}
           </div>
         ))}
-        {orders.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無訂單</p>}
+        <span className="text-xs text-slate-500 ml-2">
+          {step === 0 ? '選擇類別' : step === 1 ? '細分類型' : '查看結果'}
+        </span>
       </div>
+
+      <AnimatePresence mode="wait">
+        {/* Step 0: Category Selection */}
+        {step === 0 && (
+          <motion.div
+            key="step0"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-4"
+          >
+            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
+                  <Search className="w-4 h-4 text-teal-600" />
+                </div>
+                <h3 className="font-semibold text-slate-800">客戶類別識別</h3>
+              </div>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                這位客戶是以<strong>機構/公司</strong>身份，還是以<strong>個人</strong>身份進行諮詢？
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => handleCategorySelect('機構')}
+                className="card-press bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:border-teal-300 hover:shadow-md transition-all text-left"
+              >
+                <div className="w-12 h-12 rounded-xl bg-teal-100 flex items-center justify-center mb-3">
+                  <Building2 className="w-6 h-6 text-teal-600" />
+                </div>
+                <div className="font-semibold text-slate-800 text-base">機構</div>
+                <div className="text-xs text-slate-500 mt-1">公司/實體客戶</div>
+                <div className="flex items-center gap-1 mt-3 text-xs text-teal-600 font-medium">
+                  A1-A3 <ChevronRight className="w-3 h-3" />
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleCategorySelect('個人')}
+                className="card-press bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:border-teal-300 hover:shadow-md transition-all text-left"
+              >
+                <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-3">
+                  <User className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="font-semibold text-slate-800 text-base">個人</div>
+                <div className="text-xs text-slate-500 mt-1">高淨值個人客戶</div>
+                <div className="flex items-center gap-1 mt-3 text-xs text-purple-600 font-medium">
+                  B1-B3 <ChevronRight className="w-3 h-3" />
+                </div>
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 1: Sub-type Selection */}
+        {step === 1 && (
+          <motion.div
+            key="step1"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-3"
+          >
+            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${category === '機構' ? 'bg-teal-100 text-teal-700' : 'bg-purple-100 text-purple-700'}`}>
+                  {category}
+                </span>
+                <span className="text-sm text-slate-500">已選擇</span>
+              </div>
+              <p className="text-sm text-slate-600">
+                {category === '機構'
+                  ? '這家公司是準備上市、已經上市，還是跨境經營？'
+                  : '這位客戶是財富創造者、繼承者，還是跨境高淨值人士？'}
+              </p>
+            </div>
+
+            {currentTypes.map((ct) => (
+              <button
+                key={ct.code}
+                onClick={() => handleSubTypeSelect(ct.code)}
+                className="card-press w-full bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:border-teal-300 hover:shadow-md transition-all text-left"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm ${
+                        ct.code.startsWith('A')
+                          ? 'bg-teal-100 text-teal-700'
+                          : 'bg-purple-100 text-purple-700'
+                      }`}
+                    >
+                      {ct.code}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-800">{ct.name}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">{ct.entryAngle}</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                </div>
+              </button>
+            ))}
+
+            <button
+              onClick={handleReset}
+              className="w-full py-3 text-sm text-slate-500 hover:text-slate-700 flex items-center justify-center gap-1"
+            >
+              <RotateCcw className="w-4 h-4" />
+              重新選擇
+            </button>
+          </motion.div>
+        )}
+
+        {/* Step 2: Result */}
+        {step === 2 && result && (
+          <motion.div
+            key="step2"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-4"
+          >
+            <div className="bg-white rounded-xl border-2 border-teal-200 p-5 shadow-md">
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className={`w-14 h-14 rounded-xl flex items-center justify-center font-bold text-lg ${
+                    result.code.startsWith('A')
+                      ? 'bg-teal-100 text-teal-700'
+                      : 'bg-purple-100 text-purple-700'
+                  }`}
+                >
+                  {result.code}
+                </div>
+                <div>
+                  <div className="font-bold text-lg text-slate-800">{result.name}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${result.category === '機構' ? 'bg-teal-100 text-teal-700' : 'bg-purple-100 text-purple-700'}`}>
+                      {result.category}
+                    </span>
+                    <DifficultyBadge difficulty={result.difficulty} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Core Needs */}
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1">
+                  <Lightbulb className="w-4 h-4 text-amber-500" />
+                  核心需求
+                </h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {result.coreNeeds.map((need) => (
+                    <span
+                      key={need}
+                      className="px-2 py-1 rounded-lg text-xs bg-slate-100 text-slate-700 border border-slate-200"
+                    >
+                      {need}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Entry Angle */}
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1">
+                  <ArrowRight className="w-4 h-4 text-teal-500" />
+                  切入角度
+                </h4>
+                <p className="text-sm text-slate-600 bg-teal-50 rounded-lg p-3 border border-teal-100">
+                  「{result.entryAngle}」
+                </p>
+              </div>
+
+              {/* Difficulty */}
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1">
+                  <Shield className="w-4 h-4 text-slate-500" />
+                  開拓難度
+                </h4>
+                <DifficultyBadge difficulty={result.difficulty} />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => onViewStrategy(result.code)}
+                className="flex-1 py-3 rounded-xl bg-teal-600 text-white font-semibold text-sm shadow-md hover:bg-teal-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 min-h-[44px]"
+              >
+                <Target className="w-4 h-4" />
+                查看攻略
+              </button>
+              <button
+                onClick={handleReset}
+                className="py-3 px-5 rounded-xl bg-white border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 min-h-[44px]"
+              >
+                <RotateCcw className="w-4 h-4" />
+                重測
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-// ── Product List ──
-function ProductList({ user }: { user: User }) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [showCreate, setShowCreate] = useState(false);
-  const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [formSmeOwners, setFormSmeOwners] = useState<User[]>([]);
-  const [newProduct, setNewProduct] = useState({ name: '', category: '保險', description: '', keyPoints: '', minInvestment: '', icon: '📦', color: '#2a3a4e', agentRate: '10', smeRate: '15', mclubRate: '5', smeOwnerId: '' });
+// ─── Tab 2: 攻略 (Client Strategy Cards) ───
+function StrategyTab({ highlightedType }: { highlightedType: ClientTypeCode | null }) {
+  const [manuallyExpanded, setManuallyExpanded] = useState<ClientTypeCode | null>(null);
+  const expanded = manuallyExpanded ?? highlightedType;
 
-  const loadProducts = useCallback(async () => {
-    const res = await apiFetch('/products', user);
-    if (res.products) setProducts(res.products);
-  }, [user]);
-
-  useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
-
-  useEffect(() => {
-    if (showCreate && user.role === 'MCLUB_STAFF') {
-      apiFetch('/users', user).then(res => { if (res.users) setFormSmeOwners(res.users.filter((u: User) => u.role === 'SME_OWNER')); });
-    }
-  }, [showCreate, user]);
-
-  const canEdit = (p: Product) => user.role === 'MCLUB_STAFF' || (user.role === 'SME_OWNER' && p.smeOwnerId === user.id);
-
-  const createProduct = async () => {
-    if (!newProduct.name) return;
-    const commissionRules = JSON.stringify({ agentRate: parseFloat(newProduct.agentRate) || 0, smeRate: parseFloat(newProduct.smeRate) || 0, mclubRate: parseFloat(newProduct.mclubRate) || 0, type: 'percent' });
-    const body: any = {
-      name: newProduct.name, category: newProduct.category, description: newProduct.description,
-      keyPoints: JSON.stringify(newProduct.keyPoints.split(',').map(s => s.trim()).filter(Boolean)),
-      minInvestment: newProduct.minInvestment || null, icon: newProduct.icon, color: newProduct.color,
-      commissionRules,
-    };
-    if (user.role === 'MCLUB_STAFF' && newProduct.smeOwnerId) body.smeOwnerId = newProduct.smeOwnerId;
-    await apiFetch('/products', user, { method: 'POST', body: JSON.stringify(body) });
-    setShowCreate(false);
-    setNewProduct({ name: '', category: '保險', description: '', keyPoints: '', minInvestment: '', icon: '📦', color: '#2a3a4e', agentRate: '10', smeRate: '15', mclubRate: '5', smeOwnerId: '' });
-    loadProducts();
+  const toggleExpand = (code: ClientTypeCode) => {
+    setManuallyExpanded(manuallyExpanded === code ? null : code);
   };
-
-  const updateProduct = async () => {
-    if (!editProduct || !newProduct.name) return;
-    const commissionRules = JSON.stringify({ agentRate: parseFloat(newProduct.agentRate) || 0, smeRate: parseFloat(newProduct.smeRate) || 0, mclubRate: parseFloat(newProduct.mclubRate) || 0, type: 'percent' });
-    const body: any = {
-      id: editProduct.id,
-      name: newProduct.name, category: newProduct.category, description: newProduct.description,
-      keyPoints: JSON.stringify(newProduct.keyPoints.split(',').map(s => s.trim()).filter(Boolean)),
-      minInvestment: newProduct.minInvestment || null, icon: newProduct.icon, color: newProduct.color,
-      commissionRules,
-    };
-    if (user.role === 'MCLUB_STAFF' && newProduct.smeOwnerId) body.smeOwnerId = newProduct.smeOwnerId;
-    await apiFetch('/products', user, { method: 'PATCH', body: JSON.stringify(body) });
-    setEditProduct(null);
-    setNewProduct({ name: '', category: '保險', description: '', keyPoints: '', minInvestment: '', icon: '📦', color: '#2a3a4e', agentRate: '10', smeRate: '15', mclubRate: '5', smeOwnerId: '' });
-    loadProducts();
-  };
-
-  const deleteProduct = async (id: string) => {
-    if (!confirm('確認刪除此產品？此操作無法撤銷。')) return;
-    await apiFetch(`/products?id=${id}`, user, { method: 'DELETE' });
-    loadProducts();
-  };
-
-  const startEdit = (p: Product) => {
-    let rules = { agentRate: 0, smeRate: 0, mclubRate: 0 };
-    try { rules = JSON.parse(p.commissionRules || '{}'); } catch {}
-    let kp = '';
-    try { kp = JSON.parse(p.keyPoints || '[]').join(', '); } catch { kp = p.keyPoints; }
-    setNewProduct({
-      name: p.name, category: p.category, description: p.description, keyPoints: kp,
-      minInvestment: p.minInvestment || '', icon: p.icon || '📦', color: p.color || '#2a3a4e',
-      agentRate: String(rules.agentRate), smeRate: String(rules.smeRate), mclubRate: String(rules.mclubRate),
-      smeOwnerId: p.smeOwnerId,
-    });
-    setEditProduct(p);
-  };
-
-  const cancelForm = () => {
-    setShowCreate(false);
-    setEditProduct(null);
-    setNewProduct({ name: '', category: '保險', description: '', keyPoints: '', minInvestment: '', icon: '📦', color: '#2a3a4e', agentRate: '10', smeRate: '15', mclubRate: '5', smeOwnerId: '' });
-  };
-
-  const productForm = (
-    <div className="mclub-card space-y-3">
-      <h4 className="font-bold text-sm">{editProduct ? '編輯產品' : '新增產品'}</h4>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="block text-xs text-[#5a6a7a] mb-1">產品名稱 *</label>
-          <input value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} className="w-full p-2 text-sm" placeholder="名稱" />
-        </div>
-        <div>
-          <label className="block text-xs text-[#5a6a7a] mb-1">分類</label>
-          <select value={newProduct.category} onChange={e => setNewProduct({ ...newProduct, category: e.target.value })} className="w-full p-2 text-sm">
-            <option value="保險">保險</option><option value="投資">投資</option><option value="移民">移民</option>
-            <option value="教育">教育</option><option value="醫療">醫療</option><option value="其他">其他</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label className="block text-xs text-[#5a6a7a] mb-1">描述</label>
-        <textarea value={newProduct.description} onChange={e => setNewProduct({ ...newProduct, description: e.target.value })} className="w-full p-2 text-sm" rows={2} placeholder="產品描述" />
-      </div>
-      <div>
-        <label className="block text-xs text-[#5a6a7a] mb-1">重點賣點（逗號分隔）</label>
-        <input value={newProduct.keyPoints} onChange={e => setNewProduct({ ...newProduct, keyPoints: e.target.value })} className="w-full p-2 text-sm" placeholder="重點1, 重點2, 重點3" />
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        <div>
-          <label className="block text-xs text-[#5a6a7a] mb-1">最低投資額</label>
-          <input value={newProduct.minInvestment} onChange={e => setNewProduct({ ...newProduct, minInvestment: e.target.value })} className="w-full p-2 text-sm" placeholder="HK$100,000" />
-        </div>
-        <div>
-          <label className="block text-xs text-[#5a6a7a] mb-1">圖標 Emoji</label>
-          <input value={newProduct.icon} onChange={e => setNewProduct({ ...newProduct, icon: e.target.value })} className="w-full p-2 text-sm text-center" />
-        </div>
-        <div>
-          <label className="block text-xs text-[#5a6a7a] mb-1">主題色</label>
-          <div className="flex items-center gap-2">
-            <input type="color" value={newProduct.color} onChange={e => setNewProduct({ ...newProduct, color: e.target.value })} className="w-8 h-8 rounded cursor-pointer" />
-            <input value={newProduct.color} onChange={e => setNewProduct({ ...newProduct, color: e.target.value })} className="w-full p-2 text-sm" />
-          </div>
-        </div>
-      </div>
-      <div>
-        <label className="block text-xs text-[#5a6a7a] mb-1">佣金規則（百分比）</label>
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <span className="text-[10px] text-[#5a6a7a]">Agent %</span>
-            <input type="number" value={newProduct.agentRate} onChange={e => setNewProduct({ ...newProduct, agentRate: e.target.value })} className="w-full p-2 text-sm" />
-          </div>
-          <div>
-            <span className="text-[10px] text-[#5a6a7a]">SME %</span>
-            <input type="number" value={newProduct.smeRate} onChange={e => setNewProduct({ ...newProduct, smeRate: e.target.value })} className="w-full p-2 text-sm" />
-          </div>
-          <div>
-            <span className="text-[10px] text-[#5a6a7a]">MCLUB %</span>
-            <input type="number" value={newProduct.mclubRate} onChange={e => setNewProduct({ ...newProduct, mclubRate: e.target.value })} className="w-full p-2 text-sm" />
-          </div>
-        </div>
-      </div>
-      {user.role === 'MCLUB_STAFF' && formSmeOwners.length > 0 && (
-        <div>
-          <label className="block text-xs text-[#5a6a7a] mb-1">SME老闆</label>
-          <select value={newProduct.smeOwnerId} onChange={e => setNewProduct({ ...newProduct, smeOwnerId: e.target.value })} className="w-full p-2 text-sm">
-            <option value="">選擇SME老闆</option>
-            {formSmeOwners.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        </div>
-      )}
-      <div className="flex gap-2">
-        <button onClick={editProduct ? updateProduct : createProduct} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-          {editProduct ? '確認更新' : '確認新增'}
-        </button>
-        <button onClick={cancelForm} className="px-4 py-2 rounded-lg text-sm text-[#8899aa] border border-[#2a3a4e]">取消</button>
-      </div>
-    </div>
-  );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">產品管理</h2>
-        {(user.role === 'MCLUB_STAFF' || user.role === 'SME_OWNER') && (
-          <button onClick={() => { setShowCreate(!showCreate); setEditProduct(null); setNewProduct({ name: '', category: '保險', description: '', keyPoints: '', minInvestment: '', icon: '📦', color: '#2a3a4e', agentRate: '10', smeRate: '15', mclubRate: '5', smeOwnerId: '' }); }} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-            + 新增產品
-          </button>
-        )}
+    <div className="tab-content-enter px-4 py-4 space-y-3">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-bold text-slate-800">客戶攻略卡片</h2>
+        <span className="text-xs text-slate-500">6 類客戶</span>
       </div>
 
-      {showCreate && productForm}
+      <div className="space-y-3">
+        {clientTypes.map((ct) => {
+          const isExpanded = expanded === ct.code;
+          const relatedProducts = getProductsForType(ct.code);
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {products.map(p => {
-          let rules = { agentRate: 0, smeRate: 0, mclubRate: 0 };
-          try { rules = JSON.parse(p.commissionRules || '{}'); } catch {}
-          let keyPointsArr: string[] = [];
-          try { keyPointsArr = JSON.parse(p.keyPoints || '[]'); } catch { keyPointsArr = p.keyPoints ? [p.keyPoints] : []; }
           return (
-            <div key={p.id} className="mclub-card">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl" style={{ background: p.color || '#2a3a4e' }}>{p.icon}</div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-sm">{p.name}</h3>
-                  <p className="text-xs text-[#5a6a7a]">{p.category} {p.smeOwner && `· ${p.smeOwner.name}`}</p>
-                </div>
-                {canEdit(p) && (
-                  <div className="flex gap-1">
-                    <button onClick={() => { startEdit(p); setShowCreate(false); }} className="px-2 py-1 rounded text-xs text-[#8899aa] hover:text-gold hover:bg-[#1f2b3d]">✏️</button>
-                    <button onClick={() => deleteProduct(p.id)} className="px-2 py-1 rounded text-xs text-[#8899aa] hover:text-red-400 hover:bg-[#1f2b3d]">🗑️</button>
+            <motion.div
+              key={ct.code}
+              layout
+              className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
+            >
+              {/* Card Header - Always visible */}
+              <button
+                onClick={() => toggleExpand(ct.code)}
+                className="w-full p-4 text-left hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-11 h-11 rounded-lg flex items-center justify-center font-bold text-sm ${
+                        ct.code.startsWith('A')
+                          ? 'bg-teal-100 text-teal-700'
+                          : 'bg-purple-100 text-purple-700'
+                      }`}
+                    >
+                      {ct.code}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-800">{ct.name}</div>
+                      <div className="text-xs text-slate-500">{ct.category}客戶</div>
+                    </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <DifficultyBadge difficulty={ct.difficulty} />
+                    <motion.div
+                      animate={{ rotate: isExpanded ? 180 : 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ChevronDown className="w-5 h-5 text-slate-400" />
+                    </motion.div>
+                  </div>
+                </div>
+              </button>
+
+              {/* Expanded Content */}
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-4 pb-4 space-y-4 border-t border-slate-100 pt-3">
+                      {/* Profile */}
+                      <div>
+                        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                          客戶畫像
+                        </h4>
+                        <p className="text-sm text-slate-700 leading-relaxed">{ct.profile}</p>
+                      </div>
+
+                      {/* Core Needs with Products */}
+                      <div>
+                        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                          核心需求 × 產品推薦
+                        </h4>
+                        <div className="bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-slate-100">
+                                <th className="text-left py-2 px-3 text-xs font-medium text-slate-600">需求</th>
+                                <th className="text-left py-2 px-3 text-xs font-medium text-slate-600">推薦產品</th>
+                                <th className="text-center py-2 px-3 text-xs font-medium text-slate-600">難度</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {ct.coreNeeds.map((need) => {
+                                const matchingProduct = relatedProducts.find(p => p.name === need || need.includes(p.name) || p.name.includes(need));
+                                return (
+                                  <tr key={need} className="border-t border-slate-100">
+                                    <td className="py-2 px-3 text-slate-700">{need}</td>
+                                    <td className="py-2 px-3 text-teal-600 font-medium">
+                                      {matchingProduct ? matchingProduct.name : need}
+                                    </td>
+                                    <td className="py-2 px-3 text-center">
+                                      {matchingProduct ? (
+                                        <DifficultyBadge difficulty={matchingProduct.difficulty} />
+                                      ) : (
+                                        <span className="text-xs text-slate-400">—</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Entry Angle */}
+                      <div>
+                        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                          切入角度
+                        </h4>
+                        <p className="text-sm text-teal-700 font-medium bg-teal-50 rounded-lg p-3 border border-teal-100">
+                          「{ct.entryAngle}」
+                        </p>
+                      </div>
+
+                      {/* Talk Track Example */}
+                      <div>
+                        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                          開場話術示例
+                        </h4>
+                        <p className="text-sm text-slate-700 bg-amber-50 rounded-lg p-3 border border-amber-100 leading-relaxed">
+                          「{ct.talkTrackExample}」
+                        </p>
+                      </div>
+
+                      {/* Red Flags */}
+                      <div>
+                        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                          注意事項
+                        </h4>
+                        <div className="space-y-1.5">
+                          {ct.redFlags.map((flag) => (
+                            <div
+                              key={flag}
+                              className="flex items-start gap-2 text-sm text-slate-600"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                              {flag}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
-              </div>
-              <p className="text-xs text-[#8899aa] mb-2">{p.description}</p>
-              {keyPointsArr.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {keyPointsArr.map((kp, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#2a3a4e] text-[#8899aa]">{kp}</span>)}
-                </div>
-              )}
-              {p.minInvestment && <p className="text-xs text-gold mb-2">入場：{p.minInvestment}</p>}
-              {(user.role === 'MCLUB_STAFF' || user.role === 'AGENT' || user.role === 'SME_OWNER') && (
-                <div className="flex gap-2 text-[10px] text-[#5a6a7a]">
-                  <span>Agent: {rules.agentRate}%</span>
-                  <span>SME: {rules.smeRate}%</span>
-                  <span>MCLUB: {rules.mclubRate}%</span>
-                </div>
-              )}
-            </div>
+              </AnimatePresence>
+            </motion.div>
           );
         })}
       </div>
-      {editProduct && productForm}
     </div>
   );
 }
 
-// ── Commission List ──
-function CommissionList({ user }: { user: User }) {
-  const [commissions, setCommissions] = useState<Commission[]>([]);
+// ─── Tab 3: 產品 (Product Mapping Matrix) ───
+function ProductsTab() {
+  const [selectedType, setSelectedType] = useState<ClientTypeCode | null>(null);
 
-  useEffect(() => {
-    apiFetch('/commissions', user).then(res => { if (res.commissions) setCommissions(res.commissions); });
-  }, [user]);
+  const filteredProducts = selectedType
+    ? products.filter(p => p.applicableTypes.includes(selectedType))
+    : products;
 
-  const total = commissions.reduce((s, c) => s + c.amount, 0);
-  const paid = commissions.filter(c => c.status === 'PAID').reduce((s, c) => s + c.amount, 0);
-
-  const exportCSV = async () => {
-    const path = appendAuthParams(`/export?type=commissions`, user);
-    const res = await fetch(`${API_BASE}${path}`);
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `commissions_export_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
+  const allTypeCodes: ClientTypeCode[] = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3'];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">{user.role === 'MCLUB_STAFF' ? '佣金管理' : '我的收入'}</h2>
-        <button onClick={exportCSV} className="px-3 py-2 rounded-lg text-sm border border-[#2a3a4e] hover:border-gold hover:text-gold transition-colors">
-          📥 匯出CSV
-        </button>
+    <div className="tab-content-enter px-4 py-4 space-y-4">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-bold text-slate-800">產品對照矩陣</h2>
+        <span className="text-xs text-slate-500">12 項產品</span>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <StatCard label="總計" value={`HK$${total.toLocaleString()}`} gold />
-        <StatCard label="已發放" value={`HK$${paid.toLocaleString()}`} />
-      </div>
-      <div className="space-y-2">
-        {commissions.map(c => (
-          <div key={c.id} className="mclub-card flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">{c.order?.product?.icon} {c.order?.product?.name}</p>
-              <p className="text-xs text-[#5a6a7a]">客戶：{c.order?.client?.name || '-'} {user.role === 'MCLUB_STAFF' && `· ${c.recipient?.name} (${roleLabel[c.recipient?.role as UserRole] || c.role})`}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-bold text-gold">HK${c.amount.toLocaleString()}</p>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${c.status === 'PAID' ? 'status-completed' : 'status-pending'}`}>{c.status === 'PAID' ? '已發放' : '待發放'}</span>
-            </div>
-          </div>
-        ))}
-        {commissions.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無佣金記錄</p>}
-      </div>
-    </div>
-  );
-}
 
-// ── Event List (Enhanced) ──
-function EventList({ user }: { user: User }) {
-  const [events, setEvents] = useState<ClubEvent[]>([]);
-  const [showCreate, setShowCreate] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<ClubEvent | null>(null);
-  const [detailTab, setDetailTab] = useState<'details' | 'tasks' | 'budget' | 'attendees'>('details');
-  const [newEvent, setNewEvent] = useState({ title: '', description: '', category: 'networking', venue: '', eventDate: '', endDate: '', maxAttendees: '', isPublic: true, fee: '', contactPerson: '', sponsor: '', status: 'DRAFT' as EventStatus });
-  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'medium', dueDate: '', assigneeId: '' });
-  const [showAddTask, setShowAddTask] = useState(false);
-  const [newBudgetItem, setNewBudgetItem] = useState({ category: 'venue', description: '', estimatedCost: '', actualCost: '' });
-  const [showAddBudget, setShowAddBudget] = useState(false);
-
-  const loadEvents = async () => {
-    const res = await apiFetch('/e', user);
-    if (res.events) setEvents(res.events);
-  };
-
-  useEffect(() => { loadEvents(); }, [user]);
-
-  const createEvent = async () => {
-    if (!newEvent.title || !newEvent.eventDate) return;
-    await apiFetch('/e', user, {
-      method: 'POST',
-      body: JSON.stringify({
-        ...newEvent,
-        maxAttendees: newEvent.maxAttendees ? parseInt(newEvent.maxAttendees) : null,
-        fee: newEvent.fee ? parseFloat(newEvent.fee) : 0,
-      }),
-    });
-    setShowCreate(false);
-    setNewEvent({ title: '', description: '', category: 'networking', venue: '', eventDate: '', endDate: '', maxAttendees: '', isPublic: true, fee: '', contactPerson: '', sponsor: '', status: 'DRAFT' });
-    loadEvents();
-  };
-
-  const rsvpToEvent = async (eventId: string, status: RSVPStatus) => {
-    await apiFetch(`/e/${eventId}/rsvp`, user, { method: 'POST', body: JSON.stringify({ status }) });
-    loadEvents();
-  };
-
-  const updateEventStatus = async (eventId: string, status: EventStatus) => {
-    await apiFetch(`/e/${eventId}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
-    loadEvents();
-  };
-
-  const deleteEvent = async (eventId: string) => {
-    if (!confirm('確認刪除此活動？')) return;
-    await apiFetch(`/e/${eventId}`, user, { method: 'DELETE' });
-    loadEvents();
-  };
-
-  // Task operations
-  const addTask = async () => {
-    if (!selectedEvent || !newTask.title) return;
-    await apiFetch(`/e/${selectedEvent.id}/tasks`, user, {
-      method: 'POST',
-      body: JSON.stringify({ ...newTask, dueDate: newTask.dueDate || null, assigneeId: newTask.assigneeId || null }),
-    });
-    setShowAddTask(false);
-    setNewTask({ title: '', description: '', priority: 'medium', dueDate: '', assigneeId: '' });
-    loadEvents();
-    // Refresh selected event
-    const fresh = await apiFetch('/e', user);
-    if (fresh.events) {
-      setEvents(fresh.events);
-      const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent.id);
-      if (updated) setSelectedEvent(updated);
-    }
-  };
-
-  const updateTaskStatus = async (eventId: string, taskId: string, status: TaskStatus) => {
-    await apiFetch(`/e/${eventId}/tasks/${taskId}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
-    loadEvents();
-    const fresh = await apiFetch('/e', user);
-    if (fresh.events) {
-      setEvents(fresh.events);
-      const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent?.id);
-      if (updated) setSelectedEvent(updated);
-    }
-  };
-
-  const deleteTask = async (eventId: string, taskId: string) => {
-    await apiFetch(`/e/${eventId}/tasks/${taskId}`, user, { method: 'DELETE' });
-    loadEvents();
-    const fresh = await apiFetch('/e', user);
-    if (fresh.events) {
-      setEvents(fresh.events);
-      const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent?.id);
-      if (updated) setSelectedEvent(updated);
-    }
-  };
-
-  // Budget operations
-  const addBudgetItem = async () => {
-    if (!selectedEvent || !newBudgetItem.description) return;
-    await apiFetch(`/e/${selectedEvent.id}/budget`, user, {
-      method: 'POST',
-      body: JSON.stringify({
-        ...newBudgetItem,
-        estimatedCost: parseFloat(newBudgetItem.estimatedCost) || 0,
-        actualCost: newBudgetItem.actualCost ? parseFloat(newBudgetItem.actualCost) : null,
-      }),
-    });
-    setShowAddBudget(false);
-    setNewBudgetItem({ category: 'venue', description: '', estimatedCost: '', actualCost: '' });
-    const fresh = await apiFetch('/e', user);
-    if (fresh.events) {
-      setEvents(fresh.events);
-      const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent.id);
-      if (updated) setSelectedEvent(updated);
-    }
-  };
-
-  const deleteBudgetItem = async (eventId: string, budgetId: string) => {
-    await apiFetch(`/e/${eventId}/budget/${budgetId}`, user, { method: 'DELETE' });
-    const fresh = await apiFetch('/e', user);
-    if (fresh.events) {
-      setEvents(fresh.events);
-      const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent?.id);
-      if (updated) setSelectedEvent(updated);
-    }
-  };
-
-  // Check-in attendee
-  const checkInAttendee = async (eventId: string, rsvpId: string, checkIn: boolean) => {
-    await apiFetch(`/e/${eventId}/checkin`, user, { method: 'POST', body: JSON.stringify({ rsvpId, checkIn }) });
-    const fresh = await apiFetch('/e', user);
-    if (fresh.events) {
-      setEvents(fresh.events);
-      const updated = fresh.events.find((ev: ClubEvent) => ev.id === selectedEvent?.id);
-      if (updated) setSelectedEvent(updated);
-    }
-  };
-
-  const selectEvent = (e: ClubEvent) => {
-    setSelectedEvent(e);
-    setDetailTab('details');
-  };
-
-  // ── Event Detail View (with Tabs) ──
-  if (selectedEvent) {
-    const e = selectedEvent;
-    const myRsvp = e.rsvps?.find(r => r.userId === user.id);
-    const confirmedCount = e.rsvps?.filter(r => r.status === 'CONFIRMED' || r.status === 'CHECKED_IN').length || 0;
-    const checkedInCount = e.rsvps?.filter(r => r.status === 'CHECKED_IN').length || 0;
-    const fmtDate = (d: string) => new Date(d).toLocaleDateString('zh-HK', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    const tasks = e.tasks || [];
-    const doneTasks = tasks.filter(t => t.status === 'DONE').length;
-    const budgetItems = e.budgetItems || [];
-    const totalEstimated = budgetItems.reduce((s, b) => s + b.estimatedCost, 0);
-    const totalActual = budgetItems.reduce((s, b) => s + (b.actualCost || 0), 0);
-
-    const tabs = [
-      { key: 'details' as const, label: '詳情', icon: '📋' },
-      { key: 'tasks' as const, label: `任務 (${doneTasks}/${tasks.length})`, icon: '✅' },
-      { key: 'budget' as const, label: '預算', icon: '💰' },
-      { key: 'attendees' as const, label: `出席 (${confirmedCount})`, icon: '👥' },
-    ];
-
-    return (
-      <div className="space-y-4">
-        <button onClick={() => setSelectedEvent(null)} className="text-sm text-gold hover:underline">← 返回活動列表</button>
-
-        {/* Event Header */}
-        <div className="mclub-card">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold">🎉 {e.title}</h3>
-              {e.category && <span className="text-xs px-2 py-0.5 rounded-full bg-[#2a3a4e] text-[#8899aa]">{eventCategoryLabel[e.category] || e.category}</span>}
-            </div>
-            <span className={eventStatusBadge(e.status)}>{eventStatusLabel[e.status]}</span>
-          </div>
-
-          {/* Quick Stats Row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-            <div className="bg-[#0f1923] rounded-lg p-2">
-              <span className="text-[#5a6a7a]">出席</span>
-              <p className="font-bold text-sm">{confirmedCount}{e.maxAttendees ? `/${e.maxAttendees}` : ''}</p>
-            </div>
-            <div className="bg-[#0f1923] rounded-lg p-2">
-              <span className="text-[#5a6a7a]">已簽到</span>
-              <p className="font-bold text-sm text-green-400">{checkedInCount}</p>
-            </div>
-            <div className="bg-[#0f1923] rounded-lg p-2">
-              <span className="text-[#5a6a7a]">任務完成</span>
-              <p className="font-bold text-sm">{doneTasks}/{tasks.length}</p>
-            </div>
-            <div className="bg-[#0f1923] rounded-lg p-2">
-              <span className="text-[#5a6a7a]">預算</span>
-              <p className="font-bold text-sm text-gold">HK${totalEstimated.toLocaleString()}</p>
-            </div>
-          </div>
-
-          {/* Admin action buttons */}
-          {user.role === 'MCLUB_STAFF' && (
-            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-[#2a3a4e]">
-              {e.status === 'DRAFT' && <button onClick={() => updateEventStatus(e.id, 'PUBLISHED')} className="px-3 py-1 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">發佈活動</button>}
-              {e.status === 'PUBLISHED' && <button onClick={() => updateEventStatus(e.id, 'COMPLETED')} className="px-3 py-1 rounded text-xs bg-blue-900 text-blue-300 hover:bg-blue-800">標記完成</button>}
-              {e.status === 'PUBLISHED' && <button onClick={() => updateEventStatus(e.id, 'CANCELLED')} className="px-3 py-1 rounded text-xs bg-orange-900 text-orange-300 hover:bg-orange-800">取消活動</button>}
-              <button onClick={() => deleteEvent(e.id)} className="px-3 py-1 rounded text-xs bg-red-900 text-red-300 hover:bg-red-800">刪除活動</button>
-            </div>
-          )}
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="flex gap-1 bg-[#1a2330] rounded-lg p-1">
-          {tabs.map(tab => (
-            <button key={tab.key} onClick={() => setDetailTab(tab.key)}
-              className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-colors ${detailTab === tab.key ? 'bg-[#2a3a4e] text-gold' : 'text-[#8899aa] hover:text-white'}`}>
-              <span className="mr-1">{tab.icon}</span>{tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* RSVP Actions for non-admin (shown on Details tab) */}
-        {detailTab === 'details' && user.role !== 'MCLUB_STAFF' && e.status === 'PUBLISHED' && (
-          <div className="mclub-card">
-            <h4 className="font-bold mb-3">我的報名狀態</h4>
-            {myRsvp ? (
-              <div className="flex items-center justify-between">
-                <span className={'text-xs px-2 py-1 rounded-full ' + rsvpStatusClass(myRsvp.status)}>
-                  {rsvpStatusLabel[myRsvp.status]}
-                </span>
-                {myRsvp.status !== 'CHECKED_IN' && (
-                  <div className="flex gap-2">
-                    <button onClick={() => rsvpToEvent(e.id, 'CONFIRMED')} className="px-3 py-1 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">確認出席</button>
-                    <button onClick={() => rsvpToEvent(e.id, 'DECLINED')} className="px-3 py-1 rounded text-xs bg-red-900 text-red-300 hover:bg-red-800">取消出席</button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <button onClick={() => rsvpToEvent(e.id, 'CONFIRMED')} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>立即報名</button>
-            )}
-          </div>
-        )}
-
-        {/* Tab Content: Details */}
-        {detailTab === 'details' && (
-          <div className="mclub-card">
-            <div className="space-y-2 text-sm">
-              <div><span className="text-[#5a6a7a]">日期：</span>{fmtDate(e.eventDate)}</div>
-              {e.endDate && <div><span className="text-[#5a6a7a]">結束：</span>{fmtDate(e.endDate)}</div>}
-              {e.venue && <div><span className="text-[#5a6a7a]">地點：</span>{e.venue}</div>}
-              {e.description && <div><span className="text-[#5a6a7a]">描述：</span><span className="whitespace-pre-wrap">{e.description}</span></div>}
-              {e.fee > 0 && <div><span className="text-[#5a6a7a]">費用：</span><span className="text-gold">{e.currency === 'USD' ? 'US$' : 'HK$'}{e.fee.toLocaleString()}</span></div>}
-              {e.contactPerson && <div><span className="text-[#5a6a7a]">聯絡人：</span>{e.contactPerson}</div>}
-              {e.sponsor && <div><span className="text-[#5a6a7a]">贊助商：</span>{e.sponsor}</div>}
-              <div><span className="text-[#5a6a7a]">創建者：</span>{e.createdBy?.name}</div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab Content: Tasks */}
-        {detailTab === 'tasks' && (
-          <div className="space-y-3">
-            {user.role === 'MCLUB_STAFF' && (
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-sm">活動任務</h3>
-                <button onClick={() => setShowAddTask(!showAddTask)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>
-                  + 新增任務
-                </button>
-              </div>
-            )}
-            {showAddTask && (
-              <div className="mclub-card space-y-3">
-                <input placeholder="任務名稱 *" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} className="w-full p-2 text-sm" />
-                <input placeholder="任務描述" value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} className="w-full p-2 text-sm" />
-                <div className="grid grid-cols-2 gap-2">
-                  <select value={newTask.priority} onChange={e => setNewTask({ ...newTask, priority: e.target.value })} className="w-full p-2 text-sm">
-                    <option value="high">高優先</option><option value="medium">中優先</option><option value="low">低優先</option>
-                  </select>
-                  <input type="date" value={newTask.dueDate} onChange={e => setNewTask({ ...newTask, dueDate: e.target.value })} className="w-full p-2 text-sm" placeholder="截止日期" />
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={addTask} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>確認</button>
-                  <button onClick={() => setShowAddTask(false)} className="px-4 py-2 rounded-lg text-sm text-[#8899aa] border border-[#2a3a4e]">取消</button>
-                </div>
-              </div>
-            )}
-            {/* Task progress bar */}
-            {tasks.length > 0 && (
-              <div className="mclub-card">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-[#5a6a7a]">任務進度</span>
-                  <span className="text-xs font-bold">{doneTasks}/{tasks.length} 完成</span>
-                </div>
-                <div className="w-full bg-[#0f1923] rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${tasks.length > 0 ? (doneTasks / tasks.length) * 100 : 0}%` }}></div>
-                </div>
-              </div>
-            )}
-            {tasks.map(t => (
-              <div key={t.id} className="mclub-card">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-2 flex-1">
-                    {user.role === 'MCLUB_STAFF' && (
-                      <button onClick={() => updateTaskStatus(e.id, t.id, t.status === 'DONE' ? 'TODO' : 'DONE')}
-                        className={`mt-0.5 w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center text-xs ${t.status === 'DONE' ? 'bg-green-600 border-green-600 text-white' : 'border-[#5a6a7a] hover:border-gold'}`}>
-                        {t.status === 'DONE' && '✓'}
-                      </button>
-                    )}
-                    <div className="flex-1">
-                      <p className={`text-sm font-medium ${t.status === 'DONE' ? 'line-through text-[#5a6a7a]' : ''}`}>{t.title}</p>
-                      {t.description && <p className="text-xs text-[#8899aa] mt-1">{t.description}</p>}
-                      <div className="flex items-center gap-3 mt-2 text-xs">
-                        <span className={'px-1.5 py-0.5 rounded ' + taskStatusClass[t.status]}>{taskStatusLabel[t.status]}</span>
-                        <span className={priorityColor[t.priority] || ''}>● {priorityLabel[t.priority] || t.priority}</span>
-                        {t.dueDate && <span className="text-[#5a6a7a]">截止：{new Date(t.dueDate).toLocaleDateString('zh-HK')}</span>}
-                        {t.assignee && <span className="text-[#5a6a7a]">負責：{t.assignee.name}</span>}
-                      </div>
-                    </div>
-                  </div>
-                  {user.role === 'MCLUB_STAFF' && t.status !== 'DONE' && (
-                    <div className="flex gap-1 ml-2">
-                      {t.status === 'TODO' && <button onClick={() => updateTaskStatus(e.id, t.id, 'IN_PROGRESS')} className="px-2 py-1 rounded text-[10px] bg-blue-900 text-blue-300">開始</button>}
-                      {t.status === 'IN_PROGRESS' && <button onClick={() => updateTaskStatus(e.id, t.id, 'DONE')} className="px-2 py-1 rounded text-[10px] bg-green-900 text-green-300">完成</button>}
-                      <button onClick={() => deleteTask(e.id, t.id)} className="px-2 py-1 rounded text-[10px] bg-red-900 text-red-300">刪除</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            {tasks.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無任務，點擊「新增任務」開始規劃</p>}
-          </div>
-        )}
-
-        {/* Tab Content: Budget */}
-        {detailTab === 'budget' && (
-          <div className="space-y-3">
-            {user.role === 'MCLUB_STAFF' && (
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-sm">活動預算</h3>
-                <button onClick={() => setShowAddBudget(!showAddBudget)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>
-                  + 新增預算項目
-                </button>
-              </div>
-            )}
-            {/* Budget Summary */}
-            <div className="grid grid-cols-2 gap-3">
-              <StatCard label="預估總額" value={`HK$${totalEstimated.toLocaleString()}`} gold />
-              <StatCard label="實際支出" value={`HK$${totalActual.toLocaleString()}`} sub={totalEstimated > 0 ? `佔預算 ${Math.round((totalActual / totalEstimated) * 100)}%` : undefined} />
-            </div>
-            {totalEstimated > 0 && (
-              <div className="mclub-card">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-[#5a6a7a]">預算使用率</span>
-                  <span className={`text-xs font-bold ${totalActual > totalEstimated ? 'text-red-400' : 'text-green-400'}`}>{Math.round((totalActual / totalEstimated) * 100)}%</span>
-                </div>
-                <div className="w-full bg-[#0f1923] rounded-full h-2">
-                  <div className={`h-2 rounded-full transition-all ${totalActual > totalEstimated ? 'bg-red-500' : 'bg-gold'}`} style={{ width: `${Math.min((totalActual / totalEstimated) * 100, 100)}%` }}></div>
-                </div>
-              </div>
-            )}
-            {showAddBudget && (
-              <div className="mclub-card space-y-3">
-                <select value={newBudgetItem.category} onChange={e => setNewBudgetItem({ ...newBudgetItem, category: e.target.value })} className="w-full p-2 text-sm">
-                  <option value="venue">場地</option><option value="catering">餐飲</option><option value="decoration">佈置</option>
-                  <option value="av">影音</option><option value="marketing">宣傳</option><option value="staff">人員</option><option value="other">其他</option>
-                </select>
-                <input placeholder="項目描述 *" value={newBudgetItem.description} onChange={e => setNewBudgetItem({ ...newBudgetItem, description: e.target.value })} className="w-full p-2 text-sm" />
-                <div className="grid grid-cols-2 gap-2">
-                  <input placeholder="預估金額 (HKD)" type="number" value={newBudgetItem.estimatedCost} onChange={e => setNewBudgetItem({ ...newBudgetItem, estimatedCost: e.target.value })} className="w-full p-2 text-sm" />
-                  <input placeholder="實際金額 (HKD)" type="number" value={newBudgetItem.actualCost} onChange={e => setNewBudgetItem({ ...newBudgetItem, actualCost: e.target.value })} className="w-full p-2 text-sm" />
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={addBudgetItem} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>確認</button>
-                  <button onClick={() => setShowAddBudget(false)} className="px-4 py-2 rounded-lg text-sm text-[#8899aa] border border-[#2a3a4e]">取消</button>
-                </div>
-              </div>
-            )}
-            {budgetItems.map(b => (
-              <div key={b.id} className="mclub-card">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-[#2a3a4e] text-[#8899aa]">{budgetCategoryLabel[b.category] || b.category}</span>
-                      <span className="text-sm font-medium">{b.description}</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs">
-                      <span className="text-[#5a6a7a]">預估：<span className="text-gold font-bold">HK${b.estimatedCost.toLocaleString()}</span></span>
-                      {b.actualCost != null && (
-                        <span className="text-[#5a6a7a]">實際：<span className={b.actualCost > b.estimatedCost ? 'text-red-400' : 'text-green-400'}>HK${b.actualCost.toLocaleString()}</span></span>
-                      )}
-                    </div>
-                  </div>
-                  {user.role === 'MCLUB_STAFF' && (
-                    <button onClick={() => deleteBudgetItem(e.id, b.id)} className="ml-2 px-2 py-1 rounded text-xs bg-red-900 text-red-300 hover:bg-red-800">刪除</button>
-                  )}
-                </div>
-              </div>
-            ))}
-            {budgetItems.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無預算項目，點擊「新增預算項目」開始規劃</p>}
-          </div>
-        )}
-
-        {/* Tab Content: Attendees */}
-        {detailTab === 'attendees' && (
-          <div className="space-y-3">
-            {user.role !== 'MCLUB_STAFF' && e.status === 'PUBLISHED' && (
-              <div className="mclub-card">
-                <h4 className="font-bold mb-3">我的報名狀態</h4>
-                {myRsvp ? (
-                  <div className="flex items-center justify-between">
-                    <span className={'text-xs px-2 py-1 rounded-full ' + rsvpStatusClass(myRsvp.status)}>
-                      {rsvpStatusLabel[myRsvp.status]}
-                    </span>
-                    {myRsvp.status !== 'CHECKED_IN' && (
-                      <div className="flex gap-2">
-                        <button onClick={() => rsvpToEvent(e.id, 'CONFIRMED')} className="px-3 py-1 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">確認出席</button>
-                        <button onClick={() => rsvpToEvent(e.id, 'DECLINED')} className="px-3 py-1 rounded text-xs bg-red-900 text-red-300 hover:bg-red-800">取消出席</button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <button onClick={() => rsvpToEvent(e.id, 'CONFIRMED')} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>立即報名</button>
-                )}
-              </div>
-            )}
-            {/* Attendee stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <StatCard label="已確認" value={confirmedCount} />
-              <StatCard label="已簽到" value={checkedInCount} gold />
-              <StatCard label="待確認" value={e.rsvps?.filter(r => r.status === 'PENDING').length || 0} />
-            </div>
-            {/* Attendee list for MCLUB_STAFF */}
-            {user.role === 'MCLUB_STAFF' && e.rsvps && e.rsvps.length > 0 && (
-              <div className="space-y-2">
-                {e.rsvps.map(r => (
-                  <div key={r.id} className="mclub-card">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#2a3a4e] flex items-center justify-center text-sm">
-                          {r.user?.name?.charAt(0) || '?'}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">{r.user?.name}</p>
-                          <div className="flex items-center gap-2 text-xs text-[#5a6a7a]">
-                            <span>{rsvpStatusLabel[r.status]}</span>
-                            {r.guests > 0 && <span>+{r.guests}賓客</span>}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={'text-xs px-2 py-0.5 rounded-full ' + rsvpStatusClass(r.status)}>
-                          {rsvpStatusLabel[r.status]}
-                        </span>
-                        {user.role === 'MCLUB_STAFF' && r.status === 'CONFIRMED' && (
-                          <button onClick={() => checkInAttendee(e.id, r.id, true)} className="px-2 py-1 rounded text-[10px] bg-green-900 text-green-300 hover:bg-green-800">簽到</button>
-                        )}
-                        {user.role === 'MCLUB_STAFF' && r.status === 'CHECKED_IN' && (
-                          <button onClick={() => checkInAttendee(e.id, r.id, false)} className="px-2 py-1 rounded text-[10px] bg-orange-900 text-orange-300 hover:bg-orange-800">取消簽到</button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {(!e.rsvps || e.rsvps.length === 0) && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無報名</p>}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // ── Event List View ──
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">活動管理</h2>
-        {user.role === 'MCLUB_STAFF' && (
-          <button onClick={() => setShowCreate(!showCreate)} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-            + 新增活動
+      {/* Client Type Filter Chips */}
+      <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
+        <p className="text-xs text-slate-500 mb-2">按客戶類型篩選：</p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedType(null)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all min-h-[36px] ${
+              selectedType === null
+                ? 'bg-teal-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            全部
           </button>
-        )}
+          {allTypeCodes.map((code) => {
+            const ct = getClientTypeByCode(code);
+            return (
+              <button
+                key={code}
+                onClick={() => setSelectedType(selectedType === code ? null : code)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all min-h-[36px] ${
+                  selectedType === code
+                    ? code.startsWith('A')
+                      ? 'bg-teal-600 text-white shadow-sm'
+                      : 'bg-purple-600 text-white shadow-sm'
+                    : code.startsWith('A')
+                    ? 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+                    : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                }`}
+              >
+                {code} {ct.name}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {showCreate && (
-        <div className="mclub-card space-y-3">
-          <input placeholder="活動名稱 *" value={newEvent.title} onChange={e => setNewEvent({ ...newEvent, title: e.target.value })} className="w-full p-2 text-sm" />
-          <textarea placeholder="活動描述" value={newEvent.description} onChange={e => setNewEvent({ ...newEvent, description: e.target.value })} className="w-full p-2 text-sm" rows={2} />
-          <div className="grid grid-cols-2 gap-2">
-            <select value={newEvent.category} onChange={e => setNewEvent({ ...newEvent, category: e.target.value })} className="w-full p-2 text-sm">
-              <option value="networking">交流活動</option><option value="seminar">研討會</option><option value="dinner">晚宴</option>
-              <option value="workshop">工作坊</option><option value="celebration">慶典</option>
-            </select>
-            <input placeholder="地點" value={newEvent.venue} onChange={e => setNewEvent({ ...newEvent, venue: e.target.value })} className="w-full p-2 text-sm" />
+      {/* Selected Type Info */}
+      {selectedType && (
+        <div className="bg-teal-50 rounded-xl p-3 border border-teal-100">
+          <div className="flex items-center gap-2">
+            <ClientTypeBadge code={selectedType} />
+            <span className="text-sm text-teal-700">
+              適用 {filteredProducts.length} 項產品
+            </span>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs text-[#5a6a7a] mb-1">開始日期 *</label>
-              <input type="datetime-local" value={newEvent.eventDate} onChange={e => setNewEvent({ ...newEvent, eventDate: e.target.value })} className="w-full p-2 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs text-[#5a6a7a] mb-1">結束日期</label>
-              <input type="datetime-local" value={newEvent.endDate} onChange={e => setNewEvent({ ...newEvent, endDate: e.target.value })} className="w-full p-2 text-sm" />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <input placeholder="最大人數" type="number" value={newEvent.maxAttendees} onChange={e => setNewEvent({ ...newEvent, maxAttendees: e.target.value })} className="w-full p-2 text-sm" />
-            <input placeholder="費用 (HKD)" type="number" value={newEvent.fee} onChange={e => setNewEvent({ ...newEvent, fee: e.target.value })} className="w-full p-2 text-sm" />
-            <input placeholder="聯絡人" value={newEvent.contactPerson} onChange={e => setNewEvent({ ...newEvent, contactPerson: e.target.value })} className="w-full p-2 text-sm" />
-          </div>
-          <input placeholder="贊助商" value={newEvent.sponsor} onChange={e => setNewEvent({ ...newEvent, sponsor: e.target.value })} className="w-full p-2 text-sm" />
-          <select value={newEvent.status} onChange={e => setNewEvent({ ...newEvent, status: e.target.value as EventStatus })} className="w-full p-2 text-sm">
-            <option value="DRAFT">草稿</option>
-            <option value="PUBLISHED">直接發佈</option>
-          </select>
-          <div className="flex gap-2">
-            <button onClick={createEvent} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>確認新增</button>
-            <button onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg text-sm text-[#8899aa] border border-[#2a3a4e]">取消</button>
-          </div>
+          <p className="text-xs text-teal-600 mt-1">
+            切入角度：「{getClientTypeByCode(selectedType).entryAngle}」
+          </p>
         </div>
       )}
 
-      <div className="space-y-3">
-        {events.map(e => {
-          const fmtDate = (d: string) => new Date(d).toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' });
-          const myRsvp = e.rsvps?.find(r => r.userId === user.id);
-          const confirmedCount = e.rsvps?.filter(r => r.status === 'CONFIRMED' || r.status === 'CHECKED_IN').length || 0;
-          const tasks = e.tasks || [];
-          const doneTasks = tasks.filter(t => t.status === 'DONE').length;
-          const budgetItems = e.budgetItems || [];
-          const totalBudget = budgetItems.reduce((s, b) => s + b.estimatedCost, 0);
+      {/* Product List */}
+      <div className="space-y-2">
+        {filteredProducts.map((product) => (
+          <div
+            key={product.id}
+            className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-slate-800">{product.name}</h3>
+              <DifficultyBadge difficulty={product.difficulty} />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {product.applicableTypes.map((code) => (
+                <span
+                  key={code}
+                  className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                    selectedType === code
+                      ? 'bg-teal-600 text-white border-teal-600'
+                      : getTypeColor(code)
+                  }`}
+                >
+                  {code}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
 
-          return (
-            <div key={e.id} onClick={() => selectEvent(e)} className="mclub-card mclub-card-hover cursor-pointer">
-              <div className="flex items-center justify-between mb-2">
+      {/* Matrix View (compact) */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-3 border-b border-slate-100">
+          <h3 className="font-semibold text-sm text-slate-700">完整對照表</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-slate-50">
+                <th className="sticky left-0 bg-slate-50 py-2 px-2 text-left font-medium text-slate-600 min-w-[100px]">
+                  產品
+                </th>
+                {allTypeCodes.map((code) => (
+                  <th
+                    key={code}
+                    className={`py-2 px-2 text-center font-medium min-w-[44px] ${
+                      selectedType === code ? 'text-teal-700' : 'text-slate-600'
+                    }`}
+                  >
+                    {code}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr key={product.id} className="border-t border-slate-100">
+                  <td className="sticky left-0 bg-white py-1.5 px-2 text-slate-700 font-medium">
+                    {product.name}
+                  </td>
+                  {allTypeCodes.map((code) => (
+                    <td key={code} className="py-1.5 px-2 text-center">
+                      {product.applicableTypes.includes(code) ? (
+                        <span
+                          className={`inline-block w-5 h-5 rounded-full text-white text-[10px] leading-5 ${
+                            product.difficulty === '入門'
+                              ? 'bg-green-500'
+                              : product.difficulty === '進階'
+                              ? 'bg-amber-500'
+                              : 'bg-red-500'
+                          }`}
+                        >
+                          ✓
+                        </span>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="p-2 border-t border-slate-100 flex items-center gap-3 justify-center">
+          <span className="flex items-center gap-1 text-xs text-slate-500">
+            <span className="w-3 h-3 rounded-full bg-green-500 inline-block" /> 入門
+          </span>
+          <span className="flex items-center gap-1 text-xs text-slate-500">
+            <span className="w-3 h-3 rounded-full bg-amber-500 inline-block" /> 進階
+          </span>
+          <span className="flex items-center gap-1 text-xs text-slate-500">
+            <span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> 專家
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Tab 4: 話術 (Talk Track Library) ───
+function TalksTab() {
+  const [activeSection, setActiveSection] = useState<'scenario' | 'type' | 'objection'>('scenario');
+
+  return (
+    <div className="tab-content-enter px-4 py-4 space-y-4">
+      <h2 className="text-lg font-bold text-slate-800">話術庫</h2>
+
+      {/* Section Tabs */}
+      <div className="flex bg-slate-100 rounded-lg p-1">
+        {[
+          { key: 'scenario' as const, label: '按場景', icon: '🎭' },
+          { key: 'type' as const, label: '按客型', icon: '👥' },
+          { key: 'objection' as const, label: '異議處理', icon: '🛡️' },
+        ].map((section) => (
+          <button
+            key={section.key}
+            onClick={() => setActiveSection(section.key)}
+            className={`flex-1 py-2 px-2 rounded-md text-sm font-medium transition-all min-h-[40px] flex items-center justify-center gap-1 ${
+              activeSection === section.key
+                ? 'bg-white text-slate-800 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <span className="text-sm">{section.icon}</span>
+            <span>{section.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* By Scenario */}
+      {activeSection === 'scenario' && (
+        <div className="space-y-3">
+          {talkTracksByScenario.map((track) => (
+            <div
+              key={track.scenario}
+              className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm"
+            >
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-sm">🎉 {e.title}</h3>
-                  {e.category && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#2a3a4e] text-[#8899aa]">{eventCategoryLabel[e.category] || e.category}</span>}
+                  <span className="text-lg">{track.icon}</span>
+                  <h3 className="font-semibold text-slate-800">{track.label}</h3>
                 </div>
-                <span className={eventStatusBadge(e.status)}>{eventStatusLabel[e.status]}</span>
+                <CopyButton text={track.script} />
               </div>
-              <div className="flex items-center gap-3 text-xs text-[#8899aa]">
-                <span>{fmtDate(e.eventDate)}</span>
-                {e.venue && <span>{e.venue}</span>}
-                <span>👥 {confirmedCount}{e.maxAttendees ? '/' + e.maxAttendees : ''}</span>
-                {user.role === 'MCLUB_STAFF' && tasks.length > 0 && <span>✅ {doneTasks}/{tasks.length}</span>}
-                {user.role === 'MCLUB_STAFF' && totalBudget > 0 && <span className="text-gold">💰 {'HK$' + totalBudget.toLocaleString()}</span>}
+              <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 rounded-lg p-3 border border-slate-100">
+                「{track.script}」
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* By Client Type */}
+      {activeSection === 'type' && (
+        <div className="space-y-3">
+          {talkTracksByType.map((track) => (
+            <div
+              key={track.typeCode}
+              className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <ClientTypeBadge code={track.typeCode} />
+                  <span className="text-sm text-slate-500">{track.typeName}</span>
+                </div>
+                <CopyButton text={track.script} />
               </div>
-              {myRsvp && (
-                <div className="mt-2 pt-2 border-t border-[#2a3a4e]">
-                  <span className={'text-xs px-2 py-0.5 rounded-full ' + rsvpStatusClass(myRsvp.status)}>
-                    我的狀態：{rsvpStatusLabel[myRsvp.status]}
+              <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 rounded-lg p-3 border border-slate-100">
+                「{track.script}」
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Objection Handler */}
+      {activeSection === 'objection' && (
+        <div className="space-y-3">
+          <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+            <p className="text-xs text-amber-700 flex items-center gap-1">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              遇到異議不要慌，用專業回應贏得信任
+            </p>
+          </div>
+          {objectionHandlers.map((item, idx) => (
+            <div
+              key={idx}
+              className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
+            >
+              {/* Objection */}
+              <div className="p-4 border-b border-slate-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xs font-bold">
+                    {idx + 1}
+                  </span>
+                  <span className="text-xs font-medium text-red-600 uppercase tracking-wide">
+                    客戶異議
                   </span>
                 </div>
-              )}
-            </div>
-          );
-        })}
-        {events.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無活動</p>}
-      </div>
-    </div>
-  );
-}
-
-// ── FX Risk Modelling ──
-const fxStatusLabel: Record<AlertStatus, string> = { ACTIVE: '生效中', TRIGGERED: '已觸發', DISMISSED: '已關閉' };
-const fxStatusClass: Record<AlertStatus, string> = { ACTIVE: 'status-completed', TRIGGERED: 'status-pending', DISMISSED: 'status-in_progress' };
-const hedgingStatusLabel: Record<HedgingStatus, string> = { PENDING: '待配對', MATCHED: '已配對', COMPLETED: '已完成', CANCELLED: '已取消' };
-const hedgingStatusClass: Record<HedgingStatus, string> = { PENDING: 'status-pending', MATCHED: 'status-completed', COMPLETED: 'status-settled', CANCELLED: 'status-in_progress' };
-const hedgingTypeLabel: Record<string, string> = { forward: '遠期合約', option: '期權', natural: '自然對沖', other: '其他' };
-const currencyIcon: Record<string, string> = { HKD: '🇭🇰', USD: '🇺🇸', JPY: '🇯🇵', RMB: '🇨🇳', EUR: '🇪🇺', GBP: '🇬🇧' };
-
-function FXRisk({ user }: { user: User }) {
-  const [tab, setTab] = useState<'dashboard' | 'stress' | 'hedging' | 'alerts'>('dashboard');
-  const [dashboard, setDashboard] = useState<any>(null);
-  const [stressTests, setStressTests] = useState<FXStressTest[]>([]);
-  const [alerts, setAlerts] = useState<CurrencyAlert[]>([]);
-  const [hedges, setHedges] = useState<HedgingMatch[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Stress test form
-  const [showStressForm, setShowStressForm] = useState(false);
-  const [portfolioItems, setPortfolioItems] = useState([
-    { productName: '香港物業', currency: 'HKD', amount: 5000000 },
-    { productName: 'NPC基金', currency: 'USD', amount: 200000 },
-    { productName: '日本物業', currency: 'JPY', amount: 50000000 },
-    { productName: 'VFK健康產品', currency: 'RMB', amount: 3000000 },
-  ]);
-  const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>(['USD', 'JPY', 'RMB']);
-  const [stressResult, setStressResult] = useState<any>(null);
-
-  // Alert form
-  const [showAlertForm, setShowAlertForm] = useState(false);
-  const [newAlert, setNewAlert] = useState({ fromCurrency: 'JPY', toCurrency: 'HKD', threshold: '5', direction: 'down' });
-
-  // Hedging form
-  const [showHedgeForm, setShowHedgeForm] = useState(false);
-  const [newHedge, setNewHedge] = useState({ hedgingType: 'forward', fromCurrency: 'JPY', toCurrency: 'HKD', amount: '', notes: '' });
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [dashRes, stressRes, alertRes, hedgeRes] = await Promise.all([
-        apiFetch('/fx/dashboard', user),
-        apiFetch('/fx/stress-test', user),
-        apiFetch('/fx/alerts', user),
-        apiFetch('/fx/hedging', user),
-      ]);
-      if (dashRes.portfolio) setDashboard(dashRes);
-      if (stressRes.stressTests) setStressTests(stressRes.stressTests);
-      if (alertRes.alerts) setAlerts(alertRes.alerts);
-      if (hedgeRes.hedgingMatches) setHedges(hedgeRes.hedgingMatches);
-    } catch (e) { console.error('FX load error', e); }
-    setLoading(false);
-  };
-
-  useEffect(() => { loadData(); }, [user]);
-
-  const runStressTest = async () => {
-    const portfolio = portfolioItems
-      .filter(item => selectedCurrencies.includes(item.currency) || item.currency === 'HKD')
-      .map(item => ({ ...item, productId: `fx_${item.currency}` }));
-    const res = await apiFetch('/fx/stress-test', user, {
-      method: 'POST',
-      body: JSON.stringify({ portfolio, baseCurrency: 'HKD' }),
-    });
-    if (res.stressTest) {
-      setStressResult(res.results);
-      loadData();
-    }
-  };
-
-  const createAlert = async () => {
-    await apiFetch('/fx/alerts', user, {
-      method: 'POST',
-      body: JSON.stringify(newAlert),
-    });
-    setShowAlertForm(false);
-    setNewAlert({ fromCurrency: 'JPY', toCurrency: 'HKD', threshold: '5', direction: 'down' });
-    loadData();
-  };
-
-  const updateAlertStatus = async (id: string, status: string) => {
-    await apiFetch(`/fx/alerts/${id}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
-    loadData();
-  };
-
-  const deleteAlert = async (id: string) => {
-    if (!confirm('確認刪除此預警？')) return;
-    await apiFetch(`/fx/alerts/${id}`, user, { method: 'DELETE' });
-    loadData();
-  };
-
-  const createHedge = async () => {
-    await apiFetch('/fx/hedging', user, {
-      method: 'POST',
-      body: JSON.stringify(newHedge),
-    });
-    setShowHedgeForm(false);
-    setNewHedge({ hedgingType: 'forward', fromCurrency: 'JPY', toCurrency: 'HKD', amount: '', notes: '' });
-    loadData();
-  };
-
-  const updateHedgeStatus = async (id: string, status: string) => {
-    await apiFetch(`/fx/hedging/${id}`, user, { method: 'PATCH', body: JSON.stringify({ status }) });
-    loadData();
-  };
-
-  const fmt = (n: number) => n?.toLocaleString('zh-HK') || '0';
-  const fmtCurrency = (currency: string, amount: number) => {
-    const prefix: Record<string, string> = { HKD: 'HK$', USD: 'US$', JPY: '¥', RMB: '¥' };
-    return `${prefix[currency] || currency}${fmt(amount)}`;
-  };
-
-  const tabs = [
-    { key: 'dashboard' as const, label: '儀表板', icon: '📊' },
-    { key: 'stress' as const, label: '壓力測試', icon: '⚡' },
-    { key: 'hedging' as const, label: '對沖方案', icon: '🛡️' },
-    { key: 'alerts' as const, label: '匯率預警', icon: '🔔' },
-  ];
-
-  if (loading && !dashboard) {
-    return (
-      <div className="p-8 text-center">
-        <div className="inline-block w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mb-3"></div>
-        <p className="text-[#5a6a7a] text-sm">載入FX風險數據...</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold">💱 FX風險管理</h2>
-
-      {/* Tab Bar */}
-      <div className="flex gap-1 bg-[#1a2330] p-1 rounded-lg">
-        {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex-1 py-2 text-center text-sm rounded-md transition-colors ${tab === t.key ? 'bg-[#2a3a4e] text-gold font-bold' : 'text-[#5a6a7a] hover:text-[#8899aa]'}`}>
-            <span className="mr-1">{t.icon}</span>
-            <span className="hidden sm:inline">{t.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* ── Dashboard Tab ── */}
-      {tab === 'dashboard' && dashboard && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <StatCard label="總資產值 (HKD)" value={`HK$${fmt(dashboard.totalValueHKD)}`} gold />
-            <StatCard label="日匯率影響" value={`HK$${fmt(Math.abs(dashboard.totalDailyChange))}`} sub={Number(dashboard.dailyChangePercent) >= 0 ? '↑ 上漲' : '↓ 下跌'} />
-            <StatCard label="活躍預警" value={dashboard.alerts?.active || 0} sub={`${dashboard.alerts?.triggered || 0} 已觸發`} />
-          </div>
-
-          <div className="mclub-card">
-            <h3 className="font-bold mb-4">多幣種持倉</h3>
-            <div className="space-y-3">
-              {(dashboard.portfolio || []).map((item: any, i: number) => (
-                <div key={i} className="flex items-center justify-between py-3 border-b border-[#2a3a4e] last:border-0">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{currencyIcon[item.currency] || '💱'}</span>
-                    <div>
-                      <p className="font-medium text-sm">{item.productName}</p>
-                      <p className="text-xs text-[#5a6a7a]">{fmtCurrency(item.currency, item.amount)} @ {item.currency === 'HKD' ? '1.0000' : item.rate?.toFixed(4)}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-gold">HK${fmt(item.valueHKD)}</p>
-                    <p className={`text-xs ${item.dailyChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {item.dailyChange >= 0 ? '↑' : '↓'} {Math.abs(item.dailyChange).toFixed(2)}%
-                      <span className="text-[#5a6a7a] ml-1">({item.dailyImpact >= 0 ? '+' : ''}HK${fmt(item.dailyImpact)})</span>
-                    </p>
-                  </div>
+                <p className="text-sm font-medium text-slate-800">
+                  「{item.objection}」
+                </p>
+              </div>
+              {/* Response */}
+              <div className="p-4 bg-green-50/50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-green-600 uppercase tracking-wide">
+                    建議回應
+                  </span>
+                  <CopyButton text={item.response} />
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Triggered alerts */}
-          {dashboard.alerts?.triggered > 0 && (
-            <div className="mclub-card border-l-4 border-red-500">
-              <h3 className="font-bold mb-2 text-red-400">⚠️ 已觸發預警</h3>
-              {(dashboard.alerts?.items || []).filter((a: CurrencyAlert) => a.status === 'TRIGGERED').map((a: CurrencyAlert) => (
-                <div key={a.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
-                  <span className="text-sm">{currencyIcon[a.fromCurrency] || ''} {a.fromCurrency}/{a.toCurrency} {a.direction === 'down' ? '下跌' : '上漲'} ≥ {a.threshold}%</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-red-900 text-red-300">已觸發</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Recent stress tests */}
-          {stressTests.length > 0 && (
-            <div className="mclub-card">
-              <h3 className="font-bold mb-3">最近壓力測試</h3>
-              {stressTests.slice(0, 2).map(t => (
-                <div key={t.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
-                  <div>
-                    <span className="text-sm">資產 HK${fmt(t.totalAssetValue)}</span>
-                    <span className="text-xs text-[#5a6a7a] ml-2">最大損失: HK${fmt(t.maxLossAmount)}</span>
-                  </div>
-                  <span className="text-xs text-[#5a6a7a]">{new Date(t.createdAt).toLocaleDateString('zh-HK')}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Stress Test Tab ── */}
-      {tab === 'stress' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold">匯率壓力測試</h3>
-            <button onClick={() => setShowStressForm(!showStressForm)} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-              {showStressForm ? '取消' : '+ 新增測試'}
-            </button>
-          </div>
-
-          {showStressForm && (
-            <div className="mclub-card space-y-3">
-              <p className="text-sm text-[#8899aa]">選擇要測試的外幣持倉（HKD為基準貨幣，自動包含）</p>
-              {portfolioItems.map((item, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <input type="checkbox" checked={selectedCurrencies.includes(item.currency) || item.currency === 'HKD'}
-                    disabled={item.currency === 'HKD'}
-                    onChange={e => {
-                      if (e.target.checked) setSelectedCurrencies([...selectedCurrencies, item.currency]);
-                      else setSelectedCurrencies(selectedCurrencies.filter(c => c !== item.currency));
-                    }}
-                    className="w-4 h-4" />
-                  <span className="text-xl">{currencyIcon[item.currency]}</span>
-                  <div className="flex-1">
-                    <input value={item.productName} onChange={e => { const n = [...portfolioItems]; n[i] = { ...n[i], productName: e.target.value }; setPortfolioItems(n); }}
-                      className="w-full p-1 text-sm bg-transparent border-b border-[#2a3a4e]" />
-                  </div>
-                  <div className="w-28">
-                    <input type="number" value={item.amount} onChange={e => { const n = [...portfolioItems]; n[i] = { ...n[i], amount: parseFloat(e.target.value) || 0 }; setPortfolioItems(n); }}
-                      className="w-full p-1 text-sm text-right bg-transparent border-b border-[#2a3a4e]" />
-                  </div>
-                  <span className="text-xs text-[#5a6a7a] w-10">{item.currency}</span>
-                </div>
-              ))}
-              <button onClick={runStressTest} className="w-full p-3 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-                ⚡ 執行壓力測試
-              </button>
-            </div>
-          )}
-
-          {/* Stress Test Results */}
-          {stressResult && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Mild */}
-                <div className="mclub-card border-l-4 border-yellow-500">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-yellow-500 text-lg">🌡️</span>
-                    <span className="font-bold text-sm">溫和波動</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-900 text-yellow-300">5%</span>
-                  </div>
-                  <p className="text-2xl font-bold text-yellow-400">HK${fmt(stressResult.mild?.totalLoss || 0)}</p>
-                  <p className="text-xs text-[#5a6a7a]">損失率 {stressResult.mild?.lossPercent || 0}%</p>
-                  <div className="mt-3 space-y-1">
-                    {(stressResult.mild?.items || []).map((item: any) => (
-                      <div key={item.currency} className="flex justify-between text-xs">
-                        <span>{currencyIcon[item.currency]} {item.currency}</span>
-                        <span className="text-yellow-400">-{fmt(item.loss)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Moderate */}
-                <div className="mclub-card border-l-4 border-orange-500">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-orange-500 text-lg">🔥</span>
-                    <span className="font-bold text-sm">中度壓力</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-orange-900 text-orange-300">15%</span>
-                  </div>
-                  <p className="text-2xl font-bold text-orange-400">HK${fmt(stressResult.moderate?.totalLoss || 0)}</p>
-                  <p className="text-xs text-[#5a6a7a]">損失率 {stressResult.moderate?.lossPercent || 0}%</p>
-                  <div className="mt-3 space-y-1">
-                    {(stressResult.moderate?.items || []).map((item: any) => (
-                      <div key={item.currency} className="flex justify-between text-xs">
-                        <span>{currencyIcon[item.currency]} {item.currency}</span>
-                        <span className="text-orange-400">-{fmt(item.loss)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Extreme */}
-                <div className="mclub-card border-l-4 border-red-500">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-red-500 text-lg">💥</span>
-                    <span className="font-bold text-sm">極端衝擊</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-900 text-red-300">30%+</span>
-                  </div>
-                  <p className="text-2xl font-bold text-red-400">HK${fmt(stressResult.extreme?.totalLoss || 0)}</p>
-                  <p className="text-xs text-[#5a6a7a]">損失率 {stressResult.extreme?.lossPercent || 0}%</p>
-                  <div className="mt-3 space-y-1">
-                    {(stressResult.extreme?.items || []).map((item: any) => (
-                      <div key={item.currency} className="flex justify-between text-xs">
-                        <span>{currencyIcon[item.currency]} {item.currency}</span>
-                        <span className="text-red-400">-{fmt(item.loss)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  「{item.response}」
+                </p>
               </div>
             </div>
-          )}
-
-          {/* Previous Stress Tests */}
-          <div className="mclub-card">
-            <h3 className="font-bold mb-3">歷史測試記錄</h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {stressTests.map(t => {
-                let results: any = {};
-                try { results = JSON.parse(t.results); } catch {}
-                return (
-                  <div key={t.id} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
-                    <div>
-                      <span className="text-sm">資產 HK${fmt(t.totalAssetValue)}</span>
-                      <div className="flex gap-2 text-xs mt-1">
-                        <span className="text-yellow-400">溫和 -{fmt(results.mild?.totalLoss || 0)}</span>
-                        <span className="text-orange-400">中度 -{fmt(results.moderate?.totalLoss || 0)}</span>
-                        <span className="text-red-400">極端 -{fmt(results.extreme?.totalLoss || 0)}</span>
-                      </div>
-                    </div>
-                    <span className="text-xs text-[#5a6a7a]">{new Date(t.createdAt).toLocaleDateString('zh-HK')}</span>
-                  </div>
-                );
-              })}
-              {stressTests.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-4">暫無測試記錄</p>}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Hedging Tab ── */}
-      {tab === 'hedging' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold">對沖方案配對</h3>
-            <button onClick={() => setShowHedgeForm(!showHedgeForm)} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-              + 新增對沖
-            </button>
-          </div>
-
-          {showHedgeForm && (
-            <div className="mclub-card space-y-3">
-              <select value={newHedge.hedgingType} onChange={e => setNewHedge({ ...newHedge, hedgingType: e.target.value })} className="w-full p-2 text-sm">
-                <option value="forward">遠期合約</option>
-                <option value="option">期權</option>
-                <option value="natural">自然對沖</option>
-                <option value="other">其他</option>
-              </select>
-              <div className="grid grid-cols-2 gap-3">
-                <select value={newHedge.fromCurrency} onChange={e => setNewHedge({ ...newHedge, fromCurrency: e.target.value })} className="w-full p-2 text-sm">
-                  <option value="USD">USD</option><option value="JPY">JPY</option><option value="RMB">RMB</option><option value="EUR">EUR</option>
-                </select>
-                <select value={newHedge.toCurrency} onChange={e => setNewHedge({ ...newHedge, toCurrency: e.target.value })} className="w-full p-2 text-sm">
-                  <option value="HKD">HKD</option><option value="USD">USD</option><option value="RMB">RMB</option>
-                </select>
-              </div>
-              <input type="number" placeholder="對沖金額" value={newHedge.amount} onChange={e => setNewHedge({ ...newHedge, amount: e.target.value })} className="w-full p-2 text-sm" />
-              <input placeholder="備註" value={newHedge.notes} onChange={e => setNewHedge({ ...newHedge, notes: e.target.value })} className="w-full p-2 text-sm" />
-              <button onClick={createHedge} className="w-full p-3 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-                🛡️ 提交對沖請求
-              </button>
-            </div>
-          )}
-
-          <div className="space-y-3">
-            {hedges.map(h => {
-              let provider: any = null;
-              let quote: any = null;
-              try { provider = h.matchedProvider ? JSON.parse(h.matchedProvider) : null; } catch {}
-              try { quote = h.quote ? JSON.parse(h.quote) : null; } catch {}
-              return (
-                <div key={h.id} className="mclub-card">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">🛡️</span>
-                      <span className="font-medium text-sm">{hedgingTypeLabel[h.hedgingType] || h.hedgingType}</span>
-                      <span className="text-xs text-[#5a6a7a]">{currencyIcon[h.fromCurrency]} {h.fromCurrency} → {currencyIcon[h.toCurrency]} {h.toCurrency}</span>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${hedgingStatusClass[h.status]}`}>{hedgingStatusLabel[h.status]}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs text-[#8899aa] mb-2">
-                    <div>金額：<span className="text-gold font-bold">{fmtCurrency(h.fromCurrency, h.amount)}</span></div>
-                    {quote && <div>匯率：{quote.rate?.toFixed(4)} · 手續費：HK${fmt(quote.fee || 0)}</div>}
-                  </div>
-                  {provider && (
-                    <div className="text-xs text-[#8899aa] mb-2">
-                      配對機構：<span className="text-gold">{provider.name}</span> ({provider.type}) {provider.contact}
-                    </div>
-                  )}
-                  {h.commissionAmount > 0 && (
-                    <div className="text-xs text-[#5a6a7a] mb-2">
-                      佣金：{h.commissionRate}% = HK${fmt(h.commissionAmount)}
-                    </div>
-                  )}
-                  {h.notes && <p className="text-xs text-[#5a6a7a] mb-2">{h.notes}</p>}
-                  <div className="flex gap-2 mt-2">
-                    {h.status === 'PENDING' && (
-                      <button onClick={() => updateHedgeStatus(h.id, 'MATCHED')} className="px-3 py-1 rounded text-xs bg-green-900 text-green-300 hover:bg-green-800">確認配對</button>
-                    )}
-                    {h.status === 'MATCHED' && (
-                      <button onClick={() => updateHedgeStatus(h.id, 'COMPLETED')} className="px-3 py-1 rounded text-xs font-bold text-black" style={{ background: 'var(--gold)' }}>完成</button>
-                    )}
-                    {(h.status === 'PENDING' || h.status === 'MATCHED') && (
-                      <button onClick={async () => { if (!confirm('確認取消？')) return; await apiFetch(`/fx/hedging/${h.id}`, user, { method: 'PATCH', body: JSON.stringify({ status: 'CANCELLED' }) }); loadData(); }}
-                        className="px-3 py-1 rounded text-xs bg-red-900 text-red-300 hover:bg-red-800">取消</button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-            {hedges.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無對沖方案</p>}
-          </div>
-        </div>
-      )}
-
-      {/* ── Alerts Tab ── */}
-      {tab === 'alerts' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold">匯率預警</h3>
-            <button onClick={() => setShowAlertForm(!showAlertForm)} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-              + 新增預警
-            </button>
-          </div>
-
-          {showAlertForm && (
-            <div className="mclub-card space-y-3">
-              <p className="text-sm text-[#8899aa]">設定匯率變動預警條件</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-[#5a6a7a] mb-1">來源貨幣</label>
-                  <select value={newAlert.fromCurrency} onChange={e => setNewAlert({ ...newAlert, fromCurrency: e.target.value })} className="w-full p-2 text-sm">
-                    <option value="USD">USD 美元</option><option value="JPY">JPY 日圓</option><option value="RMB">RMB 人民幣</option><option value="EUR">EUR 歐元</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-[#5a6a7a] mb-1">目標貨幣</label>
-                  <select value={newAlert.toCurrency} onChange={e => setNewAlert({ ...newAlert, toCurrency: e.target.value })} className="w-full p-2 text-sm">
-                    <option value="HKD">HKD 港幣</option><option value="USD">USD 美元</option><option value="RMB">RMB 人民幣</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-[#5a6a7a] mb-1">觸發百分比</label>
-                  <input type="number" value={newAlert.threshold} onChange={e => setNewAlert({ ...newAlert, threshold: e.target.value })} className="w-full p-2 text-sm" placeholder="5" />
-                </div>
-                <div>
-                  <label className="block text-xs text-[#5a6a7a] mb-1">方向</label>
-                  <select value={newAlert.direction} onChange={e => setNewAlert({ ...newAlert, direction: e.target.value })} className="w-full p-2 text-sm">
-                    <option value="down">↓ 下跌</option><option value="up">↑ 上漲</option>
-                  </select>
-                </div>
-              </div>
-              <button onClick={createAlert} className="w-full p-3 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-                🔔 建立預警
-              </button>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            {alerts.map(a => (
-              <div key={a.id} className="mclub-card flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{currencyIcon[a.fromCurrency]}</span>
-                  <div>
-                    <p className="text-sm font-medium">{a.fromCurrency}/{a.toCurrency}</p>
-                    <p className="text-xs text-[#5a6a7a]">{a.direction === 'down' ? '↓ 下跌' : '↑ 上漲'} ≥ {a.threshold}%</p>
-                    {a.triggeredAt && <p className="text-[10px] text-red-400">觸發於 {new Date(a.triggeredAt).toLocaleDateString('zh-HK')}</p>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${fxStatusClass[a.status]}`}>{fxStatusLabel[a.status]}</span>
-                  {a.status === 'ACTIVE' && (
-                    <button onClick={() => updateAlertStatus(a.id, 'DISMISSED')} className="text-xs text-[#5a6a7a] hover:text-red-400">關閉</button>
-                  )}
-                  {a.status === 'TRIGGERED' && (
-                    <button onClick={() => updateAlertStatus(a.id, 'DISMISSED')} className="text-xs text-[#5a6a7a] hover:text-red-400">關閉</button>
-                  )}
-                  {a.status === 'DISMISSED' && (
-                    <button onClick={() => updateAlertStatus(a.id, 'ACTIVE')} className="text-xs text-[#5a6a7a] hover:text-green-400">重啟</button>
-                  )}
-                  <button onClick={() => deleteAlert(a.id)} className="text-xs text-[#5a6a7a] hover:text-red-400">刪除</button>
-                </div>
-              </div>
-            ))}
-            {alerts.length === 0 && <p className="text-[#5a6a7a] text-sm text-center py-8">暫無預警</p>}
-          </div>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-function EnhancedProfile({ user, onUpdateUser }: { user: User; onUpdateUser: (u: User) => void }) {
-  const [tab, setTab] = useState<'info' | 'settings'>('info');
-  const [profileData, setProfileData] = useState<any>(null);
-  const [editName, setEditName] = useState(user.name);
-  const [editPhone, setEditPhone] = useState(user.phone || '');
-  const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState('');
+// ─── Main App ───
+export default function PZCHandbookApp() {
+  const [activeTab, setActiveTab] = useState<TabKey>('identify');
+  const [highlightedType, setHighlightedType] = useState<ClientTypeCode | null>(null);
 
-  // Password change state
-  const [currentPw, setCurrentPw] = useState('');
-  const [newPw, setNewPw] = useState('');
-  const [confirmPw, setConfirmPw] = useState('');
-  const [pwSaving, setPwSaving] = useState(false);
-  const [pwMsg, setPwMsg] = useState('');
-
-  // Notification preferences
-  const [notifPrefs, setNotifPrefs] = useState({
-    orderNotif: true,
-    commissionNotif: true,
-    eventInvite: true,
-    fxAlert: true,
-  });
-
-  useEffect(() => {
-    apiFetch(`/users/${user.id}`, user).then(res => {
-      if (res.user) setProfileData(res.user);
-    });
-  }, [user]);
-
-  const saveProfile = async () => {
-    setSaving(true);
-    setSaveMsg('');
-    try {
-      const res = await apiFetch(`/users/${user.id}`, user, {
-        method: 'PATCH',
-        body: JSON.stringify({ name: editName, phone: editPhone }),
-      });
-      if (res.user) {
-        setSaveMsg('✅ 儲存成功');
-        onUpdateUser({ ...user, name: res.user.name, phone: res.user.phone });
-        setTimeout(() => setSaveMsg(''), 3000);
-      } else {
-        setSaveMsg('❌ 儲存失敗');
-      }
-    } catch {
-      setSaveMsg('❌ 網絡錯誤');
-    }
-    setSaving(false);
-  };
-
-  const changePassword = async () => {
-    if (newPw !== confirmPw) {
-      setPwMsg('❌ 新密碼與確認密碼不一致');
-      return;
-    }
-    if (newPw.length < 6) {
-      setPwMsg('❌ 新密碼至少需要6個字符');
-      return;
-    }
-    setPwSaving(true);
-    setPwMsg('');
-    try {
-      const res = await apiFetch('/auth/change-password', user, {
-        method: 'POST',
-        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
-      });
-      if (res.message) {
-        setPwMsg('✅ 密碼已更新');
-        setCurrentPw(''); setNewPw(''); setConfirmPw('');
-        setTimeout(() => setPwMsg(''), 3000);
-      } else {
-        setPwMsg(`❌ ${res.error || '更新失敗'}`);
-      }
-    } catch {
-      setPwMsg('❌ 網絡錯誤');
-    }
-    setPwSaving(false);
-  };
-
-  const initials = (user.name || '?').slice(0, 2).toUpperCase();
-  const createdAt = profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString('zh-HK', { year: 'numeric', month: 'long', day: 'numeric' }) : '-';
-
-  const roleBadgeColor: Record<UserRole, string> = {
-    MCLUB_STAFF: 'bg-gold/20 text-gold',
-    SME_OWNER: 'bg-blue-900/50 text-blue-300',
-    AGENT: 'bg-green-900/50 text-green-300',
-    END_USER: 'bg-purple-900/50 text-purple-300',
+  const handleViewStrategy = (code: ClientTypeCode) => {
+    setHighlightedType(code);
+    setActiveTab('strategy');
   };
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold">👤 帳戶設定</h2>
-
-      {/* Tabs */}
-      <div className="flex gap-1 bg-[#1a2330] rounded-lg p-1">
-        <button onClick={() => setTab('info')} className={`flex-1 py-2 text-sm rounded-md transition-colors ${tab === 'info' ? 'bg-[#2a3a4e] text-gold font-bold' : 'text-[#8899aa]'}`}>個人資料</button>
-        <button onClick={() => setTab('settings')} className={`flex-1 py-2 text-sm rounded-md transition-colors ${tab === 'settings' ? 'bg-[#2a3a4e] text-gold font-bold' : 'text-[#8899aa]'}`}>帳戶設定</button>
-      </div>
-
-      {tab === 'info' && (
-        <div className="space-y-4">
-          {/* Avatar & Role */}
-          <div className="mclub-card text-center">
-            <div className="w-20 h-20 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl font-bold" style={{ background: 'linear-gradient(135deg, #d4af37, #b8962e)', color: '#000' }}>
-              {user.avatar ? <img src={user.avatar} alt="avatar" className="w-full h-full rounded-full object-cover" /> : initials}
-            </div>
-            <span className={`text-xs px-3 py-1 rounded-full ${roleBadgeColor[user.role]}`}>{roleLabel[user.role]}</span>
-            {user.role === 'END_USER' && profileData && (
-              <p className="text-xs text-[#8899aa] mt-2">會員等級將由您的Agent為您升級</p>
-            )}
-            <p className="text-[10px] text-[#5a6a7a] mt-2">加入日期：{createdAt}</p>
+    <div className="min-h-screen flex flex-col bg-[#f8fafb]">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+        <div className="px-4 py-3 flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold text-slate-800">
+              <span className="text-teal-600">PZC</span> 客戶開拓手冊
+            </h1>
+            <p className="text-[10px] text-slate-500 tracking-wider">口袋教練 — 家族辦公室專業認可證書</p>
           </div>
-
-          {/* Editable fields */}
-          <div className="mclub-card space-y-4">
-            <div>
-              <label className="block text-xs text-[#5a6a7a] mb-1">姓名</label>
-              <input value={editName} onChange={e => setEditName(e.target.value)} className="w-full p-2.5 text-sm bg-[#1a2330] border border-[#2a3a4e] rounded-lg focus:border-gold focus:outline-none" />
-            </div>
-            <div>
-              <label className="block text-xs text-[#5a6a7a] mb-1">電郵地址</label>
-              <input value={user.email} readOnly className="w-full p-2.5 text-sm bg-[#141d28] border border-[#2a3a4e] rounded-lg text-[#5a6a7a] cursor-not-allowed" />
-              <p className="text-[10px] text-[#5a6a7a] mt-1">電郵地址無法更改</p>
-            </div>
-            <div>
-              <label className="block text-xs text-[#5a6a7a] mb-1">電話</label>
-              <input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="輸入電話號碼" className="w-full p-2.5 text-sm bg-[#1a2330] border border-[#2a3a4e] rounded-lg focus:border-gold focus:outline-none" />
-            </div>
-            <div>
-              <label className="block text-xs text-[#5a6a7a] mb-1">角色</label>
-              <div className={`inline-block text-xs px-3 py-1 rounded-full ${roleBadgeColor[user.role]}`}>{roleLabel[user.role]}</div>
-            </div>
-            {saveMsg && <p className="text-sm">{saveMsg}</p>}
-            <button onClick={saveProfile} disabled={saving} className="w-full py-2.5 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-              {saving ? '儲存中...' : '儲存變更'}
-            </button>
+          <div className="w-9 h-9 rounded-lg bg-teal-600 flex items-center justify-center">
+            <span className="text-white text-sm font-bold">P</span>
           </div>
         </div>
-      )}
+      </header>
 
-      {tab === 'settings' && (
-        <div className="space-y-4">
-          {/* Change Password */}
-          <div className="mclub-card space-y-4">
-            <h3 className="font-bold">🔒 更改密碼</h3>
-            <div>
-              <label className="block text-xs text-[#5a6a7a] mb-1">目前密碼</label>
-              <input type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} className="w-full p-2.5 text-sm bg-[#1a2330] border border-[#2a3a4e] rounded-lg focus:border-gold focus:outline-none" />
-            </div>
-            <div>
-              <label className="block text-xs text-[#5a6a7a] mb-1">新密碼</label>
-              <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} className="w-full p-2.5 text-sm bg-[#1a2330] border border-[#2a3a4e] rounded-lg focus:border-gold focus:outline-none" />
-            </div>
-            <div>
-              <label className="block text-xs text-[#5a6a7a] mb-1">確認新密碼</label>
-              <input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} className="w-full p-2.5 text-sm bg-[#1a2330] border border-[#2a3a4e] rounded-lg focus:border-gold focus:outline-none" />
-            </div>
-            {pwMsg && <p className="text-sm">{pwMsg}</p>}
-            <button onClick={changePassword} disabled={pwSaving} className="w-full py-2.5 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>
-              {pwSaving ? '更新中...' : '更新密碼'}
-            </button>
-          </div>
-
-          {/* Language preference */}
-          <div className="mclub-card space-y-3">
-            <h3 className="font-bold">🌐 語言偏好</h3>
-            <div className="flex items-center justify-between py-2">
-              <span className="text-sm">界面語言</span>
-              <span className="text-sm text-[#8899aa]">繁體中文</span>
-            </div>
-          </div>
-
-          {/* Notification preferences */}
-          <div className="mclub-card space-y-3">
-            <h3 className="font-bold">🔔 通知偏好</h3>
-            {[
-              { key: 'orderNotif' as const, label: '訂單通知', desc: '當訂單狀態變更時接收通知' },
-              { key: 'commissionNotif' as const, label: '佣金通知', desc: '當佣金發放時接收通知' },
-              { key: 'eventInvite' as const, label: '活動邀請', desc: '當有新活動邀請時接收通知' },
-              { key: 'fxAlert' as const, label: 'FX預警', desc: '當匯率預警觸發時接收通知' },
-            ].map(item => (
-              <div key={item.key} className="flex items-center justify-between py-2 border-b border-[#2a3a4e] last:border-0">
-                <div>
-                  <p className="text-sm">{item.label}</p>
-                  <p className="text-[10px] text-[#5a6a7a]">{item.desc}</p>
-                </div>
-                <button
-                  onClick={() => setNotifPrefs(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
-                  className={`relative w-10 h-6 rounded-full transition-colors ${notifPrefs[item.key] ? 'bg-gold' : 'bg-[#2a3a4e]'}`}
-                >
-                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${notifPrefs[item.key] ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Analytics View ──
-const CHART_COLORS = { gold: '#D4AF37', blue: '#4A90D9', green: '#27AE60', red: '#E74C3C', purple: '#8E44AD', teal: '#1ABC9C', yellow: '#E2B93B' };
-
-function AnalyticsView({ user }: { user: User }) {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const res = await apiFetch('/analytics', user);
-      if (res.error) { setError(true); } else { setData(res); }
-    } catch { setError(true); }
-    setLoading(false);
-  }, [user]);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  if (loading) return (
-    <div className="p-8 text-center">
-      <div className="inline-block w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mb-3"></div>
-      <p className="text-[#5a6a7a] text-sm">載入報表數據...</p>
-    </div>
-  );
-
-  if (error) return (
-    <div className="p-8 text-center">
-      <p className="text-red-400 mb-2">載入報表失敗</p>
-      <p className="text-xs text-[#5a6a7a] mb-4">請檢查網絡連接後重試</p>
-      <button onClick={loadData} className="px-4 py-2 rounded-lg text-sm font-bold text-black" style={{ background: 'var(--gold)' }}>重試</button>
-    </div>
-  );
-
-  const fmt = (n: number) => n?.toLocaleString() || '0';
-
-  // ── MCLUB_STAFF Analytics ──
-  if (user.role === 'MCLUB_STAFF') {
-    return (
-      <div className="space-y-6">
-        <h2 className="text-xl font-bold">📊 報表分析</h2>
-
-        {/* Monthly Revenue Trend */}
-        <div className="mclub-card">
-          <h3 className="font-bold mb-4">月度營收趨勢</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={data.monthlyRevenue || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
-              <XAxis dataKey="month" stroke="#8899aa" fontSize={12} />
-              <YAxis stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '營收']} />
-              <Line type="monotone" dataKey="revenue" stroke={CHART_COLORS.gold} strokeWidth={3} dot={{ fill: CHART_COLORS.gold, r: 5 }} activeDot={{ r: 7 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Order Status Distribution */}
-          <div className="mclub-card">
-            <h3 className="font-bold mb-4">訂單狀態分佈</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie data={data.orderStatusDist || []} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                  {(data.orderStatusDist || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
-                </Pie>
-                <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Client Level Distribution */}
-          <div className="mclub-card">
-            <h3 className="font-bold mb-4">客戶等級分佈</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={data.clientLevelDist || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
-                <XAxis dataKey="name" stroke="#8899aa" fontSize={12} />
-                <YAxis stroke="#8899aa" fontSize={12} />
-                <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                  {(data.clientLevelDist || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Commission Breakdown */}
-          <div className="mclub-card">
-            <h3 className="font-bold mb-4">佣金分帳（按角色）</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={data.commissionBreakdown || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
-                <XAxis dataKey="name" stroke="#8899aa" fontSize={12} />
-                <YAxis stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '佣金']} />
-                <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
-                  {(data.commissionBreakdown || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Top Products */}
-          <div className="mclub-card">
-            <h3 className="font-bold mb-4">產品營收排名</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={(data.topProducts || []).map((p: any) => ({ ...p, name: p.name.length > 6 ? p.name.slice(0, 6) + '…' : p.name }))} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
-                <XAxis type="number" stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${(v / 1000).toFixed(0)}k`} />
-                <YAxis type="category" dataKey="name" stroke="#8899aa" fontSize={11} width={60} />
-                <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '營收']} />
-                <Bar dataKey="revenue" fill={CHART_COLORS.gold} radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── SME_OWNER Analytics ──
-  if (user.role === 'SME_OWNER') {
-    return (
-      <div className="space-y-6">
-        <h2 className="text-xl font-bold">📊 報表分析</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <StatCard label="總營收" value={`HK$${fmt(data.totalRevenue)}`} gold />
-          <StatCard label="產品數" value={(data.productRevenue || []).length} />
-        </div>
-
-        {/* Monthly Revenue Trend */}
-        <div className="mclub-card">
-          <h3 className="font-bold mb-4">月度營收趨勢</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={data.monthlyRevenue || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
-              <XAxis dataKey="month" stroke="#8899aa" fontSize={12} />
-              <YAxis stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '營收']} />
-              <Line type="monotone" dataKey="revenue" stroke={CHART_COLORS.gold} strokeWidth={3} dot={{ fill: CHART_COLORS.gold, r: 5 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Product Revenue */}
-        <div className="mclub-card">
-          <h3 className="font-bold mb-4">產品營收分佈</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={(data.productRevenue || []).map((p: any) => ({ ...p, name: p.name.length > 6 ? p.name.slice(0, 6) + '…' : p.name }))} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
-              <XAxis type="number" stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${(v / 1000).toFixed(0)}k`} />
-              <YAxis type="category" dataKey="name" stroke="#8899aa" fontSize={11} width={60} />
-              <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '營收']} />
-              <Bar dataKey="revenue" fill={CHART_COLORS.teal} radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    );
-  }
-
-  // ── AGENT Analytics ──
-  if (user.role === 'AGENT') {
-    return (
-      <div className="space-y-6">
-        <h2 className="text-xl font-bold">📊 報表分析</h2>
-        <div className="grid grid-cols-3 gap-4">
-          <StatCard label="客戶總數" value={data.totalClients} />
-          <StatCard label="轉化率" value={`${data.conversionRate}%`} gold />
-          <StatCard label="有消費客戶" value={data.totalClients ? Math.round(data.totalClients * data.conversionRate / 100) : 0} />
-        </div>
-
-        {/* Commission Trend */}
-        <div className="mclub-card">
-          <h3 className="font-bold mb-4">月度佣金趨勢</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={data.monthlyCommission || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
-              <XAxis dataKey="month" stroke="#8899aa" fontSize={12} />
-              <YAxis stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${fmt(v)}`} />
-              <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '佣金']} />
-              <Line type="monotone" dataKey="commission" stroke={CHART_COLORS.gold} strokeWidth={3} dot={{ fill: CHART_COLORS.gold, r: 5 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Client Conversion */}
-        <div className="mclub-card">
-          <h3 className="font-bold mb-4">客戶等級轉化</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={data.clientConversion || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
-              <XAxis dataKey="name" stroke="#8899aa" fontSize={12} />
-              <YAxis stroke="#8899aa" fontSize={12} />
-              <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} />
-              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                {(data.clientConversion || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    );
-  }
-
-  // ── END_USER Analytics ──
-  return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold">📊 消費分析</h2>
-      <div className="grid grid-cols-2 gap-4">
-        <StatCard label="總消費" value={`HK$${fmt(data.totalSpent)}`} gold />
-        <StatCard label="訂單數" value={data.orderCount} />
-      </div>
-
-      {/* Spending by Category */}
-      <div className="mclub-card">
-        <h3 className="font-bold mb-4">消費分類分佈</h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <PieChart>
-            <Pie data={data.categorySpending || []} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>
-              {(data.categorySpending || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
-            </Pie>
-            <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '金額']} />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Category Breakdown Bar */}
-      <div className="mclub-card">
-        <h3 className="font-bold mb-4">分類消費金額</h3>
-        <ResponsiveContainer width="100%" height={250}>
-          <BarChart data={data.categorySpending || []}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4e" />
-            <XAxis dataKey="name" stroke="#8899aa" fontSize={12} />
-            <YAxis stroke="#8899aa" fontSize={12} tickFormatter={(v: number) => `HK$${(v / 1000).toFixed(0)}k`} />
-            <Tooltip contentStyle={{ background: '#1a2330', border: '1px solid #2a3a4e', borderRadius: '8px', color: '#e0e0e0' }} formatter={(v: number) => [`HK$${fmt(v)}`, '金額']} />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-              {(data.categorySpending || []).map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-}
-
-// ── Main App ──
-const notificationIcon: Record<NotificationType, string> = {
-  ORDER_CREATED: '📋', ORDER_STATUS_CHANGED: '🔄', COMMISSION_SETTLED: '💰',
-  EVENT_INVITATION: '🎉', EVENT_REMINDER: '⏰', FX_ALERT_TRIGGERED: '💱', SYSTEM_ANNOUNCEMENT: '📢',
-};
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return '剛剛';
-  if (mins < 60) return `${mins}分鐘前`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}小時前`;
-  const days = Math.floor(hrs / 24);
-  return `${days}天前`;
-}
-
-export default function Home() {
-  const [user, setUser] = useState<User | null>(() => {
-    if (typeof window === 'undefined') return null;
-    try { const saved = localStorage.getItem('mclub_user'); return saved ? JSON.parse(saved) : null; } catch { return null; }
-  });
-  const [currentNav, setCurrentNav] = useState('overview');
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const [dashboardError, setDashboardError] = useState(false);
-  const [dashboardLoading, setDashboardLoading] = useState(false);
-  const dashboardLoadedRef = useRef(false);
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
-
-  // ── Notification State ──
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [showNotifPanel, setShowNotifPanel] = useState(false);
-  const notifPanelRef = useRef<HTMLDivElement>(null);
-
-  // ── Search State ──
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<{ clients: any[]; orders: any[]; events: any[] }>({ clients: [], orders: [], events: [] });
-  const [showSearch, setShowSearch] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const loadDashboard = useCallback(async () => {
-    if (!user) return;
-    setDashboardError(false);
-    setDashboardLoading(true);
-    try {
-      const res = await apiFetch('/dashboard', user);
-      if (res.error) {
-        setDashboardError(true);
-      } else {
-        setDashboardData(res);
-      }
-    } catch {
-      setDashboardError(true);
-    } finally {
-      setDashboardLoading(false);
-    }
-    // Also load analytics for mini charts
-    try {
-      const aRes = await apiFetch('/analytics', user);
-      if (!aRes.error) setAnalyticsData(aRes);
-    } catch {}
-  }, [user]);
-
-  // Load dashboard on login (only once per login)
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('mclub_user', JSON.stringify(user));
-      if (!dashboardLoadedRef.current) {
-        dashboardLoadedRef.current = true;
-        loadDashboard();
-      }
-    }
-  }, [user, loadDashboard]);
-
-  // ── Notification Loading & Polling ──
-  const loadNotifications = useCallback(async () => {
-    if (!user) return;
-    try {
-      const res = await apiFetch('/notifications', user);
-      if (res.notifications) {
-        setNotifications(res.notifications);
-        setUnreadCount(res.unreadCount || 0);
-      }
-    } catch {}
-  }, [user]);
-
-  useEffect(() => {
-    if (user) { loadNotifications(); }
-  }, [user, loadNotifications]);
-
-  // Poll every 30 seconds
-  useEffect(() => {
-    if (!user) return;
-    const interval = setInterval(loadNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [user, loadNotifications]);
-
-  // Close notif panel when clicking outside
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (notifPanelRef.current && !notifPanelRef.current.contains(e.target as Node)) {
-        setShowNotifPanel(false);
-      }
-    };
-    if (showNotifPanel) document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [showNotifPanel]);
-
-  const markNotifRead = async (id: string) => {
-    if (!user) return;
-    await apiFetch(`/notifications/${id}`, user, { method: 'PATCH' });
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    setUnreadCount(prev => Math.max(0, prev - 1));
-  };
-
-  const markAllRead = async () => {
-    if (!user) return;
-    await apiFetch('/notifications', user, { method: 'PATCH', body: JSON.stringify({ action: 'markAllRead' }) });
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    setUnreadCount(0);
-  };
-
-  const deleteNotif = async (id: string) => {
-    if (!user) return;
-    await apiFetch(`/notifications/${id}`, user, { method: 'DELETE' });
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    const deleted = notifications.find(n => n.id === id);
-    if (deleted && !deleted.read) setUnreadCount(prev => Math.max(0, prev - 1));
-  };
-
-  // Navigate between tabs
-  const handleNavChange = useCallback((nav: string) => {
-    setCurrentNav(nav);
-  }, []);
-
-  const handleLogin = (u: User) => { setUser(u); setCurrentNav('overview'); dashboardLoadedRef.current = false; };
-  const handleLogout = () => { setUser(null); localStorage.removeItem('mclub_user'); setDashboardData(null); dashboardLoadedRef.current = false; setNotifications([]); setUnreadCount(0); setSearchQuery(''); };
-
-  const handleUpdateUser = (updatedUser: User) => {
-    setUser(updatedUser);
-    localStorage.setItem('mclub_user', JSON.stringify(updatedUser));
-  };
-
-  // ── Search Logic ──
-  const doSearch = useCallback(async (q: string) => {
-    if (!user || q.length < 1) { setSearchResults({ clients: [], orders: [], events: [] }); return; }
-    try {
-      const res = await apiFetch(`/search?q=${encodeURIComponent(q)}`, user);
-      if (res.clients || res.orders || res.events) {
-        setSearchResults({ clients: res.clients || [], orders: res.orders || [], events: res.events || [] });
-        setShowSearch(true);
-      }
-    } catch {}
-  }, [user]);
-
-  const onSearchChange = (val: string) => {
-    setSearchQuery(val);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    if (val.length < 1) { setSearchResults({ clients: [], orders: [], events: [] }); setShowSearch(false); return; }
-    searchTimerRef.current = setTimeout(() => doSearch(val), 300);
-  };
-
-  // Close search dropdown on click outside or Escape
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSearch(false);
-    };
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowSearch(false); };
-    if (showSearch) { document.addEventListener('mousedown', handleClick); document.addEventListener('keydown', handleKey); }
-    return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
-  }, [showSearch]);
-
-  if (!user) return <LoginPage onLogin={handleLogin} />;
-
-  const renderContent = () => {
-    switch (currentNav) {
-      case 'overview': return <OverviewDashboard user={user} data={dashboardData} error={dashboardError} loading={dashboardLoading} onRetry={loadDashboard} onNavigate={handleNavChange} analyticsData={analyticsData} />;
-      case 'clients': return <ClientList user={user} />;
-      case 'orders': return <OrderList user={user} />;
-      case 'products': return <ProductList user={user} />;
-      case 'commissions': return <CommissionList user={user} />;
-      case 'events': return <EventList user={user} />;
-      case 'fx': return <FXRisk user={user} />;
-      case 'analytics': return <AnalyticsView user={user} />;
-      case 'profile': return <EnhancedProfile user={user} onUpdateUser={handleUpdateUser} />;
-      default: return <OverviewDashboard user={user} data={dashboardData} error={dashboardError} loading={dashboardLoading} onRetry={loadDashboard} onNavigate={handleNavChange} />;
-    }
-  };
-
-  return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      <Sidebar current={currentNav} onChange={handleNavChange} role={user.role} onLogout={handleLogout} />
-      <main className="flex-1 p-4 md:p-6 pb-24 md:pb-6 max-w-4xl">
-        <div className="flex items-center justify-between mb-6 gap-3">
-          {/* Search Bar */}
-          <div className="relative flex-1 max-w-xs md:max-w-sm" ref={searchRef}>
-            <div className="flex items-center bg-[#1a2330] border border-[#2a3a4e] rounded-lg overflow-hidden">
-              <span className="pl-3 text-sm">🔍</span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => onSearchChange(e.target.value)}
-                onFocus={() => { if (searchQuery.length >= 1 && (searchResults.clients.length || searchResults.orders.length || searchResults.events.length)) setShowSearch(true); }}
-                placeholder="搜尋客戶、訂單、活動..."
-                className="w-full px-2 py-2 text-sm bg-transparent border-none focus:outline-none placeholder:text-[#5a6a7a]"
-              />
-              {searchQuery && (
-                <button onClick={() => { setSearchQuery(''); setSearchResults({ clients: [], orders: [], events: [] }); setShowSearch(false); }} className="pr-3 text-[#5a6a7a] hover:text-white text-xs">✕</button>
-              )}
-            </div>
-            {/* Search Results Dropdown */}
-            {showSearch && searchQuery.length >= 1 && (
-              <div className="absolute left-0 top-full mt-1 w-full min-w-[280px] bg-[#1a2330] border border-[#2a3a4e] rounded-xl shadow-2xl z-50 max-h-80 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#2a3a4e transparent' }}>
-                {/* Clients */}
-                {searchResults.clients.length > 0 && (
-                  <div>
-                    <div className="px-3 py-2 text-xs text-[#5a6a7a] font-bold border-b border-[#2a3a4e]">👥 客戶</div>
-                    {searchResults.clients.map((c: any) => (
-                      <div key={c.id} onClick={() => { handleNavChange('clients'); setShowSearch(false); setSearchQuery(''); }} className="px-3 py-2 hover:bg-[#1f2b3d] cursor-pointer transition-colors border-b border-[#2a3a4e] last:border-0">
-                        <p className="text-sm font-medium">{c.name}</p>
-                        <p className="text-[10px] text-[#5a6a7a]">{c.phone || c.email || memberLabel[c.memberLevel as MemberLevel]}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {/* Orders */}
-                {searchResults.orders.length > 0 && (
-                  <div>
-                    <div className="px-3 py-2 text-xs text-[#5a6a7a] font-bold border-b border-[#2a3a4e]">📋 訂單</div>
-                    {searchResults.orders.map((o: any) => (
-                      <div key={o.id} onClick={() => { handleNavChange('orders'); setShowSearch(false); setSearchQuery(''); }} className="px-3 py-2 hover:bg-[#1f2b3d] cursor-pointer transition-colors border-b border-[#2a3a4e] last:border-0">
-                        <p className="text-sm font-medium">{o.product?.icon} {o.product?.name}</p>
-                        <p className="text-[10px] text-[#5a6a7a]">{o.client?.name} · {o.currency === 'USD' ? 'US$' : 'HK$'}{o.amount?.toLocaleString()}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {/* Events */}
-                {searchResults.events.length > 0 && (
-                  <div>
-                    <div className="px-3 py-2 text-xs text-[#5a6a7a] font-bold border-b border-[#2a3a4e]">🎉 活動</div>
-                    {searchResults.events.map((e: any) => (
-                      <div key={e.id} onClick={() => { handleNavChange('events'); setShowSearch(false); setSearchQuery(''); }} className="px-3 py-2 hover:bg-[#1f2b3d] cursor-pointer transition-colors border-b border-[#2a3a4e] last:border-0">
-                        <p className="text-sm font-medium">{e.title}</p>
-                        <p className="text-[10px] text-[#5a6a7a]">{e.venue || ''} {e.eventDate ? `· ${new Date(e.eventDate).toLocaleDateString('zh-HK')}` : ''}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {/* No results */}
-                {searchResults.clients.length === 0 && searchResults.orders.length === 0 && searchResults.events.length === 0 && (
-                  <div className="p-4 text-center">
-                    <p className="text-sm text-[#5a6a7a]">無搜尋結果</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden md:block">
-              <p className="text-xs text-[#5a6a7a]">{roleLabel[user.role]}</p>
-              <p className="font-bold text-sm">{user.name}</p>
-            </div>
-            {/* Notification Bell */}
-            <div className="relative" ref={notifPanelRef}>
-              <button onClick={() => setShowNotifPanel(!showNotifPanel)} className="relative p-2 hover:bg-[#1f2b3d] rounded-lg transition-colors">
-                <span className="text-lg">🔔</span>
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{unreadCount > 9 ? '9+' : unreadCount}</span>
-                )}
-              </button>
-
-              {/* Notification Dropdown */}
-              {showNotifPanel && (
-                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto bg-[#1a2330] border border-[#2a3a4e] rounded-xl shadow-2xl z-50" style={{ scrollbarWidth: 'thin', scrollbarColor: '#2a3a4e transparent' }}>
-                  <div className="flex items-center justify-between p-3 border-b border-[#2a3a4e]">
-                    <h3 className="font-bold text-sm">通知</h3>
-                    {unreadCount > 0 && (
-                      <button onClick={markAllRead} className="text-xs text-gold hover:underline">全部已讀</button>
-                    )}
-                  </div>
-                  <div className="divide-y divide-[#2a3a4e]">
-                    {notifications.length === 0 && (
-                      <div className="p-6 text-center">
-                        <p className="text-2xl mb-2">🔕</p>
-                        <p className="text-sm text-[#5a6a7a]">暫無通知</p>
-                      </div>
-                    )}
-                    {notifications.map(n => (
-                      <div key={n.id} onClick={() => { if (!n.read) markNotifRead(n.id); if (n.link) { handleNavChange(n.link); setShowNotifPanel(false); } }} className={`p-3 cursor-pointer hover:bg-[#1f2b3d] transition-colors ${!n.read ? 'bg-[#1f2b3d]/50' : ''}`}>
-                        <div className="flex items-start gap-2">
-                          <span className="text-lg mt-0.5 shrink-0">{notificationIcon[n.type]}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className={`text-sm font-medium truncate ${!n.read ? 'text-white' : 'text-[#8899aa]'}`}>{n.title}</p>
-                              {!n.read && <span className="w-2 h-2 rounded-full bg-gold shrink-0"></span>}
-                            </div>
-                            <p className="text-xs text-[#5a6a7a] mt-0.5 line-clamp-2">{n.message}</p>
-                            <p className="text-[10px] text-[#5a6a7a] mt-1">{timeAgo(n.createdAt)}</p>
-                          </div>
-                          <button onClick={(e) => { e.stopPropagation(); deleteNotif(n.id); }} className="text-[#5a6a7a] hover:text-red-400 text-xs shrink-0 p-1">✕</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <button onClick={handleLogout} className="md:hidden text-xs text-[#5a6a7a]">登出</button>
-          </div>
-        </div>
-        {renderContent()}
+      {/* Content Area */}
+      <main className="flex-1 pb-20 overflow-y-auto">
+        <AnimatePresence mode="wait">
+          {activeTab === 'identify' && (
+            <motion.div
+              key="identify"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <IdentifyTab onViewStrategy={handleViewStrategy} />
+            </motion.div>
+          )}
+          {activeTab === 'strategy' && (
+            <motion.div
+              key="strategy"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <StrategyTab highlightedType={highlightedType} />
+            </motion.div>
+          )}
+          {activeTab === 'products' && (
+            <motion.div
+              key="products"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <ProductsTab />
+            </motion.div>
+          )}
+          {activeTab === 'talks' && (
+            <motion.div
+              key="talks"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <TalksTab />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 safe-area-bottom shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+        <div className="flex">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => {
+                  setActiveTab(tab.key);
+                  if (tab.key !== 'strategy') setHighlightedType(null);
+                }}
+                className={`flex-1 py-2 flex flex-col items-center justify-center gap-0.5 transition-all min-h-[56px] ${
+                  isActive
+                    ? 'text-teal-600'
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                <div className="relative">
+                  <Icon className={`w-5 h-5 transition-all ${isActive ? 'scale-110' : ''}`} />
+                  {isActive && (
+                    <motion.div
+                      layoutId="navIndicator"
+                      className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-teal-600"
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                    />
+                  )}
+                </div>
+                <span className={`text-[11px] font-medium ${isActive ? 'font-semibold' : ''}`}>
+                  {tab.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
