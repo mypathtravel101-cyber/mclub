@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "百盛大通\nPARK ZEMAN CHASE LIMITED\n焦點服務：1、4、9號證券牌照專項申請\n為對沖基金與私募機構打造黃金資管陣列\n1號牌照：證券交易\nJCH 專項優勢\n1\n精準匹配與評估：深度解析 1、4、9 號牌照對持牌負責人 (RO) 的嚴格要求，精準評估核心管理團隊的勝任能力與履歷。\n2\n專屬商業藍圖：針對資管、投顧與交易聯動的複雜業務模式，量身撰寫符合 SFC 期望的高水準業務計畫書 (Business Plan)。\n3\n一站式架構設計：從公司股權架構、合規體系建設到最終遞交，全程護航，確保三大牌照申請無縫銜接，大幅縮短獲批週期。\n4號牌照：\n就證券提供意見\n9號牌照：\n提供資產管理\n頂尖\n資管平台",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1781057478,
+  "id": "202606101011069c5ccbe8f2704844",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202606101011069c5ccbe8f2704844",
+  "usage": {
+    "completion_tokens": 266,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 6066,
+    "prompt_tokens_details": {
+      "cached_tokens": 6
+    },
+    "total_tokens": 6332
+  }
+}

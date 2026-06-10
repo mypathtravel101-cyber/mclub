@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #FFFFFF;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'SimHei', 'Microsoft YaHei', sans-serif;
+}
+#mindmap { padding: 60px 80px; display: inline-block; min-width: 100%; position: relative; }
+#mindmap > svg.lines {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+}
+
+#mindmap[data-intent="finance"] .root-node {
+  background: linear-gradient(135deg, #1E3A5F, #1E40AF);
+  box-shadow: 0 4px 16px rgba(30,58,95,0.3);
+}
+
+.root-node {
+  color: white; font-size: 22px; font-weight: 700;
+  padding: 22px 36px; border-radius: 14px;
+  white-space: nowrap; flex-shrink: 0; align-self: center;
+  text-align: center; line-height: 1.4;
+}
+
+.lr-tree { display: flex; align-items: center; gap: 0; position: relative; }
+.lr-tree .root-node { margin: 0 60px; }
+.sub-branch { display: flex; align-items: flex-start; gap: 0; }
+
+.left-branches { display: flex; flex-direction: column; gap: 14px; }
+.left-branch { display: flex; align-items: flex-start; flex-direction: row-reverse; gap: 0; }
+.left-branch .children {
+  display: flex; flex-direction: column; gap: 5px;
+  margin-right: 44px; align-items: flex-end;
+}
+
+.right-branches { display: flex; flex-direction: column; gap: 14px; }
+.right-branch { display: flex; align-items: flex-start; gap: 0; }
+.right-branch .children {
+  display: flex; flex-direction: column; gap: 5px; margin-left: 44px; align-items: flex-start;
+}
+
+.branch-node {
+  font-size: 15px; font-weight: 600;
+  padding: 10px 20px; border-radius: 8px;
+  white-space: nowrap; flex-shrink: 0; border: 2px solid;
+}
+
+.sub-node {
+  font-size: 13px; font-weight: 500;
+  padding: 6px 14px; border-radius: 6px;
+  white-space: nowrap; flex-shrink: 0; border: 1.5px solid;
+  background: #F8FAFC;
+}
+
+.leaf {
+  font-size: 12px; font-weight: 400; color: #475569;
+  padding: 3px 10px; background: #FAFAFA;
+  border-radius: 12px; border: 1px solid #E5E7EB;
+  white-space: nowrap; line-height: 1.5;
+}
+
+.c-blue { background: #EFF6FF; border-color: #3B82F6; color: #1E40AF; }
+.c-green { background: #F0FDF4; border-color: #10B981; color: #065F46; }
+.c-amber { background: #FFF7ED; border-color: #F59E0B; color: #92400E; }
+.c-purple { background: #F5F3FF; border-color: #8B5CF6; color: #5B21B6; }
+.c-cyan { background: #ECFEFF; border-color: #06B6D4; color: #155E75; }
+.c-teal { background: #F0FDFA; border-color: #14B8A6; color: #134E4A; }
+.c-red { background: #FEF2F2; border-color: #EF4444; color: #991B1B; }
+.c-gold { background: #FFFBEB; border-color: #C9A84C; color: #78600F; }
+
+.c-blue .sub-node { background: #F0F7FF; border-color: #93C5FD; color: #1E40AF; }
+.c-green .sub-node { background: #F2FDF6; border-color: #6EE7B7; color: #065F46; }
+.c-amber .sub-node { background: #FFF9F0; border-color: #FCD34D; color: #92400E; }
+.c-purple .sub-node { background: #F8F6FF; border-color: #C4B5FD; color: #5B21B6; }
+.c-cyan .sub-node { background: #F0FEFF; border-color: #67E8F9; color: #155E75; }
+.c-teal .sub-node { background: #F2FDFA; border-color: #5EEAD4; color: #134E4A; }
+.c-red .sub-node { background: #FFF5F5; border-color: #FCA5A5; color: #991B1B; }
+.c-gold .sub-node { background: #FFFDF0; border-color: #E8D48B; color: #78600F; }
+
+.role-badge {
+  display: inline-block; font-size: 10px; font-weight: 600;
+  padding: 1px 6px; border-radius: 4px; margin-right: 4px;
+  vertical-align: middle;
+}
+.role-admin { background: #DBEAFE; color: #1E40AF; }
+.role-sme { background: #F0FDF4; color: #065F46; }
+.role-agent { background: #FFF7ED; color: #92400E; }
+.role-client { background: #F5F3FF; color: #5B21B6; }
+
+.leaf-new {
+  font-size: 12px; font-weight: 500; color: #065F46;
+  padding: 3px 10px; background: #F0FDF4;
+  border-radius: 12px; border: 1.5px solid #10B981;
+  white-space: nowrap; line-height: 1.5;
+}
+.new-tag {
+  display: inline-block; font-size: 9px; font-weight: 700;
+  padding: 0px 4px; border-radius: 3px; margin-left: 4px;
+  background: #10B981; color: white; vertical-align: middle;
+  letter-spacing: 0.5px;
+}
+
+.prod-price {
+  font-size: 10px; color: #94A3B8; margin-left: 6px;
+}
+</style>
+</head>
+<body>
+<div id="mindmap" data-intent="finance">
+  <div class="lr-tree">
+
+    <!-- ═══ LEFT SIDE ═══ -->
+    <div class="left-branches">
+
+      <!-- 1. 用戶角色體系 -->
+      <div class="left-branch">
+        <div class="branch-node c-gold">🔐 用戶角色體系</div>
+        <div class="children">
+          <div class="leaf"><span class="role-badge role-admin">Admin</span> Kenneth Mak · 全部功能</div>
+          <div class="leaf"><span class="role-badge role-sme">SME</span> Calvin Chu · 產品/訂單/收入</div>
+          <div class="leaf"><span class="role-badge role-agent">Agent</span> 陳先生 · 客戶/佣金</div>
+          <div class="leaf"><span class="role-badge role-client">客戶</span> 李太太 · 瀏覽/購買</div>
+        </div>
+      </div>
+
+      <!-- 2. 客戶管理 -->
+      <div class="left-branch">
+        <div class="branch-node c-blue">👥 客戶管理</div>
+        <div class="children">
+          <div class="leaf">客戶列表 / 搜尋</div>
+          <div class="leaf">新增客戶</div>
+          <div class="leaf">等級分類 Plan A / B / C</div>
+          <div class="leaf">匯出 CSV</div>
+        </div>
+      </div>
+
+      <!-- 3. 佣金管理 -->
+      <div class="left-branch">
+        <div class="branch-node c-green">💰 佣金管理</div>
+        <div class="children">
+          <div class="leaf">佣金記錄追蹤</div>
+          <div class="leaf">自動分帳 Agent / SME / MCLUB</div>
+          <div class="leaf">發放狀態管理</div>
+          <div class="leaf">匯出 CSV</div>
+        </div>
+      </div>
+
+      <!-- 4. 活動管理 -->
+      <div class="left-branch">
+        <div class="branch-node c-amber">🎉 活動管理</div>
+        <div class="children">
+          <div class="leaf">活動列表 (工作坊 / 研討會)</div>
+          <div class="leaf">新增活動</div>
+          <div class="leaf">報名管理 / 名額控制</div>
+          <div class="leaf">發佈狀態 (草稿 / 已發佈)</div>
+        </div>
+      </div>
+
+      <!-- 5. 系統設定 -->
+      <div class="left-branch">
+        <div class="branch-node c-purple">⚙️ 系統設定</div>
+        <div class="children">
+          <div class="leaf">個人資料編輯</div>
+          <div class="leaf">更改密碼</div>
+          <div class="leaf">語言偏好 (繁中 / English)</div>
+          <div class="leaf">通知偏好 (訂單/佣金/活動/FX)</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══ CENTER ROOT ═══ -->
+    <div class="root-node">MCLUB CRM<br><span style="font-size:13px;font-weight:400;opacity:0.85;">百盛家族辦公室</span></div>
+
+    <!-- ═══ RIGHT SIDE ═══ -->
+    <div class="right-branches">
+
+      <!-- 1. Dashboard 總覽 -->
+      <div class="right-branch">
+        <div class="branch-node c-blue">📊 總覽 Dashboard</div>
+        <div class="children">
+          <div class="leaf">KPI 卡片 (客戶/訂單/營收)</div>
+          <div class="leaf">月度營收趨勢圖</div>
+          <div class="leaf">訂單狀態分佈</div>
+          <div class="leaf">Agent 業績排名</div>
+        </div>
+      </div>
+
+      <!-- 2. 訂單管理 -->
+      <div class="right-branch">
+        <div class="branch-node c-green">📋 訂單管理</div>
+        <div class="children">
+          <div class="leaf">訂單列表 (卡片式)</div>
+          <div class="leaf">新增訂單</div>
+          <div class="leaf">狀態流轉 (待確認→進行中→已完成)</div>
+          <div class="leaf">分帳功能</div>
+          <div class="leaf">匯出 CSV</div>
+        </div>
+      </div>
+
+      <!-- 3. 產品管理 (UPDATED: 8 products, VFK removed, 2 new) -->
+      <div class="right-branch">
+        <div class="branch-node c-amber">📦 產品管理</div>
+        <div class="children">
+          <div class="leaf">🏘️ 日本物業投資<span class="prod-price">HKD/JPY</span></div>
+          <div class="leaf">🇸🇹 聖多美公民計劃<span class="prod-price">USD</span></div>
+          <div class="leaf">📈 NPC基金<span class="prod-price">USD</span></div>
+          <div class="leaf">🏦 家族信託<span class="prod-price">HKD</span></div>
+          <div class="leaf">📋 公司秘書服務<span class="prod-price">HKD</span></div>
+          <div class="leaf">📱 MyPath AI<span class="prod-price">HKD</span></div>
+          <div class="leaf-new">⚖️ 香港法律服務<span class="new-tag">NEW</span><span class="prod-price">HKD</span></div>
+          <div class="leaf-new">🎓 家族辦公室專業認可證書課程<span class="new-tag">NEW</span><span class="prod-price">HKD</span></div>
+          <div class="leaf">佣金分成 (Agent/SME/MCLUB)</div>
+          <div class="leaf">產品分類與編輯</div>
+        </div>
+      </div>
+
+      <!-- 4. FX 風險管理 -->
+      <div class="right-branch">
+        <div class="branch-node c-red">💱 FX 風險管理</div>
+        <div class="children">
+          <div class="leaf">多幣種儀表板</div>
+          <div class="leaf">壓力測試</div>
+          <div class="leaf">對沖方案</div>
+          <div class="leaf">匯率預警</div>
+        </div>
+      </div>
+
+      <!-- 5. 報表分析 -->
+      <div class="right-branch">
+        <div class="branch-node c-cyan">📈 報表分析</div>
+        <div class="children">
+          <div class="leaf">月度營收趨勢</div>
+          <div class="leaf">訂單狀態分佈</div>
+          <div class="leaf">客戶等級分佈</div>
+          <div class="leaf">佣金分帳 (按角色)</div>
+          <div class="leaf">產品營收排名</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+function drawAllLines() {
+  const map = document.getElementById('mindmap');
+  if (!map) { console.error('No #mindmap'); return; }
+  const cRect = map.getBoundingClientRect();
+  const old = map.querySelector('svg.lines');
+  if (old) old.remove();
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.classList.add('lines');
+  svg.setAttribute('width', cRect.width);
+  svg.setAttribute('height', cRect.height);
+  svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:1;';
+  let lineCount = 0;
+
+  function rel(el) {
+    const r = el.getBoundingClientRect();
+    return { cx: r.left - cRect.left + r.width/2, cy: r.top - cRect.top + r.height/2, left: r.left - cRect.left, right: r.right - cRect.left };
+  }
+  function drawLine(x1, y1, x2, y2, color, width) {
+    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l.setAttribute('x1', Math.round(x1)); l.setAttribute('y1', Math.round(y1));
+    l.setAttribute('x2', Math.round(x2)); l.setAttribute('y2', Math.round(y2));
+    l.setAttribute('stroke', color); l.setAttribute('stroke-width', width);
+    l.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(l); lineCount++;
+  }
+
+  const lineStyles = [
+    { color: '#64748B', width: 2.5 },
+    { color: '#94A3B8', width: 2 },
+    { color: '#A8B4C2', width: 1.5 },
+  ];
+  function getStyle(depth) { return lineStyles[Math.min(depth, lineStyles.length - 1)]; }
+
+  function connect(parentEl, childEls, color, width, dir) {
+    if (!childEls.length) return;
+    const p = rel(parentEl);
+    const startX = dir === 'left' ? p.left : p.right;
+    const startY = p.cy;
+    if (childEls.length === 1) {
+      const c = rel(childEls[0]);
+      const endX = dir === 'left' ? c.right : c.left;
+      const midY = Math.round((startY + c.cy) / 2);
+      drawLine(startX, midY, endX, midY, color, width);
+      return;
+    }
+    let closestEdge;
+    if (dir === 'left') { closestEdge = Math.max(...childEls.map(ch => rel(ch).right)); }
+    else { closestEdge = Math.min(...childEls.map(ch => rel(ch).left)); }
+    const childClearance = 16;
+    const midpoint = startX + (closestEdge - startX) / 2;
+    const midFromChild = dir === 'left' ? closestEdge + childClearance : closestEdge - childClearance;
+    const midX = dir === 'left' ? Math.min(midpoint, midFromChild) : Math.max(midpoint, midFromChild);
+    drawLine(startX, startY, midX, startY, color, width);
+    const allCYs = childEls.map(ch => rel(ch).cy);
+    const minY = Math.min(startY, ...allCYs);
+    const maxY = Math.max(startY, ...allCYs);
+    drawLine(midX, minY, midX, maxY, color, width);
+    childEls.forEach(ch => {
+      const c = rel(ch);
+      const endX = dir === 'left' ? c.right : c.left;
+      drawLine(midX, c.cy, endX, c.cy, color, width);
+    });
+  }
+
+  function processChildren(parentNodeEl, containerEl, depth, dir) {
+    if (!containerEl) return;
+    const childNodeEls = [];
+    for (const wrapper of containerEl.children) {
+      const nodeEl = wrapper.matches?.('.branch-node,.sub-node,.leaf,.leaf-new,.deep-node') ? wrapper : wrapper.querySelector('.branch-node,.sub-node,.leaf,.leaf-new,.deep-node');
+      if (nodeEl) childNodeEls.push(nodeEl);
+    }
+    if (!childNodeEls.length) return;
+    const style = getStyle(depth);
+    connect(parentNodeEl, childNodeEls, style.color, style.width, dir);
+  }
+
+  const rootNode = map.querySelector('.root-node');
+  if (!rootNode) { console.error('No .root-node'); return; }
+
+  const leftBranches = map.querySelectorAll('.left-branches > .left-branch');
+  const leftBranchNodes = [];
+  leftBranches.forEach(branch => { const n = branch.querySelector('.branch-node'); if (n) leftBranchNodes.push(n); });
+  if (leftBranchNodes.length) connect(rootNode, leftBranchNodes, lineStyles[0].color, lineStyles[0].width, 'left');
+  leftBranches.forEach(branch => {
+    const bNode = branch.querySelector('.branch-node');
+    if (!bNode) return;
+    processChildren(bNode, branch.querySelector(':scope > .children'), 1, 'left');
+  });
+
+  const rightBranches = map.querySelectorAll('.right-branches > .right-branch');
+  const rightBranchNodes = [];
+  rightBranches.forEach(branch => { const n = branch.querySelector('.branch-node'); if (n) rightBranchNodes.push(n); });
+  if (rightBranchNodes.length) connect(rootNode, rightBranchNodes, lineStyles[0].color, lineStyles[0].width, 'right');
+  rightBranches.forEach(branch => {
+    const bNode = branch.querySelector('.branch-node');
+    if (!bNode) return;
+    processChildren(bNode, branch.querySelector(':scope > .children'), 1, 'right');
+  });
+
+  map.insertBefore(svg, map.firstChild);
+  console.log('Drew ' + lineCount + ' lines');
+}
+
+window.addEventListener('load', () => setTimeout(drawAllLines, 300));
+</script>
+</body>
+</html>

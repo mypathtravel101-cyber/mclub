@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "百盛大通\nPARK ZEMAN CHASE LIMITED\n核心服務三：模擬審查 - 您的防禦護城河\n未雨綢繆，確保從容應對監管機構的現場審查。\n交易與營運健診\n• 審查交易行為（最佳條件執行、經紀商審查、非金錢利益披露）。\n• 員工個人交易和自營交易審查。\n內部控制與政策\n• 更新員工道德守則（錯誤報告、潛在利益衝突）。\n• 個人交易政策、禮物及利益給予政策更新。\n• 審查反洗錢 (AML) 政策及程序。\n企業風險與資訊安全\n• 公司整體運營風險評估。\n• 廣告宣傳及銷售文件審查。\n• 審查私隱保護、數據保護、資訊安全及業務連續性計畫 (BCP)。",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1781057503,
+  "id": "20260610101134e1dec23e7e8d44e1",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260610101134e1dec23e7e8d44e1",
+  "usage": {
+    "completion_tokens": 251,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 6066,
+    "prompt_tokens_details": {
+      "cached_tokens": 5
+    },
+    "total_tokens": 6317
+  }
+}

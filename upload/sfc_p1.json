@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "重構家族世代價值邊界\n家族財富傳承與風險管理\nwww.parkzeman.com\n家族辦公室熱線 6227 7662\n百盛 家族辦公室",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1781057414,
+  "id": "202606101010079e5148f040ab434b",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202606101010079e5148f040ab434b",
+  "usage": {
+    "completion_tokens": 56,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 6092,
+    "prompt_tokens_details": {
+      "cached_tokens": 6
+    },
+    "total_tokens": 6148
+  }
+}

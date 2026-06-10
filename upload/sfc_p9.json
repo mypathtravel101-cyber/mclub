@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "核心服務五：基金成立與併購協助\n百盛大通\nPARK ZEMAN CHASE LIMITED\n成立 OFC / LPF / 離岸基金\n深度法務網絡\n我們與頂尖專業律師事務所深度合作。\n高質量且高性價比\n為客戶提供高質量的開放式基金型公司\n(OFC)、有限合夥基金 (LPF) 及離岸基金\n成立服務，且收費合理透明。\n協助收購金融牌照公司\n無縫對接\n協助企業透過收購現有持牌機構快速進入\n香港金融市場。\n合規盡職調查\n確保目標公司的牌照狀態及過往管運完全\n符合監管要求，將併購風險降至最低。",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1781057527,
+  "id": "20260610101158be83c0f63244442f",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260610101158be83c0f63244442f",
+  "usage": {
+    "completion_tokens": 190,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 6066,
+    "prompt_tokens_details": {
+      "cached_tokens": 6
+    },
+    "total_tokens": 6256
+  }
+}

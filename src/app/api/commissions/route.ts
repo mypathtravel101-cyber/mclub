@@ -1,21 +1,34 @@
 import { db } from '@/lib/db';
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserAuth } from '@/lib/auth-helpers';
+import { NextResponse } from 'next/server';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const auth = getUserAuth(req);
-    if (!auth) return NextResponse.json({ error: '未登入' }, { status: 401 });
-    const { userId, userRole } = auth;
+    const commissions = await db.commission.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        agent: { select: { id: true, name: true } },
+        order: {
+          select: {
+            id: true,
+            customer: { select: { name: true } },
+            product: { select: { name: true, emoji: true } },
+          },
+        },
+      },
+    });
+    return NextResponse.json(commissions);
+  } catch {
+    return NextResponse.json({ error: 'Failed to fetch commissions' }, { status: 500 });
+  }
+}
 
-    let commissions;
-    if (userRole === 'MCLUB_STAFF') {
-      commissions = await db.commission.findMany({ include: { order: { include: { product: { select: { name: true, icon: true } }, client: { select: { name: true } } } }, recipient: { select: { name: true, role: true } } }, orderBy: { createdAt: 'desc' } });
-    } else {
-      commissions = await db.commission.findMany({ where: { recipientId: userId }, include: { order: { include: { product: { select: { name: true, icon: true } }, client: { select: { name: true } } } } }, orderBy: { createdAt: 'desc' } });
-    }
-    return NextResponse.json({ commissions });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, ...data } = body;
+    const commission = await db.commission.update({ where: { id }, data });
+    return NextResponse.json(commission);
+  } catch {
+    return NextResponse.json({ error: 'Failed to update commission' }, { status: 500 });
   }
 }

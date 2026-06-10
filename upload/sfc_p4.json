@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "百盛大通\nPARK ZEMAN CHASE LIMITED\n核心服務一：新申請金融牌照的清晰路徑\n準備與評估\n編製與提交\n溝通與獲批\n評估持牌負責人（RO）資格，分析並審閱履歷資訊。\n就公司架構及業務計畫提出專業意見。\n評估並審查潛在爭議性問題，盡早提出解決方案。\n編製牌照申請文件（審查/修改表格，準備合規手冊）。\n準備並負責提交牌照申請。\n建立與監管機構的初步聯絡。\n處理監管機構提問並草擬專業回覆。\n擔任客戶與監管機構的中間聯繫人，進行牌照條件談判。\n實時監測與跟進，全力協助在合理時限內取得牌照。",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1781057463,
+  "id": "202606101010545908a9d059794544",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202606101010545908a9d059794544",
+  "usage": {
+    "completion_tokens": 228,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 6066,
+    "prompt_tokens_details": {
+      "cached_tokens": 5
+    },
+    "total_tokens": 6294
+  }
+}

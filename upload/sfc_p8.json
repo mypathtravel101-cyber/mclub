@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "核心服務四：持續合規與外判服務\n在成本效益與市場競爭力之間取得完美平衡\n極致的成本效益：\n讓您以具成本效益的途徑，直接取得具豐富經驗的合規人員和專業律師的法規意見。\n量身定制方案：\n根據貴公司的實際業務需要，設計最合適的合規服務，實現服務效益最大化。\n掌握行業先機：\n持續為客戶提供金融業內有關監察及最佳監察應用的最新資訊，保持領先優勢。\n外判服務\n(精簡成本)\n專業護航\n(極大化價值)\n百盛大通\nPARK ZEMAN CHASE LIMITED\nNotebookLM",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1781057515,
+  "id": "20260610101145050466e220a542ce",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260610101145050466e220a542ce",
+  "usage": {
+    "completion_tokens": 189,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 6066,
+    "prompt_tokens_details": {
+      "cached_tokens": 6
+    },
+    "total_tokens": 6255
+  }
+}

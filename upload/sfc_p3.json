@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "百盛大通\nPARK ZEMAN CHASE LIMITED\n金融合規全生命週期服務生態\n修改現有\n牌照限制\n新申請各類\n金融牌照\n模擬審查\n1、4、9號證券\n牌照專項申請\n(黃金資管組合)\n成立 OFC / LPF\n/ 離岸基金\n持續合規\n服務\n協助收購\n金融牌照公司\n從業務啟動到持續營運與擴張，我們為您的每一步提供精確的法規導航。\nNotebookLM",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1781057443,
+  "id": "2026061010103741922c08779b4eeb",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "2026061010103741922c08779b4eeb",
+  "usage": {
+    "completion_tokens": 140,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 6066,
+    "prompt_tokens_details": {
+      "cached_tokens": 6
+    },
+    "total_tokens": 6206
+  }
+}

@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,444 +7,131 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── 四角角色模型 ──
-
-enum UserRole {
-  MCLUB_STAFF    // MCLUB員工 — 全局數據
-  SME_OWNER      // SME老闆 — 產品提供者
-  AGENT          // Agent — 搵生意
-  END_USER       // End User — 最終客戶
-}
-
-enum OrderStatus {
-  PENDING       // 待確認
-  IN_PROGRESS   // 進行中
-  COMPLETED     // 已完成
-  SETTLED       // 已分帳
-}
-
-enum MemberLevel {
-  PLAN_A   // 入門級
-  PLAN_B   // 進階
-  PLAN_C   // 高端
-  FULL     // MCLUB全會員
-}
-
-enum CommissionStatus {
-  PENDING   // 待發放
-  PAID      // 已發放
-}
-
-enum EventStatus {
-  DRAFT       // 草稿
-  PUBLISHED   // 已發佈
-  CANCELLED   // 已取消
-  COMPLETED   // 已完成
-}
-
-enum RSVPStatus {
-  PENDING     // 待確認
-  CONFIRMED   // 已確認
-  DECLINED    // 已拒絕
-  CHECKED_IN  // 已簽到
-}
-
-enum TaskStatus {
-  TODO        // 待辦
-  IN_PROGRESS // 進行中
-  DONE        // 已完成
-}
-
-// ── FX Risk Modelling ──
-
-enum StressScenario {
-  MILD      // 溫和波動 5%
-  MODERATE  // 中度壓力 15%
-  EXTREME   // 極端衝擊 30%+
-}
-
-enum AlertStatus {
-  ACTIVE    // 生效中
-  TRIGGERED // 已觸發
-  DISMISSED // 已關閉
-}
-
-enum HedgingStatus {
-  PENDING    // 待配對
-  MATCHED    // 已配對
-  COMPLETED  // 已完成
-  CANCELLED  // 已取消
-}
-
-enum NotificationType {
-  ORDER_CREATED
-  ORDER_STATUS_CHANGED
-  COMMISSION_SETTLED
-  EVENT_INVITATION
-  EVENT_REMINDER
-  FX_ALERT_TRIGGERED
-  SYSTEM_ANNOUNCEMENT
-}
-
 model User {
-  id          String    @id @default(cuid())
-  email       String    @unique
-  password    String    // hashed
-  name        String
-  phone       String?
-  role        UserRole
-  avatar      String?
-  referredById String?  // Agent who referred this End User
-  referredBy  User?     @relation("Referrals", fields: [referredById], references: [id])
-  referrals   User[]    @relation("Referrals")
-  
-  // SME老闆: which products they own
-  ownedProducts  Product[] @relation("SMEOwner")
-  
-  // Agent: clients they referred
-  clients     Client[]  @relation("AgentClients")
-  
-  // Orders placed (End User)
-  orders      Order[]   @relation("EndUserOrders")
-  
-  // Orders where this user is the agent
-  agentOrders Order[]   @relation("OrderAgent")
-  
-  // Commissions received
-  commissions Commission[] @relation("CommissionRecipient")
-  
-  // Events organized
-  organizedEvents ClubEvent[] @relation("EventOrganizer")
-  
-  // Event RSVPs
-  eventRSVPs RSVP[] @relation("EventAttendee")
-  
-  // Timeline events created by this user
-  timelineEvents TimelineEvent[] @relation("EventCreator")
-  
-  // Event tasks assigned to this user
-  assignedTasks EventTask[] @relation("TaskAssignee")
-  
-  // FX Risk
-  stressTests      FXStressTest[]     @relation("UserStressTests")
-  currencyAlerts   CurrencyAlert[]    @relation("UserCurrencyAlerts")
-  hedgingMatches   HedgingMatch[]     @relation("UserHedgingMatches")
-  
-  // Notifications
-  notifications    Notification[]     @relation("UserNotifications")
-  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String
+  role          String   @default("agent") // admin, agent, sme
+  phone         String?
+  avatar        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  orders        Order[]
+  commissions   Commission[]
+  events        EventParticipant[]
+  notifications Notification[]
+  referrals     Customer[] @relation("Referrals")
 }
 
 model Product {
   id            String   @id @default(cuid())
-  name          String   // 產品名稱
-  category      String   // 產品分類
-  description   String   // 產品描述
-  keyPoints     String   // 重點賣點 (JSON array string)
-  minInvestment String?  // 最低投資額
-  smeOwnerId    String   // SME老闆ID
-  smeOwner      User     @relation("SMEOwner", fields: [smeOwnerId], references: [id])
-  
-  // 佣金規則 (JSON string)
-  commissionRules String  // { agentRate, smeRate, mclubRate, type: "percent"|"flat" }
-  
-  icon          String?  // 圖標emoji
-  color         String?  // 主題色
-  
-  orders        Order[]
-  
+  name          String
+  nameEn        String
+  emoji         String
+  description   String
+  descriptionEn String
+  category      String   // investment, immigration, fund, trust, corporate, technology, legal, education
+  priceMin      Float
+  priceMax      Float
+  currency      String   @default("HKD")
+  commissionRate Float    @default(0)
+  smeOwnerId    String?
+  status        String   @default("active") // active, inactive, archived
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  orders        Order[]
 }
 
-model Client {
-  id            String      @id @default(cuid())
+model Customer {
+  id            String   @id @default(cuid())
   name          String
-  phone         String?
   email         String?
-  source        String?     // 客戶來源
-  memberLevel   MemberLevel @default(PLAN_A)
+  phone         String?
+  company       String?
+  nationality   String?
+  referrerId    String?
   notes         String?
-  
-  agentId       String      // 推薦Agent
-  agent         User        @relation("AgentClients", fields: [agentId], references: [id])
-  
+  status        String   @default("active") // active, inactive, prospect
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  referrer      User?    @relation("Referrals", fields: [referrerId], references: [id])
   orders        Order[]
-  timelineEvents TimelineEvent[]
-  
-  // LTV計算
-  totalSpent    Float       @default(0)
-  
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
 }
 
 model Order {
-  id            String       @id @default(cuid())
+  id            String   @id @default(cuid())
+  customerId    String
   productId     String
-  product       Product      @relation(fields: [productId], references: [id])
-  
-  endUserId     String       // 購買的End User
-  endUser       User         @relation("EndUserOrders", fields: [endUserId], references: [id])
-  
-  clientId      String       // 對應的Client記錄
-  client        Client       @relation(fields: [clientId], references: [id])
-  
-  agentId       String?      // 推薦Agent (可為空)
-  agent         User?        @relation("OrderAgent", fields: [agentId], references: [id])
-  
-  status        OrderStatus  @default(PENDING)
-  amount        Float        // 訂單金額
-  currency      String       @default("HKD")
-  
-  notes         String?      // 訂單備註
-  
-  // 佣金已分帳標記
-  commissionSettled Boolean @default(false)
-  
+  agentId       String
+  status        String   @default("pending") // pending, processing, completed, cancelled
+  amount        Float
+  currency      String   @default("HKD")
+  commission    Float    @default(0)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  customer      Customer @relation(fields: [customerId], references: [id])
+  product       Product  @relation(fields: [productId], references: [id])
+  agent         User     @relation(fields: [agentId], references: [id])
   commissions   Commission[]
-  timelineEvents TimelineEvent[]
-  
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
 }
 
 model Commission {
-  id            String           @id @default(cuid())
-  orderId       String
-  order         Order            @relation(fields: [orderId], references: [id])
-  
-  recipientId   String           // 收款人
-  recipient     User             @relation("CommissionRecipient", fields: [recipientId], references: [id])
-  
-  role          UserRole         // 收款時的角色
-  amount        Float            // 佣金金額
-  status        CommissionStatus @default(PENDING)
-  
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-}
-
-model ClubEvent {
-  id            String       @id @default(cuid())
-  title         String       // 活動名稱
-  description   String?      // 活動描述
-  category      String       @default("networking") // 活動類別: networking, seminar, dinner, workshop, celebration
-  venue         String?      // 地點
-  eventDate     DateTime     // 活動日期
-  endDate       DateTime?    // 結束日期
-  status        EventStatus  @default(DRAFT)
-  coverImage    String?      // 封面圖片URL
-  
-  // 容量
-  maxAttendees  Int?         // 最大人數
-  isPublic      Boolean      @default(true)  // 是否公開
-  
-  // 費用
-  fee           Float        @default(0)     // 費用
-  currency      String       @default("HKD")
-  
-  // 聯絡人及贊助
-  contactPerson String?      // 聯絡人
-  sponsor       String?      // 贊助商
-  
-  // 創建者
-  createdById   String
-  createdBy     User         @relation("EventOrganizer", fields: [createdById], references: [id])
-  
-  // RSVP
-  rsvps         RSVP[]
-  
-  // 活動任務
-  tasks         EventTask[]
-  
-  // 活動預算
-  budgetItems   EventBudgetItem[]
-  
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-}
-
-model EventTask {
-  id            String       @id @default(cuid())
-  eventId       String
-  event         ClubEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  
-  title         String       // 任務名稱
-  description   String?      // 任務描述
-  status        TaskStatus   @default(TODO)  // 任務狀態
-  dueDate       DateTime?    // 截止日期
-  priority      String       @default("medium") // low, medium, high
-  
-  // 負責人
-  assigneeId    String?      // 負責人ID
-  assignee      User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-}
-
-model EventBudgetItem {
-  id            String       @id @default(cuid())
-  eventId       String
-  event         ClubEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  
-  category      String       // 預算類別: venue, catering, decoration, av, marketing, staff, other
-  description   String       // 項目描述
-  estimatedCost Float        @default(0)  // 預算金額
-  actualCost    Float?       // 實際金額
-  
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-}
-
-model RSVP {
-  id            String       @id @default(cuid())
-  eventId       String
-  event         ClubEvent    @relation(fields: [eventId], references: [id])
-  
-  userId        String
-  user          User         @relation("EventAttendee", fields: [userId], references: [id])
-  
-  status        RSVPStatus   @default(PENDING)
-  notes         String?      // 備註
-  guests        Int          @default(0)     // 攜帶人數
-  
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  
-  @@unique([eventId, userId])  // 每人每活動只能RSVP一次
-}
-
-model TimelineEvent {
-  id          String   @id @default(cuid())
-  clientId    String
-  client      Client   @relation(fields: [clientId], references: [id])
-  
-  orderId     String?  // 關聯訂單（可選）
-  order       Order?   @relation(fields: [orderId], references: [id])
-  
-  eventType   String   // 事件類型: "purchase" | "upgrade" | "followup" | "note" | "status_change"
-  title       String   // 事件標題
-  description String?  // 事件描述
-  
-  createdById String?  // 誰創建的
-  createdBy   User?    @relation("EventCreator", fields: [createdById], references: [id])
-  
-  createdAt   DateTime @default(now())
-}
-
-// ── FX Risk Modelling Models ──
-
-model FXStressTest {
-  id            String         @id @default(cuid())
-  userId        String         // 測試所屬用戶
-  user          User           @relation("UserStressTests", fields: [userId], references: [id])
-  
-  // 資產組合 (JSON string: [{productId, productName, currency, amount, weight}])
-  portfolio     String
-  
-  // 基準貨幣
-  baseCurrency  String         @default("HKD")
-  
-  // 三個情境結果 (JSON string: {mild: {totalLoss, items[]}, moderate: {totalLoss, items[]}, extreme: {totalLoss, items[]}})
-  results       String
-  
-  // 總資產值（基準貨幣）
-  totalAssetValue Float
-  
-  // 最大損失金額
-  maxLossAmount  Float
-  
-  // 報告 PDF URL
-  reportUrl     String?
-  
-  // 對沖配對
-  hedgingMatches HedgingMatch[]
-  
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-}
-
-model CurrencyAlert {
-  id            String       @id @default(cuid())
-  userId        String
-  user          User         @relation("UserCurrencyAlerts", fields: [userId], references: [id])
-  
-  // 貨幣對
-  fromCurrency  String       // e.g. "JPY"
-  toCurrency    String       // e.g. "HKD"
-  
-  // 觸發條件
-  threshold     Float        // 變動百分比 (e.g. 5.0 = 5%)
-  direction     String       @default("down") // "up" or "down"
-  
-  status        AlertStatus  @default(ACTIVE)
-  triggeredAt   DateTime?    // 觸發時間
-  
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-}
-
-model HedgingMatch {
-  id            String        @id @default(cuid())
-  userId        String
-  user          User          @relation("UserHedgingMatches", fields: [userId], references: [id])
-  
-  // 關聯的壓力測試
-  stressTestId  String?
-  stressTest    FXStressTest? @relation(fields: [stressTestId], references: [id])
-  
-  // 對沖工具類型
-  hedgingType   String        // "forward" | "option" | "natural" | "other"
-  fromCurrency  String        // 需要對沖的貨幣
-  toCurrency    String        // 目標貨幣
-  
-  // 金額
-  amount        Float         // 對沖金額
-  
-  // 配對狀態
-  status        HedgingStatus @default(PENDING)
-  
-  // 配對的金融機構 (JSON string)
-  matchedProvider String?     // {name, type, contact}
-  
-  // 報價信息 (JSON string)
-  quote         String?       // {rate, fee, expiryDate}
-  
-  // 佣金
-  commissionRate Float        @default(0)
-  commissionAmount Float      @default(0)
-  
-  notes         String?
-  
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-}
-
-model CurrencyRate {
   id            String   @id @default(cuid())
-  fromCurrency  String   // e.g. "USD"
-  toCurrency    String   // e.g. "HKD"
-  rate          Float    // 匯率
-  source        String   @default("api") // 數據來源
-  date          DateTime // 匯率日期
-  
-  @@unique([fromCurrency, toCurrency, date])
+  agentId       String
+  orderId       String?
+  amount        Float
+  currency      String   @default("HKD")
+  status        String   @default("pending") // pending, approved, paid
+  paidAt        DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  agent         User     @relation(fields: [agentId], references: [id])
+  order         Order?   @relation(fields: [orderId], references: [id])
 }
 
-// ── Notification System ──
+model Event {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  type          String   @default("seminar") // seminar, webinar, meeting, training
+  date          DateTime
+  location      String?
+  maxAttendees  Int      @default(50)
+  status        String   @default("upcoming") // upcoming, ongoing, completed, cancelled
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  participants  EventParticipant[]
+}
+
+model EventParticipant {
+  id            String   @id @default(cuid())
+  eventId       String
+  userId        String
+  status        String   @default("registered") // registered, attended, cancelled
+  createdAt     DateTime @default(now())
+
+  event         Event    @relation(fields: [eventId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+}
 
 model Notification {
-  id         String           @id @default(cuid())
-  userId     String
-  user       User             @relation("UserNotifications", fields: [userId], references: [id])
-  type       NotificationType
-  title      String
-  message    String
-  read       Boolean          @default(false)
-  link       String?          // optional deep link like "/orders/xxx"
-  createdAt  DateTime         @default(now())
+  id            String   @id @default(cuid())
+  userId        String
+  title         String
+  message       String
+  type          String   @default("info") // info, warning, success, error
+  read          Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id])
 }

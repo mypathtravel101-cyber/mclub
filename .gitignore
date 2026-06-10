@@ -51,11 +51,7 @@ prompt
 
 server.log
 # Skills directory
-/skills/.zscripts/dev.pid
-.zscripts/dev.log
-.zscripts/mini-service-*.log
-__pycache__/
-.env
-node_modules/
-.next/
-*.db
+/skills/mclub-repo/
+
+# Cloned repos
+mclub-repo/

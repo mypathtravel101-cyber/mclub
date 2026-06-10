@@ -1,82 +1,75 @@
 import { db } from '@/lib/db';
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserAuth } from '@/lib/auth-helpers';
+import { NextResponse } from 'next/server';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const auth = getUserAuth(req);
-    if (!auth) return NextResponse.json({ error: '未登入' }, { status: 401 });
-    const { userId, userRole } = auth;
+    const [
+      totalOrders,
+      totalCustomers,
+      totalProducts,
+      totalEvents,
+      orderStats,
+      commissionStats,
+      recentOrders,
+      productRevenue,
+    ] = await Promise.all([
+      db.order.count(),
+      db.customer.count(),
+      db.product.count({ where: { status: 'active' } }),
+      db.event.count({ where: { status: 'upcoming' } }),
+      db.order.groupBy({ by: ['status'], _count: true }),
+      db.commission.groupBy({ by: ['status'], _sum: { amount: true } }),
+      db.order.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          customer: { select: { name: true } },
+          product: { select: { name: true, emoji: true } },
+          agent: { select: { name: true } },
+        },
+      }),
+      db.order.groupBy({
+        by: ['productId'],
+        _sum: { amount: true },
+        where: { status: { in: ['completed', 'processing'] } },
+      }),
+    ]);
 
-    // Run ALL queries sequentially to prevent SQLite concurrent access issues
-    const totalClients = await db.client.count();
-    const totalOrders = await db.order.count();
-    const totalRevenueResult = await db.order.aggregate({ _sum: { amount: true } });
-    const pendingOrders = await db.order.count({ where: { status: 'PENDING' } });
-    const completedOrders = await db.order.count({ where: { status: 'COMPLETED' } });
-    const settledOrders = await db.order.count({ where: { status: 'SETTLED' } });
-
-    const products = await db.product.findMany({ 
-      include: { _count: { select: { orders: true } }, smeOwner: { select: { name: true } } } 
+    const products = await db.product.findMany({
+      select: { id: true, name: true, emoji: true },
     });
 
-    const agents = await db.user.findMany({ 
-      where: { role: 'AGENT' }, 
-      select: { id: true, name: true, _count: { select: { clients: true } } } 
+    const revenueByProduct = productRevenue.map((r) => {
+      const product = products.find((p) => p.id === r.productId);
+      return {
+        name: product?.name || 'Unknown',
+        emoji: product?.emoji || '',
+        revenue: r._sum.amount || 0,
+      };
     });
 
-    const myCommissionsResult = await db.commission.aggregate({ 
-      where: { recipientId: userId }, _sum: { amount: true } 
-    });
-
-    const myPendingCommissionsResult = await db.commission.aggregate({ 
-      where: { recipientId: userId, status: 'PENDING' }, _sum: { amount: true } 
-    });
-
-    let smeProductOrders = null;
-    if (userRole === 'SME_OWNER') {
-      const myProducts = await db.product.findMany({ 
-        where: { smeOwnerId: userId }, select: { id: true } 
-      });
-      const myProductIds = myProducts.map(p => p.id);
-      if (myProductIds.length > 0) {
-        smeProductOrders = await db.order.findMany({ 
-          where: { productId: { in: myProductIds } }, 
-          include: { product: { select: { name: true, icon: true } }, client: { select: { name: true } } }, 
-          take: 10, orderBy: { createdAt: 'desc' } 
-        });
-      }
-    }
-
-    let myClients = null;
-    if (userRole === 'AGENT') {
-      myClients = await db.client.findMany({ 
-        where: { agentId: userId }, 
-        include: { orders: { include: { product: { select: { name: true, icon: true } } } } }, 
-        take: 10, orderBy: { createdAt: 'desc' } 
-      });
-    }
-
-    let myOrders = null;
-    if (userRole === 'END_USER') {
-      myOrders = await db.order.findMany({ 
-        where: { endUserId: userId }, 
-        include: { product: true }, 
-        orderBy: { createdAt: 'desc' } 
-      });
-    }
+    const totalRevenue = productRevenue.reduce((sum, r) => sum + (r._sum.amount || 0), 0);
+    const totalCommission = commissionStats
+      .filter((s) => s.status === 'paid')
+      .reduce((sum, s) => sum + (s._sum.amount || 0), 0);
+    const pendingCommission = commissionStats
+      .filter((s) => s.status === 'pending')
+      .reduce((sum, s) => sum + (s._sum.amount || 0), 0);
 
     return NextResponse.json({
-      totalClients, totalOrders, 
-      totalRevenue: totalRevenueResult._sum.amount || 0,
-      pendingOrders, completedOrders, settledOrders,
-      products, agents,
-      myCommissions: myCommissionsResult._sum.amount || 0,
-      myPendingCommissions: myPendingCommissionsResult._sum.amount || 0,
-      smeProductOrders, myClients, myOrders,
+      totalOrders,
+      totalCustomers,
+      totalProducts,
+      totalEvents,
+      totalRevenue,
+      totalCommission,
+      pendingCommission,
+      orderStats,
+      recentOrders,
+      revenueByProduct,
     });
-  } catch (error: any) {
-    console.error('Dashboard API error:', error);
-    return NextResponse.json({ error: error.message || '獲取儀表盤數據失敗' }, { status: 500 });
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    return NextResponse.json({ error: 'Failed to fetch dashboard data' }, { status: 500 });
   }
 }

@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "百盛大通\nPARK ZEMAN CHASE LIMITED\n建立於專業與實踐之上的信任基石\n穩健根基\n成立於 2017 年\n專為香港持牌公司、持牌人員、\n基金管理公司及各類型金融機構提\n供合規諮詢服務，確保完全符合\n本地監管法規。\n頂尖團隊\n高管與前監管視角\n團隊經驗豐富，匯聚曾在金融行業\n擔任高管、持牌負責人 (RO) 或資\n深合規經理的專業人士，提供最全\n面且具實戰價值的合規服務。\n多元客戶\n覆蓋全金融業態\n服務對象涵蓋對沖基金、私募股權\n投資公司、券商、內地基金管理公\n司、獨立財務顧問、投資移民公司\n及保險經紀公司等。\nNotebookLM",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1781057428,
+  "id": "2026061010101940ad00fae5134b71",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "2026061010101940ad00fae5134b71",
+  "usage": {
+    "completion_tokens": 238,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 6066,
+    "prompt_tokens_details": {
+      "cached_tokens": 5
+    },
+    "total_tokens": 6304
+  }
+}

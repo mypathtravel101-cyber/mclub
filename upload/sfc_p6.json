@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "百盛大通\nPARK ZEMAN CHASE LIMITED\n核心服務二：修改現有牌照條件限制\n讓合規框架適應您的業務擴張步伐\n現有限制\n1\n2\n3\n4\n業務增長\n雙向評估：\n評估現有限制及\n新業務需要；評估\n所需持牌人的新\n資格或經驗。\n文件重構：\n檢視現存文件，重\n新編寫修改條件所\n需的業務計畫書\n及合規文件。\n風險排查：\n評估並審查潛在\n爭議性問題，提\n供前瞻性解決方\n案。\n監管交涉：\n準備並提交申請，\n全程處理 SFC 的\n提問並草擬專業\n回覆。\nNotebookLM",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1781057489,
+  "id": "202606101011204b0230c6393340d4",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202606101011204b0230c6393340d4",
+  "usage": {
+    "completion_tokens": 194,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 6066,
+    "prompt_tokens_details": {
+      "cached_tokens": 5
+    },
+    "total_tokens": 6260
+  }
+}

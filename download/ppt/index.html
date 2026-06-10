@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PZC Group · FX Risk Modelling 服务方案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a1f3d;
+    --ink-rgb:10,31,61;
+    --paper:#f1f3f5;
+    --paper-rgb:241,243,245;
+    --paper-tint:#e4e8ec;
+    --ink-tint:#152a4a;
+
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+    --serif-en:"Playfair Display","Source Serif 4",Georgia,serif;
+    --serif-body-en:"Source Serif 4",Georgia,serif;
+    --serif-zh:"Noto Serif SC",source-han-serif-sc,serif;
+    --sans-zh:"Noto Sans SC",source-han-sans-sc,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;overflow:hidden;background:var(--ink);color:var(--paper);font-family:var(--sans-zh);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+
+  canvas.bg{position:fixed;inset:0;width:100vw;height:100vh;z-index:0;display:block;transition:opacity 1.2s ease}
+  canvas#bg-light{opacity:0}
+  canvas#bg-dark{opacity:1}
+  body.light-bg canvas#bg-light{opacity:1}
+  body.light-bg canvas#bg-dark{opacity:0}
+
+  #deck{position:fixed;inset:0;width:10000vw;height:100vh;display:flex;flex-wrap:nowrap;transition:transform .9s cubic-bezier(.77,0,.175,1);z-index:10;will-change:transform}
+  .slide{width:100vw;height:100vh;flex:0 0 100vw;position:relative;padding:6vh 6vw 10vh 6vw;display:flex;flex-direction:column;overflow:hidden}
+  .slide.light{color:var(--ink)}
+  .slide.dark{color:var(--paper)}
+
+  .slide::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;transition:background .7s ease}
+  .slide.light::before{background:rgba(var(--paper-rgb),.78);backdrop-filter:blur(3px)}
+  .slide.dark::before{background:rgba(var(--ink-rgb),.78);backdrop-filter:blur(3px)}
+  .slide.hero.light::before{background:rgba(var(--paper-rgb),.16);backdrop-filter:none}
+  .slide.hero.dark::before{background:rgba(var(--ink-rgb),.12);backdrop-filter:none}
+  .slide.hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none}
+  .slide.hero.light::after{background:linear-gradient(180deg,rgba(var(--paper-rgb),.28) 0%,rgba(var(--paper-rgb),0) 14%,rgba(var(--paper-rgb),0) 86%,rgba(var(--paper-rgb),.28) 100%)}
+  .slide.hero.dark::after{background:linear-gradient(180deg,rgba(var(--ink-rgb),.32) 0%,rgba(var(--ink-rgb),0) 14%,rgba(var(--ink-rgb),0) 86%,rgba(var(--ink-rgb),.32) 100%)}
+
+  .chrome{display:flex;justify-content:space-between;align-items:flex-start;font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.7}
+  .chrome .left,.chrome .right{display:flex;gap:2.4em;align-items:center}
+  .chrome .sep{width:40px;height:1px;background:currentColor;opacity:.4}
+  .foot{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.55}
+  .foot .title{font-family:var(--serif-zh);font-weight:400;letter-spacing:.05em;text-transform:none;opacity:.75;font-size:13px}
+
+  .tag{display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;padding:6px 14px;border:1px solid currentColor;opacity:.85}
+  .rule{width:100%;height:1px;background:currentColor;opacity:.25;margin:3vh 0}
+  .rule.v{width:1px;height:100%;margin:0}
+
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.3em;text-transform:uppercase;opacity:.6;margin-bottom:2.6vh}
+  .display{font-family:var(--serif-en);font-weight:700;font-size:11vw;line-height:.92;letter-spacing:-.025em}
+  .display-zh{font-family:var(--serif-zh);font-weight:700;font-size:7.8vw;line-height:1.04;letter-spacing:-.005em}
+  .h1-zh{font-family:var(--serif-zh);font-weight:700;font-size:4.6vw;line-height:1.12;letter-spacing:-.005em}
+  .h2-zh{font-family:var(--serif-zh);font-weight:600;font-size:3.2vw;line-height:1.2;letter-spacing:0}
+  .h3-zh{font-family:var(--serif-zh);font-weight:500;font-size:1.9vw;line-height:1.35}
+  .body-zh{font-family:var(--sans-zh);font-weight:400;font-size:max(15px,1.22vw);line-height:1.75;opacity:.82;letter-spacing:.01em}
+  .body-serif{font-family:var(--serif-zh);font-weight:400;font-size:max(15px,1.3vw);line-height:1.65;opacity:.88}
+  .lead{font-family:var(--serif-zh);font-weight:400;font-size:1.9vw;line-height:1.4;opacity:.85}
+  .meta{font-family:var(--mono);font-size:max(11px,.88vw);letter-spacing:.16em;text-transform:uppercase;opacity:.6}
+  .big-num{font-family:var(--serif-en);font-weight:800;font-size:10vw;line-height:.85;letter-spacing:-.03em;font-feature-settings:"tnum"}
+  .mid-num{font-family:var(--serif-en);font-weight:700;font-size:5.5vw;line-height:.88;letter-spacing:-.02em;font-feature-settings:"tnum"}
+  .ghost{font-family:var(--serif-en);font-weight:900;font-size:34vw;line-height:.8;opacity:.06;letter-spacing:-.04em;position:absolute;font-feature-settings:"tnum"}
+  em{font-style:italic;font-family:var(--serif-en)}
+  .en{font-family:var(--serif-en);font-style:italic;font-weight:500}
+
+  .col{display:flex;flex-direction:column;gap:2.4vh}
+  .row{display:flex;align-items:center;gap:3vw}
+  .grid-6{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:4vw 6vw;flex:1;align-content:center;padding:2vh 0}
+  .grid-9{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:3vh 4vw;flex:1;align-content:center}
+  .grid-4{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);gap:4vh 6vw;flex:1;align-content:center}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:4vw;flex:1;align-content:center}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:4vw;flex:1;align-items:center}
+  .split-55{display:grid;grid-template-columns:55fr 45fr;gap:5vw;flex:1;align-items:stretch}
+  .fill{flex:1}
+  .center{align-items:center;justify-content:center;text-align:center}
+  .bottom-left{position:absolute;left:6vw;bottom:9vh;max-width:50vw}
+  .bottom-right{position:absolute;right:6vw;bottom:9vh;max-width:50vw;text-align:right}
+  .top-right{position:absolute;right:6vw;top:6vh;text-align:right}
+
+  .stat{display:flex;flex-direction:column;gap:1vh;align-items:flex-start}
+  .stat .n{font-family:var(--serif-en);font-weight:800;font-size:8vw;line-height:.88;letter-spacing:-.03em;font-feature-settings:"tnum"}
+  .stat .l{font-family:var(--sans-zh);font-size:max(13px,1.05vw);opacity:.7;margin-top:1vh;font-weight:400;line-height:1.5}
+  .stat .m{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;opacity:.5;margin-bottom:.2vh}
+
+  .callout{padding:3vh 2.4vw;border-left:3px solid currentColor;position:relative;font-family:var(--serif-zh);font-size:max(15px,1.2vw);line-height:1.55;opacity:.92}
+  .slide.light .callout{background:rgba(var(--ink-rgb),.05)}
+  .slide.dark .callout{background:rgba(var(--paper-rgb),.06)}
+  .callout .cite{display:block;margin-top:1.6vh;font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:.6}
+  .callout .q-big{font-family:var(--serif-zh);font-weight:600;font-size:max(17px,1.6vw);line-height:1.42}
+
+  .plat{display:flex;flex-direction:column;justify-content:flex-end;padding:2vh 0;border-top:1px solid currentColor;border-color:rgba(127,127,127,.35)}
+  .plat .name{font-family:var(--serif-zh);font-weight:700;font-size:1.8vw;margin-bottom:.6vh}
+  .plat .nb{font-family:var(--serif-en);font-weight:700;font-size:3.2vw;letter-spacing:-.02em;line-height:1;font-feature-settings:"tnum"}
+  .plat .sub{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;opacity:.55;margin-top:.6vh}
+  .plat .fill{font-family:var(--sans-zh);font-weight:300;font-size:2.4vw;opacity:.28;letter-spacing:-.01em;line-height:1}
+
+  .rowline{display:grid;grid-template-columns:1fr 2fr 1fr;gap:2vw;padding:2.2vh 0;border-top:1px solid currentColor;align-items:center;border-color:rgba(127,127,127,.25)}
+  .rowline:last-child{border-bottom:1px solid currentColor;border-color:rgba(127,127,127,.25)}
+  .rowline .k{font-family:var(--serif-zh);font-weight:700;font-size:1.7vw}
+  .rowline .v{font-family:var(--sans-zh);font-weight:400;font-size:max(14px,1.2vw);opacity:.85;line-height:1.55}
+  .rowline .m{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:.6;justify-self:end}
+
+  .pillar{display:flex;flex-direction:column;gap:1.8vh}
+  .pillar .ic{font-family:var(--serif-en);font-style:italic;font-size:2.6vw;opacity:.45;font-weight:400}
+  .pillar .ic svg{width:2.8vw;height:2.8vw;stroke-width:1.2;opacity:.7}
+  .pillar .t{font-family:var(--serif-zh);font-weight:700;font-size:2.4vw;line-height:1.1}
+  .pillar .d{font-family:var(--sans-zh);font-weight:400;font-size:max(14px,1.1vw);opacity:.76;line-height:1.6}
+
+  .sign{font-family:var(--serif-en);font-style:italic;font-weight:500;font-size:2vw;opacity:.7}
+  .hi{position:relative;display:inline}
+  .slide.dark .hi::after{content:"";position:absolute;left:-.1em;right:-.1em;bottom:-.05em;height:.28em;background:rgba(var(--paper-rgb),.15);z-index:-1}
+  .slide.light .hi::after{content:"";position:absolute;left:-.1em;right:-.1em;bottom:-.05em;height:.28em;background:rgba(var(--ink-rgb),.08);z-index:-1}
+
+  .ico{width:1em;height:1em;display:inline-block;vertical-align:-.12em;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+  .ico-lg,.ico-md,.ico-sm{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+  .ico-lg{width:2.6vw;height:2.6vw;stroke-width:1.2;display:inline-block}
+  .ico-md{width:1.8vw;height:1.8vw;stroke-width:1.3;display:inline-block;vertical-align:-.4em}
+  .ico-sm{width:1.1vw;height:1.1vw;stroke-width:1.4;display:inline-block;vertical-align:-.15em;opacity:.7}
+
+  .img-slot{border:1.5px dashed rgba(127,127,127,.4);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1vh;padding:2vh 2vw;font-family:var(--mono);font-size:10px;letter-spacing:.28em;text-transform:uppercase;opacity:.55;position:relative;aspect-ratio:16/9;width:100%;max-height:56vh;margin-inline:auto;box-sizing:border-box}
+  .img-slot::before{content:"";position:absolute;inset:8px;border:1px solid currentColor;opacity:.2}
+  .img-slot .plus{font-size:2vw;font-weight:300;opacity:.5;letter-spacing:0}
+  .img-slot .label{position:relative;z-index:2;text-align:center}
+  .img-slot.r-4x3{aspect-ratio:4/3}
+  .img-slot.r-3x2{aspect-ratio:3/2}
+  .img-slot.r-1x1{aspect-ratio:1/1}
+
+  .frame-img{overflow:hidden;position:relative;background:rgba(0,0,0,.04);box-sizing:border-box;width:100%;border-radius:4px}
+  .slide.dark .frame-img{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12)}
+  .frame-img > img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .frame-cap{display:flex;justify-content:space-between;align-items:baseline;gap:1vw;margin-top:.8vh;font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;opacity:.72}
+  .frame-cap .pf{font-family:var(--serif-zh);font-weight:600;font-size:max(13px,1vw);letter-spacing:.04em;text-transform:none;opacity:.94}
+  .frame-cap .nb{font-family:var(--serif-en);font-style:italic;font-size:max(15px,1.2vw);letter-spacing:.02em;text-transform:none;opacity:.88}
+  .frame-cap .idx{font-family:var(--mono);opacity:.5}
+  figure.tile{display:flex;flex-direction:column;margin:0;min-width:0}
+  figure.tile > .frame-img{flex:0 0 auto}
+
+  #nav{position:fixed;left:50%;bottom:2.6vh;transform:translateX(-50%);z-index:30;display:flex;gap:10px;padding:8px 14px;border-radius:999px;background:rgba(0,0,0,.18);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  #nav .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer;transition:all .3s ease;border:0;padding:0}
+  #nav .dot:hover{background:rgba(255,255,255,.5);transform:scale(1.15)}
+  #nav .dot.active{background:rgba(255,255,255,.95);width:22px;border-radius:999px}
+  body.light-bg #nav{background:rgba(255,255,255,.25)}
+  body.light-bg #nav .dot{background:rgba(var(--ink-rgb),.25)}
+  body.light-bg #nav .dot.active{background:rgba(var(--ink-rgb),.9)}
+  #hint{position:fixed;bottom:3vh;right:3vw;z-index:30;font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;opacity:.4;mix-blend-mode:difference;color:#aaa}
+
+  .frame{flex:1;display:flex;flex-direction:column;min-height:0}
+  .frame.grid-2-7-5,
+  .frame.grid-2-6-6,
+  .frame.grid-2-8-4,
+  .frame.grid-3-3,
+  .frame.grid-6{display:grid}
+
+  .h-hero{
+    font-family:var(--serif-zh);
+    font-weight:900;
+    font-size:10vw;
+    line-height:.96;
+    letter-spacing:-.02em;
+  }
+  .h-xl{
+    font-family:var(--serif-zh);
+    font-weight:700;
+    font-size:6.2vw;
+    line-height:1.08;
+    letter-spacing:-.01em;
+  }
+  .h-sub{
+    font-family:var(--serif-zh);
+    font-weight:500;
+    font-size:3.1vw;
+    line-height:1.25;
+    letter-spacing:0;
+    opacity:.7;
+  }
+  .h-md{
+    font-family:var(--serif-zh);
+    font-weight:600;
+    font-size:2.3vw;
+    line-height:1.3;
+  }
+  .h-hero-en,.h-xl-en{font-family:var(--serif-en);letter-spacing:-.025em}
+
+  .lead{
+    font-family:var(--serif-zh);
+    font-weight:400;
+    font-size:1.75vw;
+    line-height:1.5;
+    opacity:.86;
+  }
+
+  .meta-row{
+    display:flex;
+    gap:1.2em;
+    align-items:baseline;
+    flex-wrap:wrap;
+    font-family:var(--mono);
+    font-size:max(12px,.92vw);
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    opacity:.6;
+  }
+
+  .stat-card{
+    display:flex;
+    flex-direction:column;
+    gap:.8vh;
+    align-items:flex-start;
+    padding-top:1.6vh;
+    border-top:1px solid currentColor;
+    border-color:rgba(127,127,127,.3);
+  }
+  .stat-card .stat-label{
+    font-family:var(--mono);
+    font-size:max(10px,.78vw);
+    letter-spacing:.24em;
+    text-transform:uppercase;
+    opacity:.55;
+  }
+  .stat-card .stat-nb{
+    font-family:var(--serif-en);
+    font-weight:800;
+    font-size:5.8vw;
+    line-height:.9;
+    letter-spacing:-.03em;
+    font-feature-settings:"tnum";
+    margin-top:.4vh;
+  }
+  .stat-card .stat-nb .stat-unit{
+    font-family:var(--serif-zh);
+    font-weight:500;
+    font-size:.38em;
+    letter-spacing:0;
+    opacity:.72;
+    margin-left:.14em;
+  }
+  .stat-card .stat-note{
+    font-family:var(--sans-zh);
+    font-weight:400;
+    font-size:max(13px,1.05vw);
+    line-height:1.5;
+    opacity:.72;
+    margin-top:.6vh;
+  }
+  .grid-4 .stat-card .stat-nb{font-size:7.5vw}
+  .grid-3 .stat-card .stat-nb{font-size:6.8vw}
+
+  .pipeline-section{
+    margin-top:4.4vh;
+    padding-top:2.8vh;
+    border-top:1px dashed rgba(127,127,127,.32);
+  }
+  .pipeline-section:first-of-type{
+    border-top:0;
+    padding-top:0;
+    margin-top:3vh;
+  }
+  .pipeline-label{
+    font-family:var(--mono);
+    font-size:max(11px,.85vw);
+    letter-spacing:.24em;
+    text-transform:uppercase;
+    opacity:.62;
+    margin-bottom:2.2vh;
+  }
+  .pipeline{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:1.2vw;
+  }
+  .pipeline[data-cols="3"]{grid-template-columns:repeat(3,1fr)}
+  .pipeline[data-cols="4"]{grid-template-columns:repeat(4,1fr)}
+  .pipeline[data-cols="6"]{grid-template-columns:repeat(6,1fr)}
+  .step{
+    display:flex;
+    flex-direction:column;
+    gap:.8vh;
+    padding-top:1.4vh;
+    border-top:1px solid currentColor;
+    border-color:rgba(127,127,127,.35);
+  }
+  .step-nb{
+    font-family:var(--serif-en);
+    font-style:italic;
+    font-weight:500;
+    font-size:1.15vw;
+    opacity:.45;
+  }
+  .step-title{
+    font-family:var(--sans-zh);
+    font-weight:700;
+    font-size:1.55vw;
+    letter-spacing:.01em;
+    line-height:1.2;
+  }
+  .step-desc{
+    font-family:var(--sans-zh);
+    font-weight:400;
+    font-size:max(12px,.95vw);
+    line-height:1.45;
+    opacity:.72;
+  }
+
+  .grid-2-7-5{display:grid;grid-template-columns:7fr 5fr;gap:3vw 4vh;align-items:start}
+  .grid-2-6-6{display:grid;grid-template-columns:1fr 1fr;gap:3vw 4vh;align-items:start}
+  .grid-2-8-4{display:grid;grid-template-columns:8fr 4fr;gap:3vw 4vh;align-items:start}
+  .grid-3-3{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    grid-auto-rows:minmax(0,1fr);
+    gap:2.4vh 2vw;
+  }
+
+  figure.frame-img{margin:0;display:flex;flex-direction:column;min-width:0}
+  .img-cap{
+    display:block;
+    margin-top:.8vh;
+    font-family:var(--mono);
+    font-size:max(10px,.8vw);
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    opacity:.6;
+  }
+  .callout-src{
+    display:block;
+    margin-top:1.6vh;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    opacity:.6;
+  }
+
+  .chrome{font-family:var(--mono);font-size:max(11px,.78vw);letter-spacing:.2em;text-transform:uppercase;opacity:.62}
+  .foot{font-family:var(--mono);font-size:max(11px,.78vw);letter-spacing:.18em;text-transform:uppercase;opacity:.5}
+
+  .diagram-wrap{display:flex;align-items:center;justify-content:center;width:100%;max-height:50vh}
+  .diagram-wrap svg{width:100%;max-height:50vh;stroke:currentColor;fill:none}
+
+  @media (max-width:900px){
+    .display{font-size:16vw}
+    .display-zh{font-size:12vw}
+    .h1-zh{font-size:7vw}
+    .h-hero{font-size:14vw}
+    .h-xl{font-size:9vw}
+    .pipeline{grid-template-columns:repeat(2,1fr)}
+    .grid-2-7-5,.grid-2-6-6,.grid-2-8-4{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-dark" class="bg"></canvas>
+<canvas id="bg-light" class="bg"></canvas>
+<div id="hint">&larr; &rarr; &#32763;&#39029; &middot; ESC &#32034;&#24341;</div>
+
+<div id="deck">
+
+<!-- ============================================================
+     SLIDE 1 — hero dark — Cover
+     ============================================================ -->
+<section class="slide hero dark" data-theme="dark">
+  <div class="chrome">
+    <div class="left">FX Risk Modelling &middot; PZC Group</div>
+    <div class="right">01 / 10</div>
+  </div>
+
+  <div class="frame center col">
+    <div class="kicker">PZC Group &mdash; Wealth Management</div>
+    <div class="h-hero">FX Risk<br>Modelling</div>
+    <div class="h-sub" style="margin-top:2vh">&#20840;&#38754;&#22806;&#27719;&#39118;&#38505;&#31649;&#29702;&#35299;&#20915;&#26041;&#26696;</div>
+    <div class="rule" style="margin-top:3vh"></div>
+    <div class="lead" style="max-width:52vw">Stress Testing &middot; Multi-Currency Dashboard &middot; Hedging Strategies &middot; Value at Risk</div>
+  </div>
+
+  <div class="foot">
+    <div class="title">&#31614;&#23458;&#39118;&#38505;&#31649;&#29702;&#26381;&#21153;&#26041;&#26696;</div>
+    <div>&mdash; &middot; &mdash;</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 2 — light — Big Numbers: Why FX Risk Matters
+     ============================================================ -->
+<section class="slide light" data-theme="light">
+  <div class="chrome">
+    <div class="left">FX Risk Modelling &middot; PZC Group</div>
+    <div class="right">02 / 10</div>
+  </div>
+
+  <div class="frame col">
+    <div class="kicker">Why FX Risk Matters</div>
+    <div class="h-xl">&#22806;&#27719;&#39118;&#38505;&#19981;&#21487;&#24573;&#35270;</div>
+
+    <div class="grid-4">
+      <div class="stat-card">
+        <div class="stat-label">Global Daily Volume</div>
+        <div class="stat-nb">$6.6<span class="stat-unit">&#19975;&#20159;</span></div>
+        <div class="stat-note">&#20840;&#29699;&#26085;&#22343;&#22806;&#27719;&#20132;&#26131;&#37327;&#65292;&#24066;&#22330;&#28010;&#21160;&#24433;&#21709;&#24040;&#22823;</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Annual Volatility</div>
+        <div class="stat-nb">15<span class="stat-unit">-20%</span></div>
+        <div class="stat-note">&#20027;&#35201;&#36135;&#24065;&#23545;&#24180;&#22343;&#27719;&#29575;&#28010;&#21160;&#24133;&#24230;</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Asian FX Exposure</div>
+        <div class="stat-nb">HK$1.2<span class="stat-unit">&#19975;&#20159;</span></div>
+        <div class="stat-note">&#20122;&#27954;&#20225;&#19994;&#22806;&#27719;&#25915;&#25764;&#20013;&#32445;&#24231;&#20110;&#27426;&#27954;</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Unhedged Firms</div>
+        <div class="stat-nb">68<span class="stat-unit">%</span></div>
+        <div class="stat-note">&#27809;&#26377;&#27491;&#24335;&#22806;&#27719;&#23545;&#20914;&#31574;&#30053;&#30340;&#20225;&#19994;&#27604;&#20363;</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="title">&#20840;&#29699;&#22806;&#27719;&#39118;&#38505;&#25968;&#25454;&#28895;&#26223;</div>
+    <div>&mdash; &middot; &mdash;</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 3 — hero light — Act Divider: Core Services
+     ============================================================ -->
+<section class="slide hero light" data-theme="light">
+  <div class="chrome">
+    <div class="left">Service Overview</div>
+    <div class="right">03 / 10</div>
+  </div>
+
+  <div class="frame center col">
+    <div class="tag">Core Services</div>
+    <div class="h-hero">&#26680;&#24515;&#26381;&#21153;</div>
+    <div class="rule" style="margin-top:3vh"></div>
+    <div class="h-sub">&#22235;&#22823;&#19987;&#19994;&#22806;&#27719;&#39118;&#38505;&#31649;&#29702;&#24037;&#20855;</div>
+    <div class="lead" style="max-width:50vw;margin-top:2vh">&#21161;&#21147;&#39118;&#38505;&#35782;&#21035;&middot;&#25968;&#25454;&#37319;&#38598;&middot;&#27169;&#22411;&#26500;&#24314;&middot;&#31574;&#30053;&#21046;&#23450;&middot;&#25345;&#32493;&#30417;&#25511;</div>
+  </div>
+
+  <div class="foot">
+    <div class="title">&#26681;&#25454;&#23458;&#25143;&#39118;&#38505;&#29305;&#24449;&#23450;&#21046;&#26381;&#21153;</div>
+    <div>&mdash; &middot; &mdash;</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 4 — dark — Stress Testing + Flow Diagram
+     ============================================================ -->
+<section class="slide dark" data-theme="dark">
+  <div class="chrome">
+    <div class="left">FX Risk Modelling &middot; PZC Group</div>
+    <div class="right">04 / 10</div>
+  </div>
+
+  <div class="frame grid-2-6-6">
+    <!-- Left: Text Content -->
+    <div class="col">
+      <div class="kicker">Service 01</div>
+      <div class="h-xl">Stress Testing</div>
+      <div class="h-sub" style="margin-bottom:2vh">&#21387;&#21147;&#27979;&#35797;</div>
+      <div class="lead">&#25805;&#25511;&#26500;&#27745;&#39118;&#38505;&#65292;&#19978;&#30005;&#28388;&#38500;</div>
+      <div class="body-zh" style="margin-top:2vh">
+        &#27169;&#25311;&#26497;&#31455;&#24066;&#22330;&#22330;&#26223;&#65292;&#21253;&#25324;&#36127;&#24065;&#27880;&#19979;10-20%&#12289;&#21033;&#29575;&#24613;&#25341;&#12289;&#22320;&#32536;&#25919;&#27835;&#20107;&#20214;&#31561;&#22806;&#22240;&#65292;&#37325;&#28857;&#27979;&#35797;&#22806;&#27719;&#32452;&#21512;&#22312;&#26368;&#24046;&#24773;&#20917;&#19979;&#30340;&#21487;&#33021;&#25351;&#22791;&#25439;&#22833;&#12290;
+      </div>
+      <div class="rule"></div>
+      <div class="meta-row">
+        <span>Target: &#39118;&#38505;&#22312;&#20159;&#32423;&#22806;&#27719;&#20538;&#21153;&#23458;&#25143;</span>
+      </div>
+    </div>
+
+    <!-- Right: SVG Flow Diagram -->
+    <div class="col center">
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" style="max-height:46vh">
+          <!-- Background subtle grid -->
+          <line x1="0" y1="130" x2="600" y2="130" stroke="currentColor" stroke-width="0.5" opacity="0.08"/>
+
+          <!-- Step 1: Scenario Input -->
+          <rect x="10" y="40" width="120" height="80" rx="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <text x="70" y="68" text-anchor="middle" font-family="var(--serif-en)" font-size="11" fill="currentColor" opacity="0.5" font-style="italic">Step 01</text>
+          <text x="70" y="92" text-anchor="middle" font-family="var(--sans-zh)" font-size="13" fill="currentColor" font-weight="700">&#22330;&#26223;&#35774;&#23450;</text>
+
+          <!-- Arrow 1 -->
+          <line x1="138" y1="80" x2="168" y2="80" stroke="currentColor" stroke-width="1.5"/>
+          <polyline points="163,75 170,80 163,85" stroke="currentColor" stroke-width="1.5" fill="none"/>
+
+          <!-- Step 2: Simulation Engine -->
+          <rect x="178" y="40" width="120" height="80" rx="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <text x="238" y="68" text-anchor="middle" font-family="var(--serif-en)" font-size="11" fill="currentColor" opacity="0.5" font-style="italic">Step 02</text>
+          <text x="238" y="92" text-anchor="middle" font-family="var(--sans-zh)" font-size="13" fill="currentColor" font-weight="700">&#27169;&#25311;&#24341;&#25806;</text>
+
+          <!-- Arrow 2 -->
+          <line x1="306" y1="80" x2="336" y2="80" stroke="currentColor" stroke-width="1.5"/>
+          <polyline points="331,75 338,80 331,85" stroke="currentColor" stroke-width="1.5" fill="none"/>
+
+          <!-- Step 3: Loss Analysis -->
+          <rect x="346" y="40" width="120" height="80" rx="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <text x="406" y="68" text-anchor="middle" font-family="var(--serif-en)" font-size="11" fill="currentColor" opacity="0.5" font-style="italic">Step 03</text>
+          <text x="406" y="92" text-anchor="middle" font-family="var(--sans-zh)" font-size="13" fill="currentColor" font-weight="700">&#25439;&#22833;&#20998;&#26512;</text>
+
+          <!-- Arrow 3 -->
+          <line x1="474" y1="80" x2="504" y2="80" stroke="currentColor" stroke-width="1.5"/>
+          <polyline points="499,75 506,80 499,85" stroke="currentColor" stroke-width="1.5" fill="none"/>
+
+          <!-- Step 4: Report Output -->
+          <rect x="514" y="40" width="76" height="80" rx="4" stroke="currentColor" stroke-width="2" fill="currentColor" fill-opacity="0.08"/>
+          <text x="552" y="68" text-anchor="middle" font-family="var(--serif-en)" font-size="11" fill="currentColor" opacity="0.5" font-style="italic">Step 04</text>
+          <text x="552" y="92" text-anchor="middle" font-family="var(--sans-zh)" font-size="13" fill="currentColor" font-weight="700">&#25253;&#21578;&#36755;&#20986;</text>
+
+          <!-- Scenario labels below -->
+          <text x="70" y="148" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.45">&#36127;&#24065;&#27880;&#19979; 10-20%</text>
+          <text x="70" y="162" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.45">&#21033;&#29575;&#24613;&#25341; / &#22320;&#32536;&#20107;&#20214;</text>
+
+          <!-- Simulation details below -->
+          <text x="238" y="148" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.45">Monte Carlo</text>
+          <text x="238" y="162" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.45">&#21387;&#21147;&#25968;&#23383;&#27169;&#22411;</text>
+
+          <!-- Loss analysis details below -->
+          <text x="406" y="148" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.45">P&amp;L Impact</text>
+          <text x="406" y="162" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.45">&#25439;&#22833;&#20272;&#31639; + &#26631;&#20934;&#23545;&#27604;</text>
+
+          <!-- Report details below -->
+          <text x="552" y="148" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.45">&#22330;&#26223;&#20998;&#26512;</text>
+          <text x="552" y="162" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.45">&#25439;&#22833;&#25253;&#21578;</text>
+
+          <!-- Bottom decorative line -->
+          <line x1="10" y1="185" x2="590" y2="185" stroke="currentColor" stroke-width="0.5" opacity="0.15"/>
+
+          <!-- Output label -->
+          <text x="300" y="210" text-anchor="middle" font-family="var(--serif-zh)" font-size="12" fill="currentColor" opacity="0.6">&#36755;&#20986;&#65306;&#21387;&#21147;&#27979;&#35797;&#25253;&#21578; &middot; &#22330;&#26223;&#20998;&#26512; &middot; &#25439;&#22833;&#20272;&#31639; &middot;&#31649;&#29702;&#24314;&#35758;</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="title">&#21387;&#21147;&#27979;&#35797; &middot; Stress Testing</div>
+    <div>&mdash; &middot; &mdash;</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 5 — light — Multi-Currency Dashboard + Diagram
+     ============================================================ -->
+<section class="slide light" data-theme="light">
+  <div class="chrome">
+    <div class="left">FX Risk Modelling &middot; PZC Group</div>
+    <div class="right">05 / 10</div>
+  </div>
+
+  <div class="frame grid-2-6-6">
+    <!-- Left: Text Content -->
+    <div class="col">
+      <div class="kicker">Service 02</div>
+      <div class="h-xl">Multi-Currency<br>Dashboard</div>
+      <div class="h-sub" style="margin-bottom:2vh">&#22810;&#24065;&#31181;&#20202;&#34920;&#26495;</div>
+      <div class="lead">&#23454;&#26102;&#25968;&#25454;&#35270;&#31383;&#65292;&#20840;&#23616;&#25484;&#25511;</div>
+      <div class="body-zh" style="margin-top:2vh">
+        &#25972;&#21512; Bloomberg &#23450;&#20215;&#12289;&#27719;&#29575;&#36235;&#21183;&#12289;&#22806;&#27719;&#25915;&#25764;&#25968;&#25454;&#65292;&#20026;&#39318;&#32423;&#22810;&#24065;&#31181;&#20132;&#26131;&#23458;&#25143;&#25552;&#20379;&#23454;&#26102;&#39118;&#38505;&#20998;&#26512;&#24179;&#21488;&#12290;
+      </div>
+      <div class="rule"></div>
+      <div class="meta-row">
+        <span>Target: &#39057;&#32321;&#22810;&#24065;&#31181;&#20132;&#26131;&#23458;&#25143;</span>
+      </div>
+    </div>
+
+    <!-- Right: SVG Dashboard Diagram -->
+    <div class="col center">
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg" style="max-height:48vh">
+          <!-- Dashboard outer frame -->
+          <rect x="10" y="10" width="580" height="300" rx="6" stroke="currentColor" stroke-width="1.5" fill="currentColor" fill-opacity="0.03"/>
+
+          <!-- Header bar -->
+          <rect x="10" y="10" width="580" height="36" rx="6" stroke="currentColor" stroke-width="1" fill="currentColor" fill-opacity="0.06"/>
+          <rect x="10" y="40" width="580" height="6" rx="0" stroke="currentColor" stroke-width="0.5" fill="none"/>
+          <text x="30" y="34" font-family="var(--mono)" font-size="10" fill="currentColor" opacity="0.7">FX DASHBOARD &mdash; LIVE</text>
+          <circle cx="570" cy="28" r="4" stroke="currentColor" stroke-width="1" fill="currentColor" fill-opacity="0.2"/>
+          <circle cx="556" cy="28" r="4" stroke="currentColor" stroke-width="1" fill="currentColor" fill-opacity="0.2"/>
+
+          <!-- Currency pair panel -->
+          <rect x="20" y="58" width="175" height="150" rx="4" stroke="currentColor" stroke-width="0.8" fill="none"/>
+          <text x="30" y="78" font-family="var(--mono)" font-size="8" fill="currentColor" opacity="0.5" letter-spacing="0.15em">CURRENCY PAIRS</text>
+          <line x1="30" y1="84" x2="185" y2="84" stroke="currentColor" stroke-width="0.4" opacity="0.3"/>
+
+          <text x="30" y="100" font-family="var(--mono)" font-size="10" fill="currentColor" opacity="0.85">USD/HKD</text>
+          <text x="170" y="100" text-anchor="end" font-family="var(--serif-en)" font-size="10" fill="currentColor" font-weight="700">7.8102</text>
+          <text x="30" y="118" font-family="var(--mono)" font-size="10" fill="currentColor" opacity="0.85">EUR/USD</text>
+          <text x="170" y="118" text-anchor="end" font-family="var(--serif-en)" font-size="10" fill="currentColor" font-weight="700">1.0845</text>
+          <text x="30" y="136" font-family="var(--mono)" font-size="10" fill="currentColor" opacity="0.85">GBP/USD</text>
+          <text x="170" y="136" text-anchor="end" font-family="var(--serif-en)" font-size="10" fill="currentColor" font-weight="700">1.2713</text>
+          <text x="30" y="154" font-family="var(--mono)" font-size="10" fill="currentColor" opacity="0.85">USD/JPY</text>
+          <text x="170" y="154" text-anchor="end" font-family="var(--serif-en)" font-size="10" fill="currentColor" font-weight="700">149.82</text>
+          <text x="30" y="172" font-family="var(--mono)" font-size="10" fill="currentColor" opacity="0.85">AUD/USD</text>
+          <text x="170" y="172" text-anchor="end" font-family="var(--serif-en)" font-size="10" fill="currentColor" font-weight="700">0.6531</text>
+          <text x="30" y="190" font-family="var(--mono)" font-size="10" fill="currentColor" opacity="0.85">USD/CNH</text>
+          <text x="170" y="190" text-anchor="end" font-family="var(--serif-en)" font-size="10" fill="currentColor" font-weight="700">7.2480</text>
+
+          <!-- Trend line chart area -->
+          <rect x="210" y="58" width="375" height="150" rx="4" stroke="currentColor" stroke-width="0.8" fill="none"/>
+          <text x="220" y="78" font-family="var(--mono)" font-size="8" fill="currentColor" opacity="0.5" letter-spacing="0.15em">EXPOSURE TREND &mdash; 6M</text>
+          <line x1="220" y1="84" x2="575" y2="84" stroke="currentColor" stroke-width="0.4" opacity="0.3"/>
+
+          <!-- Y axis labels -->
+          <text x="226" y="104" font-family="var(--mono)" font-size="7" fill="currentColor" opacity="0.35">40M</text>
+          <text x="226" y="130" font-family="var(--mono)" font-size="7" fill="currentColor" opacity="0.35">30M</text>
+          <text x="226" y="156" font-family="var(--mono)" font-size="7" fill="currentColor" opacity="0.35">20M</text>
+          <text x="226" y="182" font-family="var(--mono)" font-size="7" fill="currentColor" opacity="0.35">10M</text>
+
+          <!-- Grid lines -->
+          <line x1="250" y1="100" x2="570" y2="100" stroke="currentColor" stroke-width="0.3" opacity="0.12"/>
+          <line x1="250" y1="126" x2="570" y2="126" stroke="currentColor" stroke-width="0.3" opacity="0.12"/>
+          <line x1="250" y1="152" x2="570" y2="152" stroke="currentColor" stroke-width="0.3" opacity="0.12"/>
+          <line x1="250" y1="178" x2="570" y2="178" stroke="currentColor" stroke-width="0.3" opacity="0.12"/>
+
+          <!-- Trend line 1 (USD exposure - goes up) -->
+          <polyline points="260,170 300,155 340,148 380,138 420,125 460,130 500,118 540,110 560,105"
+            stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.85"/>
+          <!-- Trend line 2 (EUR exposure - wavy) -->
+          <polyline points="260,185 300,175 340,168 380,172 420,160 460,155 500,148 540,140 560,135"
+            stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.4" stroke-dasharray="4,3"/>
+          <!-- Trend line 3 (JPY exposure - decreasing) -->
+          <polyline points="260,145 300,150 340,158 380,162 420,165 460,170 500,175 540,178 560,180"
+            stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.3" stroke-dasharray="2,4"/>
+
+          <!-- X axis labels -->
+          <text x="265" y="200" font-family="var(--mono)" font-size="7" fill="currentColor" opacity="0.35">Jul</text>
+          <text x="330" y="200" font-family="var(--mono)" font-size="7" fill="currentColor" opacity="0.35">Aug</text>
+          <text x="400" y="200" font-family="var(--mono)" font-size="7" fill="currentColor" opacity="0.35">Sep</text>
+          <text x="470" y="200" font-family="var(--mono)" font-size="7" fill="currentColor" opacity="0.35">Oct</text>
+          <text x="545" y="200" font-family="var(--mono)" font-size="7" fill="currentColor" opacity="0.35">Nov</text>
+
+          <!-- Bottom: Exposure bars -->
+          <rect x="20" y="220" width="565" height="78" rx="4" stroke="currentColor" stroke-width="0.8" fill="none"/>
+          <text x="30" y="240" font-family="var(--mono)" font-size="8" fill="currentColor" opacity="0.5" letter-spacing="0.15em">FX EXPOSURE BREAKDOWN</text>
+          <line x1="30" y1="246" x2="575" y2="246" stroke="currentColor" stroke-width="0.4" opacity="0.3"/>
+
+          <!-- Bar 1: USD -->
+          <rect x="40" y="262" width="180" height="18" rx="2" stroke="currentColor" stroke-width="0" fill="currentColor" fill-opacity="0.2"/>
+          <text x="50" y="275" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.8">USD  45%</text>
+
+          <!-- Bar 2: EUR -->
+          <rect x="240" y="262" width="110" height="18" rx="2" stroke="currentColor" stroke-width="0" fill="currentColor" fill-opacity="0.12"/>
+          <text x="250" y="275" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.8">EUR  25%</text>
+
+          <!-- Bar 3: JPY -->
+          <rect x="360" y="262" width="66" height="18" rx="2" stroke="currentColor" stroke-width="0" fill="currentColor" fill-opacity="0.08"/>
+          <text x="370" y="275" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.8">JPY 15%</text>
+
+          <!-- Bar 4: Other -->
+          <rect x="436" y="262" width="56" height="18" rx="2" stroke="currentColor" stroke-width="0" fill="currentColor" fill-opacity="0.05"/>
+          <text x="446" y="275" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.8">OTR 15%</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="title">&#22810;&#24065;&#31181;&#20202;&#34920;&#26495; &middot; Multi-Currency Dashboard</div>
+    <div>&mdash; &middot; &mdash;</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 6 — dark — Hedging Strategies + Hierarchy Diagram
+     ============================================================ -->
+<section class="slide dark" data-theme="dark">
+  <div class="chrome">
+    <div class="left">FX Risk Modelling &middot; PZC Group</div>
+    <div class="right">06 / 10</div>
+  </div>
+
+  <div class="frame grid-2-6-6">
+    <!-- Left: Text Content -->
+    <div class="col">
+      <div class="kicker">Service 03</div>
+      <div class="h-xl">Hedging<br>Strategies</div>
+      <div class="h-sub" style="margin-bottom:2vh">&#23545;&#20914;&#31574;&#30053;</div>
+      <div class="lead">&#20010;&#24615;&#21270;&#23545;&#20914;&#26041;&#26696;&#65292;&#25903;&#25345;&#31283;&#20581;&#25104;&#38271;</div>
+      <div class="body-zh" style="margin-top:2vh">
+        &#26681;&#25454;&#23458;&#25143;&#22806;&#27719;&#25915;&#25764;&#21644;&#39118;&#38505;&#29305;&#24449;&#65292;&#35774;&#35745;&#20010;&#24615;&#21270;&#23545;&#20914;&#26041;&#26696;&#12290;&#21253;&#21547;&#36828;&#26399;&#21512;&#32422;&#12289;&#26399;&#26435;&#31574;&#30053;&#12289;&#33258;&#28982;&#23545;&#20914;&#31561;&#22810;&#31181;&#24037;&#20855;&#65292;&#21512;&#29702;&#21028;&#26045;&#25104;&#26412;&#19982;&#25928;&#30410;&#12290;
+      </div>
+      <div class="rule"></div>
+      <div class="meta-row">
+        <span>Target: &#20027;&#21160;&#31649;&#29702;&#22806;&#27719;&#39118;&#38505;&#23458;&#25143;</span>
+      </div>
+    </div>
+
+    <!-- Right: SVG Hierarchy Diagram -->
+    <div class="col center">
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg" style="max-height:48vh">
+          <!-- Root node: Hedging Strategy -->
+          <rect x="210" y="20" width="180" height="52" rx="6" stroke="currentColor" stroke-width="1.8" fill="currentColor" fill-opacity="0.08"/>
+          <text x="300" y="42" text-anchor="middle" font-family="var(--serif-zh)" font-size="14" fill="currentColor" font-weight="700">&#23545;&#20914;&#31574;&#30053;</text>
+          <text x="300" y="58" text-anchor="middle" font-family="var(--serif-en)" font-size="9" fill="currentColor" opacity="0.45" font-style="italic">Hedging Strategy</text>
+
+          <!-- Connector lines from root -->
+          <line x1="300" y1="72" x2="300" y2="105" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+          <line x1="100" y1="105" x2="500" y2="105" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+          <line x1="100" y1="105" x2="100" y2="120" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+          <line x1="300" y1="105" x2="300" y2="120" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+          <line x1="500" y1="105" x2="500" y2="120" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+
+          <!-- Branch 1: Forward Contracts -->
+          <rect x="25" y="120" width="150" height="44" rx="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <text x="100" y="140" text-anchor="middle" font-family="var(--serif-zh)" font-size="13" fill="currentColor" font-weight="600">&#36828;&#26399;&#21512;&#32422;</text>
+          <text x="100" y="155" text-anchor="middle" font-family="var(--serif-en)" font-size="9" fill="currentColor" opacity="0.4" font-style="italic">Forward Contracts</text>
+
+          <!-- Branch 2: Options -->
+          <rect x="225" y="120" width="150" height="44" rx="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <text x="300" y="140" text-anchor="middle" font-family="var(--serif-zh)" font-size="13" fill="currentColor" font-weight="600">&#26399;&#26435;&#31574;&#30053;</text>
+          <text x="300" y="155" text-anchor="middle" font-family="var(--serif-en)" font-size="9" fill="currentColor" opacity="0.4" font-style="italic">Options Strategies</text>
+
+          <!-- Branch 3: Natural Hedging -->
+          <rect x="425" y="120" width="150" height="44" rx="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <text x="500" y="140" text-anchor="middle" font-family="var(--serif-zh)" font-size="13" fill="currentColor" font-weight="600">&#33258;&#28982;&#23545;&#20914;</text>
+          <text x="500" y="155" text-anchor="middle" font-family="var(--serif-en)" font-size="9" fill="currentColor" opacity="0.4" font-style="italic">Natural Hedging</text>
+
+          <!-- Sub-items for Forward -->
+          <line x1="100" y1="164" x2="100" y2="185" stroke="currentColor" stroke-width="0.8" opacity="0.35"/>
+          <rect x="35" y="185" width="130" height="30" rx="3" stroke="currentColor" stroke-width="0.8" fill="currentColor" fill-opacity="0.03"/>
+          <text x="100" y="204" text-anchor="middle" font-family="var(--sans-zh)" font-size="10" fill="currentColor" opacity="0.7">&#22266;&#23450;&#27719;&#29575; / &#23380;&#36828;&#26399;</text>
+          <rect x="35" y="222" width="130" height="30" rx="3" stroke="currentColor" stroke-width="0.8" fill="currentColor" fill-opacity="0.03"/>
+          <text x="100" y="241" text-anchor="middle" font-family="var(--sans-zh)" font-size="10" fill="currentColor" opacity="0.7">&#23450;&#26399;&#22806;&#27719;&#20132;&#26131;</text>
+
+          <!-- Sub-items for Options -->
+          <line x1="300" y1="164" x2="300" y2="185" stroke="currentColor" stroke-width="0.8" opacity="0.35"/>
+          <rect x="235" y="185" width="130" height="30" rx="3" stroke="currentColor" stroke-width="0.8" fill="currentColor" fill-opacity="0.03"/>
+          <text x="300" y="204" text-anchor="middle" font-family="var(--sans-zh)" font-size="10" fill="currentColor" opacity="0.7">&#20248;&#36141; / &#30462;&#25341;&#26399;&#26435;</text>
+          <rect x="235" y="222" width="130" height="30" rx="3" stroke="currentColor" stroke-width="0.8" fill="currentColor" fill-opacity="0.03"/>
+          <text x="300" y="241" text-anchor="middle" font-family="var(--sans-zh)" font-size="10" fill="currentColor" opacity="0.7">&#22810;&#32455;&#31574;&#30053; / Tunnel</text>
+
+          <!-- Sub-items for Natural -->
+          <line x1="500" y1="164" x2="500" y2="185" stroke="currentColor" stroke-width="0.8" opacity="0.35"/>
+          <rect x="435" y="185" width="130" height="30" rx="3" stroke="currentColor" stroke-width="0.8" fill="currentColor" fill-opacity="0.03"/>
+          <text x="500" y="204" text-anchor="middle" font-family="var(--sans-zh)" font-size="10" fill="currentColor" opacity="0.7">&#25910;&#20837;&#24065;&#31181;&#25972;&#21512;</text>
+          <rect x="435" y="222" width="130" height="30" rx="3" stroke="currentColor" stroke-width="0.8" fill="currentColor" fill-opacity="0.03"/>
+          <text x="500" y="241" text-anchor="middle" font-family="var(--sans-zh)" font-size="10" fill="currentColor" opacity="0.7">&#36164;&#20135;&#36164;&#20135;&#21306;&#37197;&#31649;&#29702;</text>
+
+          <!-- Bottom output bar -->
+          <line x1="50" y1="275" x2="550" y2="275" stroke="currentColor" stroke-width="0.5" opacity="0.15"/>
+          <text x="300" y="298" text-anchor="middle" font-family="var(--serif-zh)" font-size="12" fill="currentColor" opacity="0.6">&#36755;&#20986;&#65306;&#23545;&#20914;&#25552;&#26696; &middot; &#25104;&#26412;&#25928;&#30410;&#20998;&#26512; &middot;&#25191;&#34892;&#35745;&#21010;</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="title">&#23545;&#20914;&#31574;&#30053; &middot; Hedging Strategies</div>
+    <div>&mdash; &middot; &mdash;</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 7 — light — Value at Risk + Bell Curve Diagram
+     ============================================================ -->
+<section class="slide light" data-theme="light">
+  <div class="chrome">
+    <div class="left">FX Risk Modelling &middot; PZC Group</div>
+    <div class="right">07 / 10</div>
+  </div>
+
+  <div class="frame grid-2-6-6">
+    <!-- Left: Text Content -->
+    <div class="col">
+      <div class="kicker">Service 04</div>
+      <div class="h-xl">Value at Risk</div>
+      <div class="h-sub" style="margin-bottom:2vh">&#39118;&#38505;&#20272;&#20540; / VaR</div>
+      <div class="lead">&#37327;&#21270;&#26368;&#22823;&#39044;&#26399;&#25439;&#22833;&#65292;&#31934;&#30830;&#20934;&#22791;</div>
+      <div class="body-zh" style="margin-top:2vh">
+        &#32479;&#35745;&#27169;&#22411;&#35745;&#31639;&#29305;&#23450;&#20449;&#24515;&#27700;&#24179;&#19979;&#30340;&#26368;&#22823;&#39044;&#26399;&#25439;&#22833;&#12290;&#20363;&#22914;&ldquo;95% VaR &#20026; HK$5M&rdquo;&#65292;&#24847;&#21619;&#30524;95%&#30340;&#31995;&#35768;&#20102;&#27599;&#26085;&#25439;&#22833;&#19981;&#20250;&#36229;&#36807;&#28857;&#27491;500&#19907;&#12402;&#12290;
+      </div>
+      <div class="rule"></div>
+      <div class="meta-row">
+        <span>Target: &#38656;&#35201;&#23450;&#26399;&#39118;&#38505;&#25253;&#21578;&#23458;&#25143;</span>
+      </div>
+    </div>
+
+    <!-- Right: SVG VaR Bell Curve -->
+    <div class="col center">
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg" style="max-height:48vh">
+          <!-- Y axis -->
+          <line x1="80" y1="30" x2="80" y2="250" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+          <!-- X axis -->
+          <line x1="80" y1="250" x2="560" y2="250" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+
+          <!-- X axis label -->
+          <text x="320" y="280" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.45">Daily P&amp;L Distribution</text>
+
+          <!-- Y axis label -->
+          <text x="50" y="145" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.45" transform="rotate(-90,50,145)">Probability</text>
+
+          <!-- Bell curve path (normal distribution) -->
+          <path d="M 100,250 C 100,250 130,248 160,240 C 190,230 210,210 240,180 C 270,148 290,90 320,65 C 350,90 370,148 400,180 C 430,210 450,230 480,240 C 510,248 540,250 540,250"
+            stroke="currentColor" stroke-width="2" fill="none" opacity="0.85"/>
+
+          <!-- Fill under curve (main body) -->
+          <path d="M 100,250 C 100,250 130,248 160,240 C 190,230 210,210 240,180 C 270,148 290,90 320,65 C 350,90 370,148 400,180 C 430,210 450,230 480,240 C 510,248 540,250 540,250 Z"
+            fill="currentColor" fill-opacity="0.04"/>
+
+          <!-- VaR threshold vertical line -->
+          <line x1="430" y1="40" x2="430" y2="250" stroke="currentColor" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7"/>
+
+          <!-- Shaded VaR tail area (right tail = losses) -->
+          <path d="M 430,210 C 450,230 510,248 540,250 L 540,250 L 430,250 Z"
+            fill="currentColor" fill-opacity="0.18"/>
+
+          <!-- VaR label -->
+          <text x="435" y="36" font-family="var(--mono)" font-size="10" fill="currentColor" opacity="0.75" font-style="italic">95% VaR</text>
+
+          <!-- VaR value annotation -->
+          <line x1="430" y1="250" x2="430" y2="262" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+          <text x="430" y="272" text-anchor="middle" font-family="var(--serif-en)" font-size="11" fill="currentColor" font-weight="700">-HK$5M</text>
+
+          <!-- Mean label -->
+          <line x1="320" y1="65" x2="320" y2="255" stroke="currentColor" stroke-width="0.6" opacity="0.2"/>
+          <text x="320" y="60" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="currentColor" opacity="0.4">&#956; = 0</text>
+
+          <!-- Percentages -->
+          <text x="280" y="225" text-anchor="middle" font-family="var(--serif-en)" font-size="14" fill="currentColor" opacity="0.5" font-weight="700">95%</text>
+          <text x="480" y="230" text-anchor="middle" font-family="var(--serif-en)" font-size="11" fill="currentColor" opacity="0.6" font-weight="700">5%</text>
+
+          <!-- Annotation box -->
+          <rect x="100" y="28" width="220" height="38" rx="3" stroke="currentColor" stroke-width="0.8" fill="currentColor" fill-opacity="0.04"/>
+          <text x="110" y="44" font-family="var(--serif-zh)" font-size="10" fill="currentColor" opacity="0.7">&#20449;&#24515;&#27700;&#24179;: 95% / 99% / 99.9%</text>
+          <text x="110" y="58" font-family="var(--serif-zh)" font-size="10" fill="currentColor" opacity="0.7">&#25345;&#26377;&#26399;: 1&#26085; / 10&#26085; / 30&#26085;</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="title">&#39118;&#38505;&#20272;&#20540; &middot; Value at Risk</div>
+    <div>&mdash; &middot; &mdash;</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 8 — hero dark — Hero Statement: Integration
+     ============================================================ -->
+<section class="slide hero dark" data-theme="dark">
+  <div class="chrome">
+    <div class="left">Integration</div>
+    <div class="right">08 / 10</div>
+  </div>
+
+  <div class="frame center col">
+    <div class="kicker">Full-Spectrum Protection</div>
+    <div class="h-hero">&#22235;&#23450;&#19968;&#20307;&#65292;</div>
+    <div class="h-hero">&#21319;&#39118;&#38505;&#20110;&#19968;&#36527;</div>
+    <div class="rule" style="margin-top:3vh"></div>
+    <div class="lead" style="max-width:54vw">
+      Stress Testing &#21516;&#25152;&#26377;&#26381;&#21153;&#32487;&#20851;&#31574;&#36816;&#65292;&#22810;&#24065;&#31181;&#20202;&#34920;&#26495;&#23454;&#26102;&#30417;&#25511;&#65292;&#23545;&#20914;&#31574;&#30053;&#20027;&#21160;&#31649;&#29702;&#65292;VaR &#37327;&#21270;&#39118;&#38505;&#25435;&#32622;&mdash;&mdash;&#22235;&#39033;&#26381;&#21153;&#20849;&#21516;&#26550;&#25104;&#23458;&#25143;&#30340;&#23436;&#25972;&#22806;&#27719;&#39118;&#38505;&#38450;&#24433;&#20307;&#31995;&#12290;
+    </div>
+    <div class="rule" style="margin-top:3vh"></div>
+    <div class="meta-row">
+      <span>Stress Testing</span>
+      <span>&rarr;</span>
+      <span>Dashboard</span>
+      <span>&rarr;</span>
+      <span>Hedging</span>
+      <span>&rarr;</span>
+      <span>VaR</span>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="title">&#26381;&#21153;&#25972;&#21512; &middot; Integrated Framework</div>
+    <div>&mdash; &middot; &mdash;</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 9 — light — Pipeline: 5-Step Methodology
+     ============================================================ -->
+<section class="slide light" data-theme="light">
+  <div class="chrome">
+    <div class="left">FX Risk Modelling &middot; PZC Group</div>
+    <div class="right">09 / 10</div>
+  </div>
+
+  <div class="frame col">
+    <div class="kicker">Methodology</div>
+    <div class="h-xl">&#25105;&#20204;&#30340;&#26041;&#27861;&#35770;</div>
+    <div class="lead" style="margin-top:1vh">&#20116;&#27493;&#31995;&#32479;&#21270;&#26041;&#27861;&#65292;&#30830;&#20445;&#39118;&#38505;&#31649;&#29702;&#30340;&#31934;&#30830;&#24615;&#19982;&#21487;&#34892;&#24615;</div>
+
+    <div class="pipeline-section">
+      <div class="pipeline-label">Five-Step Approach</div>
+      <div class="pipeline">
+        <div class="step">
+          <div class="step-nb">Step 01</div>
+          <div class="step-title">&#39118;&#38505;&#35782;&#21035;</div>
+          <div class="step-desc">&#20840;&#38754;&#35780;&#20272;&#23458;&#25143;&#22806;&#27719;&#25915;&#25764;&#12289;&#27719;&#29575;&#25935;&#24863;&#24230;&#12289;&#20132;&#26131;&#27169;&#24335;</div>
+        </div>
+        <div class="step">
+          <div class="step-nb">Step 02</div>
+          <div class="step-title">&#25968;&#25454;&#37319;&#38598;</div>
+          <div class="step-desc">&#25972;&#21512; Bloomberg&#12289;&#20132;&#26131;&#35760;&#24405;&#12289;&#24066;&#22330;&#25968;&#25454;&#65292;&#24314;&#31435;&#25968;&#25454;&#28210;</div>
+        </div>
+        <div class="step">
+          <div class="step-nb">Step 03</div>
+          <div class="step-title">&#27169;&#22411;&#26500;&#24314;</div>
+          <div class="step-desc">&#24314;&#31435; VaR&#12289;&#21387;&#21147;&#27979;&#35797;&#12289;&#21333;&#22240;&#23376;&#27169;&#22411;&#31561;&#39118;&#38505;&#27979;&#37327;&#24037;&#20855;</div>
+        </div>
+        <div class="step">
+          <div class="step-nb">Step 04</div>
+          <div class="step-title">&#31574;&#30053;&#21046;&#23450;</div>
+          <div class="step-desc">&#35774;&#35745;&#20010;&#24615;&#21270;&#23545;&#20914;&#26041;&#26696;&#65292;&#21253;&#21547;&#25104;&#26412;&#25928;&#30410;&#20998;&#26512;&#19982;&#25191;&#34892;&#35745;&#21010;</div>
+        </div>
+        <div class="step">
+          <div class="step-nb">Step 05</div>
+          <div class="step-title">&#25345;&#32493;&#30417;&#25511;</div>
+          <div class="step-desc">&#23450;&#26399;&#25253;&#21578;&#12289;&#23454;&#26102;&#39118;&#38505;&#21453;&#39304;&#12289;&#31574;&#30053;&#21160;&#24577;&#35843;&#25972;&#19982;&#20248;&#21270;</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="title">&#26041;&#27861;&#35770; &middot; Methodology</div>
+    <div>&mdash; &middot; &mdash;</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 10 — dark — Contact / Thank You
+     ============================================================ -->
+<section class="slide dark" data-theme="dark">
+  <div class="chrome">
+    <div class="left">FX Risk Modelling &middot; PZC Group</div>
+    <div class="right">10 / 10</div>
+  </div>
+
+  <div class="frame center col">
+    <div class="kicker">Thank You</div>
+    <div class="h-hero">&#35874;&#35874;</div>
+    <div class="rule" style="margin-top:3vh"></div>
+    <div class="h-sub" style="margin-top:2vh">PZC Group</div>
+    <div class="lead" style="margin-top:2vh">&#39118;&#38505;&#31649;&#29702;&#20915;&#31574;&#31572;&#22836;&#65292;&#25915;&#31649;&#38543;&#24402;</div>
+    <div class="rule" style="margin-top:4vh"></div>
+
+    <div class="rowline" style="border-top:0;max-width:36vw;margin:0 auto">
+      <div class="k">Contact</div>
+      <div class="v">Kenneth Mak</div>
+      <div class="m">Director</div>
+    </div>
+    <div class="rowline" style="max-width:36vw;margin:0 auto">
+      <div class="k">Email</div>
+      <div class="v">kenneth.mak@pzcgroup.com</div>
+      <div class="m"></div>
+    </div>
+    <div class="rowline" style="max-width:36vw;margin:0 auto">
+      <div class="k">Service</div>
+      <div class="v">FX Risk Modelling &middot; Wealth Advisory</div>
+      <div class="m"></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="title">PZC Group &middot; Hong Kong</div>
+    <div>&mdash; &middot; &mdash;</div>
+  </div>
+</section>
+
+</div>
+
+<div id="nav"></div>
+
+<script>
+const VS = `attribute vec2 position;void main(){gl_Position=vec4(position,0.0,1.0);}`;
+
+const FS_DARK = `precision highp float;
+uniform vec2 u_resolution;uniform float u_time;uniform vec2 u_mouse;
+vec3 palette(float t,vec3 a,vec3 b,vec3 c,vec3 d){return a+b*cos(6.28318*(c*t+d));}
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution.xy;
+  vec2 p=uv*2.0-1.0;p.x*=u_resolution.x/u_resolution.y;
+  vec2 m=u_mouse*2.0-1.0;m.x*=u_resolution.x/u_resolution.y;
+  float md=length(p-m);
+  float mr=sin(md*15.0-u_time*4.0)*exp(-md*3.0);p+=mr*0.08;
+  vec2 p0=p;
+  for(float i=1.0;i<4.0;i++){
+    p.x+=0.1/i*sin(i*3.0*p.y+u_time*0.4)+0.05;
+    p.y+=0.1/i*cos(i*2.0*p.x+u_time*0.3)-0.05;
+  }
+  float r=length(p);float ang=atan(p.y,p.x);
+  vec3 a=vec3(0.12,0.12,0.13);
+  vec3 b=vec3(0.03,0.04,0.05);
+  vec3 c=vec3(1.0,1.0,1.0);
+  vec3 d=vec3(0.1,0.2,0.4);
+  vec3 col=palette(r*1.5+p0.x*0.5+u_time*0.1,a,b,c,d);
+  float disp=sin(r*25.0-u_time*1.5+ang*2.0)*0.5+0.5;
+  col+=vec3(disp*0.015,disp*0.01,disp*0.02);
+  float hi=pow(sin(p.x*4.0+p.y*3.0+u_time)*0.5+0.5,8.0);
+  col+=hi*0.08;
+  vec3 base=vec3(0.05,0.05,0.06);
+  col=mix(base,col,0.85);
+  gl_FragColor=vec4(col,1.0);
+}`;
+
+const FS_LIGHT = `precision highp float;
+uniform vec2 u_resolution;uniform float u_time;uniform vec2 u_mouse;
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float noise(vec2 p){
+  vec2 i=floor(p),f=fract(p);
+  float a=hash(i),b=hash(i+vec2(1,0));
+  float c=hash(i+vec2(0,1)),d=hash(i+vec2(1,1));
+  vec2 u=f*f*(3.0-2.0*f);
+  return mix(a,b,u.x)+(c-a)*u.y*(1.0-u.x)+(d-b)*u.x*u.y;
+}
+float fbm(vec2 p){
+  float v=0.0,a=0.5;
+  mat2 m=mat2(0.80,0.60,-0.60,0.80);
+  for(int i=0;i<5;i++){v+=a*noise(p);p=m*p*2.02;a*=0.5;}
+  return v;
+}
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution.xy;
+  vec2 p=uv;p.x*=u_resolution.x/u_resolution.y;
+  vec2 m=u_mouse;m.x*=u_resolution.x/u_resolution.y;
+  vec2 md=p-m;float dl=length(md);
+  p+=normalize(md+vec2(0.0001))*exp(-dl*5.0)*0.03;
+  vec2 q=vec2(fbm(p*1.8+u_time*0.07),fbm(p*1.8+vec2(5.2,1.3)+u_time*0.06));
+  vec2 r=vec2(fbm(p*2.0+q*1.3+vec2(1.7,9.2)+u_time*0.05),
+              fbm(p*2.0+q*1.3+vec2(8.3,2.8)+u_time*0.04));
+  float f=fbm(p*2.2+r*1.5);
+  vec3 silverDark=vec3(0.86,0.85,0.84);
+  vec3 paper=vec3(0.955,0.945,0.925);
+  vec3 col=mix(silverDark,paper,f);
+  float ph=r.x*2.2+u_time*0.35;
+  col+=vec3(0.78,0.62,0.92)*sin(ph)*0.055;
+  col+=vec3(0.55,0.72,0.95)*sin(ph*0.8+2.0)*0.05;
+  float hl=smoothstep(0.48,0.92,f);
+  col+=hl*0.06;
+  gl_FragColor=vec4(col,1.0);
+}`;
+
+const mouse={x:0.5,y:0.5};
+addEventListener('mousemove',e=>{mouse.x=e.clientX/innerWidth;mouse.y=e.clientY/innerHeight});
+
+function bootGL(canvasId, fsSrc){
+  const canvas=document.getElementById(canvasId);
+  const gl=canvas.getContext('webgl',{alpha:false,antialias:true});
+  if(!gl) return ()=>false;
+  const mk=(t,s)=>{const sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);return sh};
+  const prog=gl.createProgram();
+  gl.attachShader(prog,mk(gl.VERTEX_SHADER,VS));
+  gl.attachShader(prog,mk(gl.FRAGMENT_SHADER,fsSrc));
+  gl.linkProgram(prog);gl.useProgram(prog);
+  const buf=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+  const pos=gl.getAttribLocation(prog,'position');
+  gl.enableVertexAttribArray(pos);gl.vertexAttribPointer(pos,2,gl.FLOAT,false,0,0);
+  const lRes=gl.getUniformLocation(prog,'u_resolution');
+  const lT=gl.getUniformLocation(prog,'u_time');
+  const lM=gl.getUniformLocation(prog,'u_mouse');
+  const resize=()=>{
+    const d=Math.min(window.devicePixelRatio||1,2);
+    canvas.width=innerWidth*d;canvas.height=innerHeight*d;
+    gl.viewport(0,0,canvas.width,canvas.height);
+  };
+  addEventListener('resize',resize);resize();
+  return (tSec)=>{
+    gl.uniform2f(lRes,canvas.width,canvas.height);
+    gl.uniform1f(lT,tSec);
+    gl.uniform2f(lM,mouse.x,1-mouse.y);
+    gl.drawArrays(gl.TRIANGLES,0,6);
+    return true;
+  };
+}
+const drawDark=bootGL('bg-dark',FS_DARK);
+const drawLight=bootGL('bg-light',FS_LIGHT);
+const t0=Date.now();
+(function loop(){
+  const t=(Date.now()-t0)/1000;
+  drawDark(t);drawLight(t);
+  requestAnimationFrame(loop);
+})();
+
+const deck=document.getElementById('deck');
+const slides=deck.querySelectorAll('.slide');
+const nav=document.getElementById('nav');
+let idx=0,total=slides.length,lock=false;
+
+deck.style.width=(total*100)+'vw';
+
+slides.forEach((s,i)=>{
+  const b=document.createElement('button');
+  b.className='dot';b.dataset.i=i;b.setAttribute('aria-label','Page '+(i+1));
+  b.onclick=()=>go(i);
+  nav.appendChild(b);
+});
+
+function go(n){
+  if(lock)return;
+  idx=Math.max(0,Math.min(total-1,n));
+  deck.style.transform=`translateX(${-idx*100}vw)`;
+  slides.forEach((s,i)=>s.classList.toggle('active',i===idx));
+  nav.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+  const el=slides[idx];
+  const th=el.dataset.theme || (el.classList.contains('light')?'light':(el.classList.contains('dark')?'dark':'dark'));
+  document.body.classList.toggle('light-bg',th==='light');
+  lock=true;setTimeout(()=>lock=false,700);
+}
+
+let overviewOn=false;
+const ov=document.createElement('div');
+ov.id='overview';
+ov.style.cssText='position:fixed;inset:0;z-index:100;background:rgba(var(--ink-rgb),.92);backdrop-filter:blur(12px);display:none;overflow-y:auto;padding:4vh 4vw';
+document.body.appendChild(ov);
+
+function buildOverview(){
+  ov.innerHTML='';
+  const grid=document.createElement('div');
+  grid.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:2vh 1.6vw;max-width:90vw;margin:0 auto';
+  slides.forEach((s,i)=>{
+    const card=document.createElement('div');
+    card.style.cssText='cursor:pointer;border-radius:6px;overflow:hidden;border:2px solid '+(i===idx?'rgba(var(--paper-rgb),.8)':'rgba(var(--paper-rgb),.15)')+';transition:border-color .2s';
+    card.onmouseenter=()=>card.style.borderColor='rgba(var(--paper-rgb),.6)';
+    card.onmouseleave=()=>card.style.borderColor=i===idx?'rgba(var(--paper-rgb),.8)':'rgba(var(--paper-rgb),.15)';
+    const wrap=document.createElement('div');
+    wrap.style.cssText='width:100%;aspect-ratio:16/9;overflow:hidden;position:relative;pointer-events:none;background:'+(s.classList.contains('light')?'var(--paper)':'var(--ink)');
+    const clone=s.cloneNode(true);
+    clone.style.cssText='width:100vw;height:100vh;transform:scale('+(1/4.5)+');transform-origin:top left;position:absolute;top:0;left:0;pointer-events:none';
+    wrap.appendChild(clone);
+    const label=document.createElement('div');
+    label.style.cssText='padding:6px 10px;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--paper);opacity:.7';
+    label.textContent=(i+1)+' / '+total;
+    card.appendChild(wrap);
+    card.appendChild(label);
+    card.onclick=()=>{toggleOverview();go(i)};
+    grid.appendChild(card);
+  });
+  ov.appendChild(grid);
+}
+
+function toggleOverview(){
+  overviewOn=!overviewOn;
+  if(overviewOn){buildOverview();ov.style.display='block';}
+  else{ov.style.display='none';}
+}
+
+addEventListener('keydown',e=>{
+  if(e.key==='Escape'){e.preventDefault();toggleOverview();return;}
+  if(overviewOn)return;
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '||e.key==='ArrowDown')go(idx+1);
+  if(e.key==='ArrowLeft'||e.key==='PageUp'||e.key==='ArrowUp')go(idx-1);
+  if(e.key==='Home')go(0);
+  if(e.key==='End')go(total-1);
+});
+
+let wheelTO=null,wheelAcc=0;
+addEventListener('wheel',e=>{
+  wheelAcc+=e.deltaY+e.deltaX;
+  if(Math.abs(wheelAcc)>50){go(idx+(wheelAcc>0?1:-1));wheelAcc=0;}
+  clearTimeout(wheelTO);wheelTO=setTimeout(()=>wheelAcc=0,150);
+},{passive:true});
+
+let tx=0,ty=0;
+addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+addEventListener('touchend',e=>{
+  const dx=(e.changedTouches[0].clientX-tx);
+  const dy=(e.changedTouches[0].clientY-ty);
+  if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy))go(idx+(dx<0?1:-1));
+},{passive:true});
+
+go(0);
+</script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>
