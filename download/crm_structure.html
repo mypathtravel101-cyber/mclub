@@ -8,7 +8,7 @@ body {
   background: #FFFFFF;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'SimHei', 'Microsoft YaHei', sans-serif;
 }
-#mindmap { padding: 60px 80px; display: inline-block; min-width: 100%; position: relative; }
+#mindmap { padding: 50px 70px; display: inline-block; min-width: 100%; position: relative; }
 #mindmap > svg.lines {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   pointer-events: none; z-index: 0;
@@ -30,17 +30,17 @@ body {
 .lr-tree .root-node { margin: 0 60px; }
 .sub-branch { display: flex; align-items: flex-start; gap: 0; }
 
-.left-branches { display: flex; flex-direction: column; gap: 14px; }
+.left-branches { display: flex; flex-direction: column; gap: 16px; }
 .left-branch { display: flex; align-items: flex-start; flex-direction: row-reverse; gap: 0; }
 .left-branch .children {
-  display: flex; flex-direction: column; gap: 5px;
-  margin-right: 44px; align-items: flex-end;
+  display: flex; flex-direction: column; gap: 6px;
+  margin-right: 48px; align-items: flex-end;
 }
 
-.right-branches { display: flex; flex-direction: column; gap: 14px; }
+.right-branches { display: flex; flex-direction: column; gap: 16px; }
 .right-branch { display: flex; align-items: flex-start; gap: 0; }
 .right-branch .children {
-  display: flex; flex-direction: column; gap: 5px; margin-left: 44px; align-items: flex-start;
+  display: flex; flex-direction: column; gap: 6px; margin-left: 48px; align-items: flex-start;
 }
 
 .branch-node {
@@ -51,7 +51,7 @@ body {
 
 .sub-node {
   font-size: 13px; font-weight: 500;
-  padding: 6px 14px; border-radius: 6px;
+  padding: 7px 14px; border-radius: 6px;
   white-space: nowrap; flex-shrink: 0; border: 1.5px solid;
   background: #F8FAFC;
 }
@@ -91,21 +91,52 @@ body {
 .role-agent { background: #FFF7ED; color: #92400E; }
 .role-client { background: #F5F3FF; color: #5B21B6; }
 
-.leaf-new {
-  font-size: 12px; font-weight: 500; color: #065F46;
-  padding: 3px 10px; background: #F0FDF4;
-  border-radius: 12px; border: 1.5px solid #10B981;
-  white-space: nowrap; line-height: 1.5;
+/* ─── Product Leaf Styles ─── */
+.prod-leaf {
+  font-size: 12.5px; font-weight: 500; color: #1E293B;
+  padding: 5px 12px; background: #FFFFFF;
+  border-radius: 8px; border: 1.5px solid #E2E8F0;
+  white-space: nowrap; line-height: 1.6;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.prod-leaf .prod-num {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  color: #94A3B8; margin-right: 5px; min-width: 14px; text-align: right;
+}
+.prod-leaf .prod-currency {
+  display: inline-block; font-size: 10px; font-weight: 600;
+  padding: 0px 5px; border-radius: 3px; margin-left: 6px;
+  background: #F1F5F9; color: #64748B; vertical-align: middle;
+  letter-spacing: 0.3px;
+}
+.prod-leaf-new {
+  font-size: 12.5px; font-weight: 600; color: #065F46;
+  padding: 5px 12px; background: #F0FDF4;
+  border-radius: 8px; border: 2px solid #10B981;
+  white-space: nowrap; line-height: 1.6;
+  box-shadow: 0 1px 3px rgba(16,185,129,0.15);
+}
+.prod-leaf-new .prod-num {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  color: #10B981; margin-right: 5px; min-width: 14px; text-align: right;
+}
+.prod-leaf-new .prod-currency {
+  display: inline-block; font-size: 10px; font-weight: 600;
+  padding: 0px 5px; border-radius: 3px; margin-left: 6px;
+  background: #D1FAE5; color: #065F46; vertical-align: middle;
+  letter-spacing: 0.3px;
 }
 .new-tag {
   display: inline-block; font-size: 9px; font-weight: 700;
-  padding: 0px 4px; border-radius: 3px; margin-left: 4px;
+  padding: 0px 5px; border-radius: 3px; margin-left: 4px;
   background: #10B981; color: white; vertical-align: middle;
   letter-spacing: 0.5px;
 }
 
-.prod-price {
-  font-size: 10px; color: #94A3B8; margin-left: 6px;
+.prod-section-label {
+  font-size: 11px; font-weight: 700; color: #94A3B8;
+  padding: 2px 0; white-space: nowrap; line-height: 1.5;
+  letter-spacing: 0.5px; text-transform: uppercase;
 }
 </style>
 </head>
@@ -174,7 +205,7 @@ body {
     </div>
 
     <!-- ═══ CENTER ROOT ═══ -->
-    <div class="root-node">MCLUB CRM<br><span style="font-size:13px;font-weight:400;opacity:0.85;">百盛家族辦公室</span></div>
+    <div class="root-node">MCLUB CRM<br><span style="font-size:13px;font-weight:400;opacity:0.85;">百盛家族辦公室 · 8 項產品</span></div>
 
     <!-- ═══ RIGHT SIDE ═══ -->
     <div class="right-branches">
@@ -202,18 +233,20 @@ body {
         </div>
       </div>
 
-      <!-- 3. 產品管理 (UPDATED: 8 products, VFK removed, 2 new) -->
+      <!-- 3. 產品管理 — 8 Products (UPDATED) -->
       <div class="right-branch">
         <div class="branch-node c-amber">📦 產品管理</div>
         <div class="children">
-          <div class="leaf">🏘️ 日本物業投資<span class="prod-price">HKD/JPY</span></div>
-          <div class="leaf">🇸🇹 聖多美公民計劃<span class="prod-price">USD</span></div>
-          <div class="leaf">📈 NPC基金<span class="prod-price">USD</span></div>
-          <div class="leaf">🏦 家族信託<span class="prod-price">HKD</span></div>
-          <div class="leaf">📋 公司秘書服務<span class="prod-price">HKD</span></div>
-          <div class="leaf">📱 MyPath AI<span class="prod-price">HKD</span></div>
-          <div class="leaf-new">⚖️ 香港法律服務<span class="new-tag">NEW</span><span class="prod-price">HKD</span></div>
-          <div class="leaf-new">🎓 家族辦公室專業認可證書課程<span class="new-tag">NEW</span><span class="prod-price">HKD</span></div>
+          <div class="prod-section-label">— 產品線 (8 項) —</div>
+          <div class="prod-leaf"><span class="prod-num">1</span>🏘️ 日本物業投資<span class="prod-currency">HKD/JPY</span></div>
+          <div class="prod-leaf"><span class="prod-num">2</span>🇸🇹 聖多美公民計劃<span class="prod-currency">USD</span></div>
+          <div class="prod-leaf"><span class="prod-num">3</span>📈 NPC基金<span class="prod-currency">USD</span></div>
+          <div class="prod-leaf"><span class="prod-num">4</span>🏦 家族信託<span class="prod-currency">HKD</span></div>
+          <div class="prod-leaf"><span class="prod-num">5</span>📋 公司秘書服務<span class="prod-currency">HKD</span></div>
+          <div class="prod-leaf"><span class="prod-num">6</span>📱 MyPath AI<span class="prod-currency">HKD</span></div>
+          <div class="prod-leaf-new"><span class="prod-num">7</span>⚖️ 香港法律服務<span class="new-tag">NEW</span><span class="prod-currency">HKD</span></div>
+          <div class="prod-leaf-new"><span class="prod-num">8</span>🎓 家族辦公室專業認可證書課程<span class="new-tag">NEW</span><span class="prod-currency">HKD</span></div>
+          <div class="prod-section-label">— 產品設定 —</div>
           <div class="leaf">佣金分成 (Agent/SME/MCLUB)</div>
           <div class="leaf">產品分類與編輯</div>
         </div>
@@ -312,16 +345,27 @@ function drawAllLines() {
     });
   }
 
-  function processChildren(parentNodeEl, containerEl, depth, dir) {
+  const NODE_SEL = '.branch-node, .sub-node, .leaf, .deep-node, .prod-leaf, .prod-leaf-new, .prod-section-label';
+  const CONTAINER_SEL = ':scope > .children, :scope > .leaf-group, :scope > .deep-group';
+
+  function processChildren(parentNodeEl, containerEl, branchColor, depth, dir) {
     if (!containerEl) return;
     const childNodeEls = [];
     for (const wrapper of containerEl.children) {
-      const nodeEl = wrapper.matches?.('.branch-node,.sub-node,.leaf,.leaf-new,.deep-node') ? wrapper : wrapper.querySelector('.branch-node,.sub-node,.leaf,.leaf-new,.deep-node');
+      const nodeEl = wrapper.matches?.(NODE_SEL) ? wrapper : wrapper.querySelector(NODE_SEL);
       if (nodeEl) childNodeEls.push(nodeEl);
     }
     if (!childNodeEls.length) return;
     const style = getStyle(depth);
     connect(parentNodeEl, childNodeEls, style.color, style.width, dir);
+
+    for (const wrapper of containerEl.children) {
+      const nodeEl = wrapper.matches?.(NODE_SEL) ? wrapper : wrapper.querySelector(NODE_SEL);
+      if (!nodeEl) continue;
+      wrapper.querySelectorAll(CONTAINER_SEL).forEach(nc =>
+        processChildren(nodeEl, nc, branchColor, depth + 1, dir)
+      );
+    }
   }
 
   const rootNode = map.querySelector('.root-node');
@@ -334,7 +378,7 @@ function drawAllLines() {
   leftBranches.forEach(branch => {
     const bNode = branch.querySelector('.branch-node');
     if (!bNode) return;
-    processChildren(bNode, branch.querySelector(':scope > .children'), 1, 'left');
+    processChildren(bNode, branch.querySelector(':scope > .children'), null, 1, 'left');
   });
 
   const rightBranches = map.querySelectorAll('.right-branches > .right-branch');
@@ -344,7 +388,7 @@ function drawAllLines() {
   rightBranches.forEach(branch => {
     const bNode = branch.querySelector('.branch-node');
     if (!bNode) return;
-    processChildren(bNode, branch.querySelector(':scope > .children'), 1, 'right');
+    processChildren(bNode, branch.querySelector(':scope > .children'), null, 1, 'right');
   });
 
   map.insertBefore(svg, map.firstChild);
