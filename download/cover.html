@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<!-- Using system fonts for reliable rendering -->
+<style>
+  :root {
+    --c-accent: #27728b;
+    --c-text: #1e1c1b;
+    --c-muted: #7d7871;
+    --c-bg: #f5f4f3;
+  }
+  @page {
+    size: 794px 1123px;
+    margin: 0;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 794px;
+    height: 1123px;
+    background: var(--c-bg);
+    font-family: 'Noto Serif SC', 'Noto Sans SC', serif;
+  }
+  .cover {
+    position: relative;
+    width: 794px;
+    height: 1123px;
+    overflow: hidden;
+  }
+
+  /* Layer 1: Background - right-side vertical watermark */
+  .bg-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+  }
+  .watermark {
+    position: absolute;
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%) rotate(90deg);
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 160pt;
+    font-weight: 900;
+    color: var(--c-accent);
+    opacity: 0.03;
+    white-space: nowrap;
+    letter-spacing: 0.05em;
+  }
+
+  /* Layer 2: Structure - color dash + accent lines */
+  .struct-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+  }
+  .color-dash {
+    position: absolute;
+    left: 95px;
+    top: 140px;
+    width: 50px;
+    height: 5px;
+    background: var(--c-accent);
+  }
+  .meta-accent-line {
+    position: absolute;
+    left: 45px;
+    bottom: 200px;
+    width: 2px;
+    height: 80px;
+    background: var(--c-accent);
+    opacity: 0.5;
+  }
+
+  /* Layer 3: Content */
+  .content-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+  }
+  .kicker {
+    position: absolute;
+    left: 95px;
+    top: 200px;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 16pt;
+    font-weight: 300;
+    color: var(--c-accent);
+    letter-spacing: 0.3em;
+    opacity: 0.7;
+  }
+  .hero-title {
+    position: absolute;
+    left: 95px;
+    top: 260px;
+    font-size: 48pt;
+    font-weight: 900;
+    color: var(--c-text);
+    line-height: 1.2;
+    max-width: 450px;
+  }
+  .hero-title-sub {
+    position: absolute;
+    left: 95px;
+    top: 460px;
+    font-size: 26pt;
+    font-weight: 700;
+    color: var(--c-accent);
+    line-height: 1.4;
+    max-width: 480px;
+  }
+  .summary {
+    position: absolute;
+    left: 95px;
+    top: 560px;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 14pt;
+    font-weight: 300;
+    color: var(--c-muted);
+    line-height: 1.8;
+    max-width: 420px;
+  }
+  .meta {
+    position: absolute;
+    left: 115px;
+    bottom: 195px;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 12pt;
+    font-weight: 400;
+    color: var(--c-text);
+    line-height: 2.0;
+    opacity: 0.8;
+  }
+  .footer {
+    position: absolute;
+    right: 95px;
+    bottom: 50px;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 12pt;
+    font-weight: 300;
+    color: var(--c-muted);
+    letter-spacing: 0.15em;
+    opacity: 0.6;
+    text-align: right;
+  }
+
+  /* Decorative bottom line */
+  .bottom-line {
+    position: absolute;
+    left: 95px;
+    right: 95px;
+    bottom: 85px;
+    height: 1px;
+    background: var(--c-accent);
+    opacity: 0.3;
+  }
+</style>
+</head>
+<body>
+<div class="cover">
+  <!-- Layer 1: Background -->
+  <div class="bg-layer">
+    <div class="watermark">HANDBOOK</div>
+  </div>
+
+  <!-- Layer 2: Structure -->
+  <div class="struct-layer">
+    <div class="color-dash"></div>
+    <div class="meta-accent-line"></div>
+    <div class="bottom-line"></div>
+  </div>
+
+  <!-- Layer 3: Content -->
+  <div class="content-layer">
+    <div class="kicker">PZC PROFESSIONAL CERTIFICATE</div>
+    <div class="hero-title">家族辦公室<br/>畢業生<br/>客戶開拓手冊</div>
+    <div class="hero-title-sub">口袋教練 · 行動指南</div>
+    <div class="summary">
+      本手冊專為家族辦公室專業認可證書課程畢業生而設計，涵蓋六大客戶類型識別、產品配對策略、實戰話術庫及反對處理攻略，幫助新畢業生帶着信心走近每一位潛在客戶。
+    </div>
+    <div class="meta">
+      家族辦公室專業認可證書課程<br/>
+      Professional Certificate in Family Office<br/>
+      MCLUB Academy
+    </div>
+    <div class="footer">2026 EDITION</div>
+  </div>
+</div>
+</body>
+</html>
