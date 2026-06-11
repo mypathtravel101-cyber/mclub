@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-PZC Group — Return Decomposition Horizontal Bar Chart (10-Year)
-Matching the reference image style: 3 panels, horizontal stacked bars
+PZC Group — Return Decomposition (10-Year)
+4 separate horizontal bars per panel, matching reference layout exactly
 """
 import matplotlib
 matplotlib.use('Agg')
@@ -17,6 +17,7 @@ plt.rcParams['axes.unicode_minus'] = False
 
 OUT = '/home/z/my-project/download/ppt_charts'
 BG = '#F5F2E8'
+DARK = '#1A1A1A'
 
 # ── Parameters ──
 invested_hkd = 2_400_000
@@ -28,105 +29,118 @@ balance_at_exit = 11_990_939
 principal_paid_10y = 19_209_061
 loan_jpy = 31_200_000
 
-# ── 3 Scenarios (research-based property forecasts) ──
+# ── 3 Scenarios ──
 scenarios = [
     {'label': '保守 -1.5%/年', 'prop_ann': -0.015},
     {'label': '最可能 +2.5%/年', 'prop_ann': 0.025},
     {'label': '樂觀 +5.0%/年',  'prop_ann': 0.050},
 ]
 
-# Calculate components for each scenario
 for s in scenarios:
     prop_10y = jpy_prop * (1 + s['prop_ann'])**hold
     
-    # Component 1: 10-year net rent in HKD
-    rent_hkd = (net_rent_jpy / fx_base) * hold
+    # Component 1: Net exit value (property - mortgage balance) in HKD
+    net_exit_hkd = (prop_10y - balance_at_exit) / fx_base
     
-    # Component 2: Mortgage principal paid (equity build-up) in HKD
+    # Component 2: Principal paid (equity build) in HKD
     equity_hkd = principal_paid_10y / fx_base
     
-    # Component 3: Property price change in HKD
-    price_change_jpy = prop_10y - jpy_prop
-    price_change_hkd = price_change_jpy / fx_base
+    # Component 3: Capital gain/loss (price change) in HKD
+    price_change_hkd = (prop_10y - jpy_prop) / fx_base
     
-    # Total value at exit = net rent + (property - remaining mortgage) in HKD
-    net_exit_hkd = (prop_10y - balance_at_exit) / fx_base
+    # Component 4: 10-year net rent in HKD
+    rent_hkd = (net_rent_jpy / fx_base) * hold
+    
+    # Total
     total_hkd = rent_hkd + net_exit_hkd
-    
-    # ROI & annualized
     roi = (total_hkd - invested_hkd) / invested_hkd * 100
     ann = ((total_hkd / invested_hkd)**(1/hold) - 1) * 100
     
-    s['rent_hkd'] = rent_hkd
+    s['net_exit_hkd'] = net_exit_hkd
     s['equity_hkd'] = equity_hkd
     s['price_change_hkd'] = price_change_hkd
+    s['rent_hkd'] = rent_hkd
     s['total_hkd'] = total_hkd
     s['roi'] = roi
     s['ann'] = ann
-    s['prop_10y_jpy'] = prop_10y
 
-# ── Colors ──
-GREY_BAR  = '#BDC3C7'
-BLUE_BAR  = '#1E3A5F'
-GOLD_BAR  = '#C9A84C'
-GREEN_BAR = '#27AE60'
-RED_BAR   = '#E74C3C'
-DARK      = '#1A1A1A'
+# ── Colors (matching reference) ──
+GREY_BAR   = '#BDC3C7'   # 物業淨套現
+BLUE_BAR   = '#1E3A5F'   # 按揭本金償還
+GOLD_BAR   = '#C9A84C'   # 淨租金
+GREEN_BAR  = '#27AE60'   # 資本增值 (positive)
+RED_BAR    = '#E74C3C'   # 資本增值 (negative)
+ZERO_BAR   = '#95A5A6'   # 資本增值 (zero)
 
 # ── Chart ──
-fig, axes = plt.subplots(1, 3, figsize=(16, 7), sharey=True)
+fig, axes = plt.subplots(1, 3, figsize=(18, 7))
 fig.patch.set_facecolor(BG)
 fig.suptitle('回報來源分解 — 客戶投入 HKD 2,400,000（基準匯率）',
              fontsize=18, fontweight='bold', color=DARK, y=1.01)
 
-categories = ['10年淨租金', '按揭本金償還', '房價變動']
+categories = [
+    '物業淨套現價值',
+    '按揭本金償還',
+    '資本增值（房價變動）',
+    '10年淨租金',
+]
 
 for idx, (ax, s) in enumerate(zip(axes, scenarios)):
     ax.set_facecolor(BG)
     
-    vals = [s['rent_hkd']/1000, s['equity_hkd']/1000, s['price_change_hkd']/1000]
-    pcts = [v*1000/invested_hkd*100 for v in vals]
+    vals_k = [s['net_exit_hkd']/1000, s['equity_hkd']/1000,
+              s['price_change_hkd']/1000, s['rent_hkd']/1000]
+    pcts = [v*1000/invested_hkd*100 for v in vals_k]
     
-    # Colors: rent=gold, equity=blue, price=green/red
-    if vals[2] >= 0:
-        colors = [GOLD_BAR, BLUE_BAR, GREEN_BAR]
+    colors = [GREY_BAR, BLUE_BAR, GOLD_BAR, '#2980B9']
+    # Capital gain color
+    if s['price_change_hkd'] < -1000:
+        colors[2] = RED_BAR
+    elif s['price_change_hkd'] > 1000:
+        colors[2] = GREEN_BAR
     else:
-        colors = [GOLD_BAR, BLUE_BAR, RED_BAR]
+        colors[2] = ZERO_BAR
     
-    y_pos = [2, 1, 0]
-    labels_detail = []
+    y_pos = [3, 2, 1, 0]
     
-    for i, (cat, val, pct, c, y) in enumerate(zip(categories, vals, pcts, colors, y_pos)):
-        sign = '+' if val >= 0 else ''
-        ax.barh(y, val, height=0.5, color=c, alpha=0.85, edgecolor='white', linewidth=1.2)
+    for i, (cat, val, pct, c, y) in enumerate(zip(categories, vals_k, pcts, colors, y_pos)):
+        ax.barh(y, val, height=0.55, color=c, alpha=0.85, edgecolor='white', linewidth=1.2)
         
-        # Label: HKD amount + percentage
-        if abs(val) > 50:
-            txt_x = val + 30 if val >= 0 else val - 30
-            ha = 'left' if val >= 0 else 'right'
-            ax.text(txt_x, y, 'HKD {}{:.0f}K\n({}{}%)'.format(sign, abs(val), sign, pct),
-                    ha=ha, va='center', fontsize=9, fontweight='bold', color=DARK)
+        sign = '+' if val >= 0 else ''
+        # Text label at end of bar
+        if val >= 0:
+            txt_x = val + 40
+            ha = 'left'
+        else:
+            txt_x = val - 40
+            ha = 'right'
+        
+        ax.text(txt_x, y,
+                'HKD {}{:.0f}K\n({}{}%)'.format(sign, abs(val), sign, pct),
+                ha=ha, va='center', fontsize=8.5, fontweight='bold', color=DARK)
     
-    # Invested capital reference line
-    ax.axvline(x=0, color=DARK, linewidth=1.5)
+    # Zero line
+    ax.axvline(x=0, color=DARK, linewidth=1.2, alpha=0.5)
     
     # Scenario title
     subtitle = '10年總計: +{:.1f}% ｜ 年化: {:.2f}%'.format(s['roi'], s['ann'])
     ax.set_title('{}\n{}'.format(s['label'], subtitle),
-                 fontsize=12, fontweight='bold', color=DARK, pad=12)
+                 fontsize=12, fontweight='bold', color=DARK, pad=10)
     
-    ax.set_yticks([0, 1, 2])
-    ax.set_yticklabels(categories, fontsize=11, fontweight='bold')
-    ax.set_xlabel('金額 (千港元)', fontsize=10)
-    ax.grid(axis='x', alpha=0.3)
+    ax.set_yticks([0, 1, 2, 3])
+    ax.set_yticklabels(categories, fontsize=10, fontweight='bold')
+    ax.set_xlabel('回報率（%）', fontsize=10)
+    ax.grid(axis='x', alpha=0.25)
     
-    # Set symmetric x range
-    all_vals = [s2['rent_hkd']/1000 for s2 in scenarios] + \
-               [s2['equity_hkd']/1000 for s2 in scenarios] + \
-               [s2['price_change_hkd']/1000 for s2 in scenarios]
-    xmin = min(all_vals) * 1.3
-    xmax = max(all_vals) * 1.3
-    ax.set_xlim(xmin, xmax)
+    # Consistent x range across all 3
+    ax.set_xlim(-800, 4500)
+    
+    # Format x-axis as percentage of invested
+    # x values are in HKD thousands, invested = 2400K
+    # So x=2400 means 100% return
+    ticks = np.arange(-600, 4200, 600)
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(['{}%'.format(int(t/2400*100)) for t in ticks], fontsize=8)
 
 plt.tight_layout()
 plt.savefig('{}/return_decomposition.png'.format(OUT), dpi=200, bbox_inches='tight', facecolor=BG)
@@ -134,5 +148,9 @@ plt.close()
 
 print("OK return_decomposition.png")
 for s in scenarios:
-    print("{}: 總回報 HKD {:,.0f}, 年化 {:.2f}%, ROI +{:.1f}%".format(
-        s['label'], s['total_hkd'], s['ann'], s['roi']))
+    print("\n{} (ROI +{:.1f}%, 年化 {:.2f}%)".format(s['label'], s['roi'], s['ann']))
+    print("  物業淨套現: HKD {:,.0f}K ({:.1f}%)".format(s['net_exit_hkd']/1000, s['net_exit_hkd']/invested_hkd*100))
+    print("  按揭本金:   HKD {:,.0f}K ({:.1f}%)".format(s['equity_hkd']/1000, s['equity_hkd']/invested_hkd*100))
+    print("  資本增值:   HKD {:,.0f}K ({:+.1f}%)".format(s['price_change_hkd']/1000, s['price_change_hkd']/invested_hkd*100))
+    print("  淨租金:     HKD {:,.0f}K ({:.1f}%)".format(s['rent_hkd']/1000, s['rent_hkd']/invested_hkd*100))
+    print("  總計:       HKD {:,.0f}K".format(s['total_hkd']/1000))
