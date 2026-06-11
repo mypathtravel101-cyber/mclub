@@ -1,0 +1,707 @@
+     1→# -*- coding: utf-8 -*-
+     2→"""
+     3→PZC Group — JPY Property FX Risk Scenario Analysis (10-Year Holding Period)
+     4→Mortgage: 15 years (client 45→60), but HOLDING/EXIT at year 10 (client 45→55)
+     5→At year 10, remaining mortgage balance is repaid from sale proceeds.
+     6→"""
+     7→
+     8→import matplotlib
+     9→matplotlib.use('Agg')
+    10→import matplotlib.pyplot as plt
+    11→import matplotlib.ticker as mticker
+    12→import matplotlib.font_manager as fm
+    13→import matplotlib.colors as mcolors
+    14→import numpy as np
+    15→import os, json, math
+    16→
+    17→# ── Font setup ──
+    18→fm.fontManager.addfont('/usr/share/fonts/truetype/chinese/SarasaMonoSC-Regular.ttf')
+    19→fm.fontManager.addfont('/usr/share/fonts/truetype/chinese/SarasaMonoSC-Bold.ttf')
+    20→fm.fontManager.addfont('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')
+    21→plt.rcParams['font.sans-serif'] = ['Sarasa Mono SC', 'DejaVu Sans']
+    22→plt.rcParams['axes.unicode_minus'] = False
+    23→
+    24→GOLD   = '#C9A84C'
+    25→DARK   = '#1A1A1A'
+    26→BLUE   = '#1E3A5F'
+    27→LIGHT_BG = '#F5F2E8'
+    28→GREEN  = '#2ECC71'
+    29→RED    = '#E74C3C'
+    30→ORANGE = '#F39C12'
+    31→GREY   = '#95A5A6'
+    32→
+    33→OUT = '/home/z/my-project/download/ppt_charts'
+    34→os.makedirs(OUT, exist_ok=True)
+    35→
+    36→# ══════════════════════════════════════════════════════
+    37→# 1. CORE ASSUMPTIONS
+    38→# ══════════════════════════════════════════════════════
+    39→HKD_PROP     = 4_000_000          # Property price in HKD
+    40→JPY_PER_HKD  = 19.5               # Base FX rate (JPY/HKD)
+    41→JPY_PROP     = HKD_PROP * JPY_PER_HKD   # 78M JPY
+    42→YIELD_PCT    = 0.06               # Gross yield 6%
+    43→LTV          = 0.40               # 40% loan
+    44→RATE_ANNUAL  = 0.03               # 3% mortgage rate
+    45→TERM_YEARS   = 15                 # 15-year mortgage (contractual)
+    46→HOLD_YEARS   = 10                 # 10-year holding period (exit at year 10)
+    47→CLIENT_AGE   = 45
+    48→
+    49→# ── Mortgage calculation (15-year term) ──
+    50→LOAN_JPY = JPY_PROP * LTV
+    51→DOWN_JPY = JPY_PROP * (1 - LTV)
+    52→INVESTED_HKD = DOWN_JPY / JPY_PER_HKD   # HKD 2,400,000
+    53→r_m = RATE_ANNUAL / 12
+    54→n_total = TERM_YEARS * 12
+    55→
+    56→monthly_payment = LOAN_JPY * (r_m * (1 + r_m)**n_total) / ((1 + r_m)**n_total - 1)
+    57→annual_payment  = monthly_payment * 12
+    58→
+    59→# Gross rent in JPY
+    60→gross_rent_jpy = JPY_PROP * YIELD_PCT
+    61→net_rent_jpy = gross_rent_jpy - annual_payment
+    62→
+    63→# ── Amortization schedule (full 15 years) ──
+    64→years_all = np.arange(1, TERM_YEARS + 1)
+    65→balance_all = np.zeros(TERM_YEARS)
+    66→interest_paid_all = np.zeros(TERM_YEARS)
+    67→principal_paid_all = np.zeros(TERM_YEARS)
+    68→
+    69→remaining = LOAN_JPY
+    70→for i, y in enumerate(years_all):
+    71→    year_interest = 0
+    72→    year_principal = 0
+    73→    for m in range(12):
+    74→        interest_m = remaining * r_m
+    75→        principal_m = monthly_payment - interest_m
+    76→        remaining -= principal_m
+    77→        year_interest += interest_m
+    78→        year_principal += principal_m
+    79→    interest_paid_all[i] = year_interest
+    80→    principal_paid_all[i] = year_principal
+    81→    balance_all[i] = max(remaining, 0)
+    82→
+    83→# Balance at end of year 10 (HOLD_YEARS)
+    84→balance_at_exit = balance_all[HOLD_YEARS - 1]  # index 9
+    85→total_principal_paid_10y = sum(principal_paid_all[:HOLD_YEARS])
+    86→
+    87→print(f"=== 10-Year Holding Period Analysis ===")
+    88→print(f"Property: HKD {HKD_PROP:,} / JPY {JPY_PROP:,.0f}")
+    89→print(f"Down payment: HKD {INVESTED_HKD:,}")
+    90→print(f"Loan: JPY {LOAN_JPY:,.0f} ({LTV*100:.0f}% LTV @ {RATE_ANNUAL*100:.0f}%, {TERM_YEARS}yr)")
+    91→print(f"Monthly mortgage: JPY {monthly_payment:,.0f}")
+    92→print(f"Annual mortgage: JPY {annual_payment:,.0f}")
+    93→print(f"Gross rent: JPY {gross_rent_jpy:,.0f}/yr")
+    94→print(f"Net rent: JPY {net_rent_jpy:,.0f}/yr")
+    95→print(f"Mortgage balance at year 10: JPY {balance_at_exit:,.0f}")
+    96→print(f"Principal paid in 10yr: JPY {total_principal_paid_10y:,.0f}")
+    97→
+    98→# ══════════════════════════════════════════════════════
+    99→# 2. FX SCENARIOS (7 base scenarios)
+   100→# ══════════════════════════════════════════════════════
+   101→fx_rate_changes = [-0.20, -0.10, -0.05, 0, 0.05, 0.10, 0.20]
+   102→fx_labels  = ['JPY大幅升值\n(+20%)', 'JPY升值\n(+10%)', 'JPY小幅升值\n(+5%)',
+   103→              '基準情景\n(現匯率)', 'JPY小幅貶值\n(-5%)', 'JPY貶值\n(-10%)', 'JPY大幅貶值\n(-20%)']
+   104→fx_rates   = [JPY_PER_HKD * (1 + c) for c in fx_rate_changes]
+   105→scenario_colors = ['#1E8449', '#27AE60', '#82E0AA', GOLD, '#F1948A', '#E74C3C', '#C0392B']
+   106→
+   107→# ══════════════════════════════════════════════════════
+   108→# 3. RETURN CALCULATIONS (10-year holding)
+   109→# ══════════════════════════════════════════════════════
+   110→# At year 10 exit:
+   111→#   - Property sold at exit_property_jpy (which may differ from JPY_PROP based on price change)
+   112→#   - Remaining mortgage balance repaid: balance_at_exit
+   113→#   - Net exit proceeds in JPY = exit_property_jpy - balance_at_exit
+   114→#   - Convert to HKD at exit FX rate
+   115→#   - Total HKD return = cumulative net rent (10yr) + net exit proceeds (HKD)
+   116→#   - ROI = (total HKD return - invested HKD) / invested HKD
+   117→
+   118→# Base scenario (no price change, base FX)
+   119→exit_property_jpy_base = JPY_PROP
+   120→net_exit_jpy_base = exit_property_jpy_base - balance_at_exit
+   121→net_exit_hkd_base = net_exit_jpy_base / JPY_PER_HKD
+   122→cum_net_rent_hkd_base = (net_rent_jpy / JPY_PER_HKD) * HOLD_YEARS
+   123→total_return_hkd_base = cum_net_rent_hkd_base + net_exit_hkd_base
+   124→roi_base = (total_return_hkd_base - INVESTED_HKD) / INVESTED_HKD * 100
+   125→annualized_base = ((total_return_hkd_base / INVESTED_HKD) ** (1/HOLD_YEARS) - 1) * 100
+   126→
+   127→print(f"\n--- Base Scenario (10yr) ---")
+   128→print(f"Net exit (JPY): {net_exit_jpy_base:,.0f}")
+   129→print(f"Net exit (HKD): {net_exit_hkd_base:,.0f}")
+   130→print(f"Cum net rent (HKD, 10yr): {cum_net_rent_hkd_base:,.0f}")
+   131→print(f"Total return (HKD): {total_return_hkd_base:,.0f}")
+   132→print(f"ROI: {roi_base:+.2f}%")
+   133→print(f"Annualized: {annualized_base:+.2f}%")
+   134→
+   135→# Per-scenario (FX only, no price change)
+   136→cum_net_income_hkd = []
+   137→total_return_hkd = []
+   138→annual_net_income_hkd = []
+   139→roi_list = []
+   140→annualized_roi = []
+   141→
+   142→for rate in fx_rates:
+   143→    ann_hkd = net_rent_jpy / rate
+   144→    annual_net_income_hkd.append(ann_hkd)
+   145→    cum = ann_hkd * HOLD_YEARS
+   146→    cum_net_income_hkd.append(cum)
+   147→    net_exit_hkd = net_exit_jpy_base / rate
+   148→    total = cum + net_exit_hkd
+   149→    total_return_hkd.append(total)
+   150→    r = (total - INVESTED_HKD) / INVESTED_HKD * 100
+   151→    roi_list.append(r)
+   152→    a = ((total / INVESTED_HKD) ** (1/HOLD_YEARS) - 1) * 100
+   153→    annualized_roi.append(a)
+   154→
+   155→# ══════════════════════════════════════════════════════
+   156→# 4. CHART 1 — Mortgage Amortization (full 15yr, highlight 10yr)
+   157→# ══════════════════════════════════════════════════════
+   158→fig, ax1 = plt.subplots(figsize=(12, 6.5))
+   159→fig.patch.set_facecolor(LIGHT_BG)
+   160→ax1.set_facecolor(LIGHT_BG)
+   161→
+   162→bar_w = 0.5
+   163→# Color years 1-10 differently from 11-15
+   164→for i, y in enumerate(years_all):
+   165→    alpha = 0.85 if y <= HOLD_YEARS else 0.35
+   166→    c_p = BLUE if y <= HOLD_YEARS else '#5B7BA5'
+   167→    c_i = GOLD if y <= HOLD_YEARS else '#D4BC7A'
+   168→    ax1.bar(y - bar_w/4, principal_paid_all[i]/1e6, bar_w/2, color=c_p, alpha=alpha)
+   169→    ax1.bar(y + bar_w/4, interest_paid_all[i]/1e6, bar_w/2, color=c_i, alpha=alpha)
+   170→
+   171→# Add vertical line at year 10
+   172→ax1.axvline(x=HOLD_YEARS + 0.5, color=RED, linestyle='--', linewidth=2, alpha=0.7)
+   173→ax1.text(HOLD_YEARS + 0.7, max(principal_paid_all/1e6) * 0.9, '第10年\n退出點',
+   174→         fontsize=10, color=RED, fontweight='bold', va='top')
+   175→
+   176→ax2 = ax1.twinx()
+   177→ax2.plot(years_all, balance_all/1e6, color=RED, linewidth=2.5, marker='o', markersize=5,
+   178→         label='貸款餘額', zorder=5)
+   179→# Highlight year 10 balance
+   180→ax2.plot(HOLD_YEARS, balance_at_exit/1e6, 's', color=RED, markersize=12, zorder=6,
+   181→         markeredgecolor='white', markeredgewidth=2)
+   182→ax2.annotate(f'剩餘: {balance_at_exit/1e6:.1f}M',
+   183→             xy=(HOLD_YEARS, balance_at_exit/1e6),
+   184→             xytext=(HOLD_YEARS + 1.5, balance_at_exit/1e6 + 3),
+   185→             fontsize=10, color=RED, fontweight='bold',
+   186→             arrowprops=dict(arrowstyle='->', color=RED, lw=1.5))
+   187→
+   188→ax2.set_ylabel('貸款餘額 (百萬日圓)', fontsize=12, fontweight='bold')
+   189→ax2.tick_params(axis='y', labelsize=10)
+   190→ax1.set_xlabel('年份', fontsize=12, fontweight='bold')
+   191→ax1.set_ylabel('金額 (百萬日圓)', fontsize=12, fontweight='bold')
+   192→ax1.set_title('15年按揭攤還計劃 (第10年退出)', fontsize=16, fontweight='bold', color=DARK, pad=15)
+   193→ax1.set_xticks(years_all)
+   194→
+   195→# Custom legend
+   196→from matplotlib.patches import Patch
+   197→legend_elements = [
+   198→    Patch(facecolor=BLUE, alpha=0.85, label='本金償還 (1-10年)'),
+   199→    Patch(facecolor=GOLD, alpha=0.85, label='利息支出 (1-10年)'),
+   200→    Patch(facecolor='#5B7BA5', alpha=0.35, label='本金償還 (11-15年)'),
+   201→    Patch(facecolor='#D4BC7A', alpha=0.35, label='利息支出 (11-15年)'),
+   202→    plt.Line2D([0],[0], color=RED, linewidth=2.5, marker='o', label='貸款餘額'),
+   203→]
+   204→ax1.legend(handles=legend_elements, loc='upper right', fontsize=9.5,
+   205→           facecolor='white', edgecolor=GOLD, framealpha=0.9)
+   206→ax1.grid(axis='y', alpha=0.3)
+   207→ax1.tick_params(axis='x', labelsize=9)
+   208→ax1.tick_params(axis='y', labelsize=10)
+   209→plt.tight_layout()
+   210→plt.savefig(f'{OUT}/mortgage_amortization.png', dpi=200, bbox_inches='tight', facecolor=LIGHT_BG)
+   211→plt.close()
+   212→print("OK mortgage_amortization.png")
+   213→
+   214→# ══════════════════════════════════════════════════════
+   215→# 5. CHART 2 — Annual Net Income HKD by FX Scenario
+   216→# ══════════════════════════════════════════════════════
+   217→fig, ax = plt.subplots(figsize=(12, 6.5))
+   218→fig.patch.set_facecolor(LIGHT_BG)
+   219→ax.set_facecolor(LIGHT_BG)
+   220→
+   221→bars = ax.bar(range(len(fx_labels)), [x/1000 for x in annual_net_income_hkd],
+   222→              color=scenario_colors, edgecolor='white', linewidth=1.5, width=0.65)
+   223→
+   224→for bar, val in zip(bars, annual_net_income_hkd):
+   225→    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 2,
+   226→            f'HKD {val/1000:,.0f}K', ha='center', va='bottom', fontsize=9, fontweight='bold', color=DARK)
+   227→
+   228→ax.set_xticks(range(len(fx_labels)))
+   229→ax.set_xticklabels(fx_labels, fontsize=9.5)
+   230→ax.set_ylabel('每年淨收入 (千港元)', fontsize=12, fontweight='bold')
+   231→ax.set_title('不同匯率情景下的每年淨租金收入（港元）', fontsize=14, fontweight='bold', color=DARK, pad=15)
+   232→ax.axhline(y=annual_net_income_hkd[3]/1000, color=GOLD, linestyle='--', alpha=0.5,
+   233→           label=f'基準: HKD {annual_net_income_hkd[3]/1000:,.0f}K/年')
+   234→ax.legend(loc='best', fontsize=10, facecolor='white', edgecolor=GOLD)
+   235→ax.grid(axis='y', alpha=0.3)
+   236→plt.tight_layout()
+   237→plt.savefig(f'{OUT}/fx_annual_income.png', dpi=200, bbox_inches='tight', facecolor=LIGHT_BG)
+   238→plt.close()
+   239→print("OK fx_annual_income.png")
+   240→
+   241→# ══════════════════════════════════════════════════════
+   242→# 6. CHART 3 — 10-Year Cumulative Return by FX Scenario
+   243→# ══════════════════════════════════════════════════════
+   244→fig, ax = plt.subplots(figsize=(13, 7))
+   245→fig.patch.set_facecolor(LIGHT_BG)
+   246→ax.set_facecolor(LIGHT_BG)
+   247→
+   248→x = np.arange(len(fx_labels))
+   249→down_hkd = INVESTED_HKD / 1000
+   250→total_hkd = [t/1000 for t in total_return_hkd]
+   251→profit_hkd = [(t - INVESTED_HKD)/1000 for t in total_return_hkd]
+   252→
+   253→bars_invested = ax.bar(x, [down_hkd]*len(x), 0.55, color=GREY, alpha=0.6,
+   254→                       label='投入本金 (HKD 2,400K)', edgecolor='white')
+   255→bars_profit = ax.bar(x, profit_hkd, 0.55, bottom=[down_hkd]*len(x), color=scenario_colors,
+   256→                     alpha=0.85, label='10年總回報利潤', edgecolor='white')
+   257→
+   258→for i, (p, t) in enumerate(zip(profit_hkd, total_hkd)):
+   259→    ax.text(i, t + 50, f'HKD {t:,.0f}K\n(ROI: {roi_list[i]:+.1f}%)',
+   260→            ha='center', va='bottom', fontsize=8.5, fontweight='bold', color=DARK)
+   261→
+   262→ax.set_xticks(x)
+   263→ax.set_xticklabels(fx_labels, fontsize=9.5)
+   264→ax.set_ylabel('金額 (千港元)', fontsize=12, fontweight='bold')
+   265→ax.set_title('10年投資總回報 — 不同匯率情景', fontsize=14, fontweight='bold', color=DARK, pad=15)
+   266→ax.legend(loc='upper left', fontsize=10, facecolor='white', edgecolor=GOLD)
+   267→ax.grid(axis='y', alpha=0.3)
+   268→plt.tight_layout()
+   269→plt.savefig(f'{OUT}/fx_total_return.png', dpi=200, bbox_inches='tight', facecolor=LIGHT_BG)
+   270→plt.close()
+   271→print("OK fx_total_return.png")
+   272→
+   273→# ══════════════════════════════════════════════════════
+   274→# 7. CHART 4 — FX Sensitivity (Exit Value + Net Yield)
+   275→# ══════════════════════════════════════════════════════
+   276→fig, ax1 = plt.subplots(figsize=(12, 6.5))
+   277→fig.patch.set_facecolor(LIGHT_BG)
+   278→ax1.set_facecolor(LIGHT_BG)
+   279→
+   280→fx_range = np.linspace(JPY_PER_HKD * 0.75, JPY_PER_HKD * 1.25, 100)
+   281→# Net exit value = (JPY_PROP - balance_at_exit) / rate
+   282→exit_hkd_curve = [(net_exit_jpy_base / r) / 1e6 for r in fx_range]
+   283→net_income_curve = [(net_rent_jpy / r) / 1000 for r in fx_range]
+   284→
+   285→ax1.plot(fx_range, exit_hkd_curve, color=BLUE, linewidth=2.5, label='淨套現價值 (百萬港元)')
+   286→ax1.fill_between(fx_range, exit_hkd_curve, alpha=0.1, color=BLUE)
+   287→ax1.set_xlabel('日圓/港元匯率 (JPY/HKD)', fontsize=12, fontweight='bold')
+   288→ax1.set_ylabel('淨套現價值 (百萬港元)', fontsize=12, fontweight='bold', color=BLUE)
+   289→ax1.tick_params(axis='y', labelcolor=BLUE)
+   290→
+   291→ax2 = ax1.twinx()
+   292→ax2.plot(fx_range, net_income_curve, color=GOLD, linewidth=2.5, linestyle='--', label='每年淨收入 (千港元)')
+   293→ax2.set_ylabel('每年淨收入 (千港元)', fontsize=12, fontweight='bold', color=GOLD)
+   294→ax2.tick_params(axis='y', labelcolor=GOLD)
+   295→
+   296→ax1.axvline(x=JPY_PER_HKD, color=RED, linestyle=':', alpha=0.7, linewidth=1.5)
+   297→ax1.annotate(f'基準: {JPY_PER_HKD}', xy=(JPY_PER_HKD, net_exit_jpy_base/JPY_PER_HKD/1e6),
+   298→             xytext=(JPY_PER_HKD+1.5, net_exit_jpy_base/JPY_PER_HKD/1e6 - 0.3),
+   299→             fontsize=10, color=RED, fontweight='bold',
+   300→             arrowprops=dict(arrowstyle='->', color=RED))
+   301→
+   302→for i, (rate, c) in enumerate(zip(fx_rates, scenario_colors)):
+   303→    ax1.plot(rate, (net_exit_jpy_base/rate)/1e6, 'o', color=c, markersize=10, zorder=5,
+   304→             markeredgecolor='white', markeredgewidth=1.5)
+   305→
+   306→lines1, labels1 = ax1.get_legend_handles_labels()
+   307→lines2, labels2 = ax2.get_legend_handles_labels()
+   308→ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right', fontsize=10,
+   309→           facecolor='white', edgecolor=GOLD, framealpha=0.9)
+   310→ax1.set_title('匯率敏感度分析 — 淨套現價值與淨收入 (第10年退出)', fontsize=14, fontweight='bold', color=DARK, pad=15)
+   311→ax1.grid(alpha=0.3)
+   312→plt.tight_layout()
+   313→plt.savefig(f'{OUT}/fx_sensitivity.png', dpi=200, bbox_inches='tight', facecolor=LIGHT_BG)
+   314→plt.close()
+   315→print("OK fx_sensitivity.png")
+   316→
+   317→# ══════════════════════════════════════════════════════
+   318→# 8. CHART 5 — Summary Dashboard
+   319→# ══════════════════════════════════════════════════════
+   320→fig, axes = plt.subplots(1, 2, figsize=(13, 6))
+   321→fig.patch.set_facecolor(LIGHT_BG)
+   322→fig.suptitle('JPY物業投資 — 關鍵指標摘要 (10年持倉)', fontsize=15, fontweight='bold', color=DARK, y=1.02)
+   323→
+   324→yields_hkd = [(net_rent_jpy / rate) / INVESTED_HKD * 100 for rate in fx_rates]
+   325→
+   326→ax = axes[0]
+   327→ax.set_facecolor(LIGHT_BG)
+   328→bars = ax.barh(range(len(fx_labels)), yields_hkd, color=scenario_colors, edgecolor='white', height=0.6)
+   329→for i, (y, bar) in enumerate(zip(yields_hkd, bars)):
+   330→    ax.text(y + 0.1, bar.get_y() + bar.get_height()/2,
+   331→            '{:.2f}%'.format(y), va='center', fontsize=10, fontweight='bold', color=DARK)
+   332→ax.set_yticks(range(len(fx_labels)))
+   333→ax.set_yticklabels([l.replace('\n', ' ') for l in fx_labels], fontsize=9.5)
+   334→ax.set_xlabel('淨回報率 (%)', fontsize=11, fontweight='bold')
+   335→ax.set_title('淨租金回報率（相對投入本金）', fontsize=12, fontweight='bold', color=DARK)
+   336→ax.axvline(x=yields_hkd[3], color=RED, linestyle='--', alpha=0.5)
+   337→ax.grid(axis='x', alpha=0.3)
+   338→
+   339→ax = axes[1]
+   340→ax.set_facecolor(LIGHT_BG)
+   341→bars = ax.barh(range(len(fx_labels)), annualized_roi, color=scenario_colors, edgecolor='white', height=0.6)
+   342→for i, (r, bar) in enumerate(zip(annualized_roi, bars)):
+   343→    ax.text(max(r, 0) + 0.2, bar.get_y() + bar.get_height()/2,
+   344→            '{:+.2f}%'.format(r), va='center', fontsize=10, fontweight='bold', color=DARK)
+   345→ax.set_yticks(range(len(fx_labels)))
+   346→ax.set_yticklabels([l.replace('\n', ' ') for l in fx_labels], fontsize=9.5)
+   347→ax.set_xlabel('年化回報率 (%)', fontsize=11, fontweight='bold')
+   348→ax.set_title('10年年化總回報率', fontsize=12, fontweight='bold', color=DARK)
+   349→ax.axvline(x=0, color=RED, linewidth=1)
+   350→ax.grid(axis='x', alpha=0.3)
+   351→
+   352→plt.tight_layout()
+   353→plt.savefig(f'{OUT}/fx_summary_dashboard.png', dpi=200, bbox_inches='tight', facecolor=LIGHT_BG)
+   354→plt.close()
+   355→print("OK fx_summary_dashboard.png")
+   356→
+   357→# ══════════════════════════════════════════════════════
+   358→# 9. RETURN DECOMPOSITION CHART
+   359→# ══════════════════════════════════════════════════════
+   360→# Show return sources under 3 property price scenarios
+   361→fig, axes = plt.subplots(1, 3, figsize=(15, 6), sharey=True)
+   362→fig.patch.set_facecolor(LIGHT_BG)
+   363→fig.suptitle('回報來源分解 — 10年持倉期', fontsize=15, fontweight='bold', color=DARK, y=1.02)
+   364→
+   365→price_scenarios = [
+   366→    ('房價年跌-2.47%', -0.0247),
+   367→    ('房價持平0%', 0.0),
+   368→    ('房價年增+1.77%', 0.0177),
+   369→]
+   370→
+   371→for idx, (label, annual_price_growth) in enumerate(price_scenarios):
+   372→    ax = axes[idx]
+   373→    ax.set_facecolor(LIGHT_BG)
+   374→    
+   375→    # Property value at year 10
+   376→    prop_10y = JPY_PROP * (1 + annual_price_growth) ** HOLD_YEARS
+   377→    net_exit = prop_10y - balance_at_exit
+   378→    net_exit_hkd = net_exit / JPY_PER_HKD
+   379→    
+   380→    # Capital gain from price change (in HKD)
+   381→    price_gain_hkd = (prop_10y - JPY_PROP) / JPY_PER_HKD
+   382→    
+   383→    # Equity from mortgage paydown (principal paid)
+   384→    equity_paydown_hkd = total_principal_paid_10y / JPY_PER_HKD
+   385→    
+   386→    # Cash yield from net rent
+   387→    cash_yield_hkd = (net_rent_jpy / JPY_PER_HKD) * HOLD_YEARS
+   388→    
+   389→    # Total
+   390→    total_hkd_val = net_exit_hkd + cash_yield_hkd
+   391→    roi_val = (total_hkd_val - INVESTED_HKD) / INVESTED_HKD * 100
+   392→    
+   393→    # Stacked bar
+   394→    categories = ['租金現金流\n(10年)', '按揭本金\n償還', '房價變動']
+   395→    values = [cash_yield_hkd, equity_paydown_hkd, price_gain_hkd]
+   396→    colors = [GOLD, BLUE, GREEN if price_gain_hkd >= 0 else RED]
+   397→    
+   398→    bottoms = [0, values[0], values[0] + values[1]]
+   399→    
+   400→    for i, (cat, val, c, b) in enumerate(zip(categories, values, colors, bottoms)):
+   401→        ax.bar(0, val/1000, bottom=b/1000, color=c, alpha=0.85, width=0.5, edgecolor='white', linewidth=1.5)
+   402→        if abs(val) > 10000:
+   403→            y_pos = (b + val/2) / 1000
+   404→            ax.text(0, y_pos, 'HKD {:.0f}K\n({:.1f}%)'.format(val/1000, val/INVESTED_HKD*100),
+   405→                    ha='center', va='center', fontsize=9, fontweight='bold', color='white')
+   406→    
+   407→    # Invested capital line
+   408→    ax.axhline(y=INVESTED_HKD/1000, color=RED, linestyle='--', linewidth=1.5, alpha=0.7)
+   409→    ax.text(0.35, INVESTED_HKD/1000, '投入本金', fontsize=8, color=RED, va='bottom')
+   410→    
+   411→    ax.set_title('{}\nROI: {:+.1f}%'.format(label, roi_val), fontsize=12, fontweight='bold', color=DARK)
+   412→    ax.set_xticks([])
+   413→    ax.set_ylabel('金額 (千港元)' if idx == 0 else '')
+   414→    ax.grid(axis='y', alpha=0.3)
+   415→
+   416→plt.tight_layout()
+   417→plt.savefig(f'{OUT}/return_decomposition.png', dpi=200, bbox_inches='tight', facecolor=LIGHT_BG)
+   418→plt.close()
+   419→print("OK return_decomposition.png")
+   420→
+   421→# ══════════════════════════════════════════════════════
+   422→# 10. 2-VARIABLE STRESS TEST (FX x Property Value)
+   423→# ══════════════════════════════════════════════════════
+   424→# Variable 1: FX Rate (12 scenarios)
+   425→var1_fx = [
+   426→    {"label": "JPY升+25%", "rate_change": -0.25, "tier": "T3"},
+   427→    {"label": "JPY升+20%", "rate_change": -0.20, "tier": "T3"},
+   428→    {"label": "JPY升+15%", "rate_change": -0.15, "tier": "T2"},
+   429→    {"label": "JPY升+10%", "rate_change": -0.10, "tier": "T2"},
+   430→    {"label": "JPY升+5%",  "rate_change": -0.05, "tier": "T1"},
+   431→    {"label": "基準",      "rate_change":  0.00, "tier": "T1"},
+   432→    {"label": "JPY貶-5%",  "rate_change":  0.05, "tier": "T1"},
+   433→    {"label": "JPY貶-10%", "rate_change":  0.10, "tier": "T2"},
+   434→    {"label": "JPY貶-15%", "rate_change":  0.15, "tier": "T2"},
+   435→    {"label": "JPY貶-20%", "rate_change":  0.20, "tier": "T3"},
+   436→    {"label": "JPY貶-30%", "rate_change":  0.30, "tier": "T3"},
+   437→    {"label": "2022危機-31%", "rate_change": 0.31, "tier": "H"},
+   438→]
+   439→
+   440→# Variable 2: Property Value (7 scenarios)
+   441→# Use SAME annual rates as 15-year model; 10-yr total is naturally smaller
+   442→# Labels show the ORIGINAL 15-year target for consistency; total_change shows actual 10-yr
+   443→var2_prop = [
+   444→    {"label": "崩盤 -22%",  "annual_rate": -0.0247},  # 15yr label "崩盤 -30%"
+   445→    {"label": "下跌 -10%",  "annual_rate": -0.0108},  # 15yr label "下跌 -15%"
+   446→    {"label": "持平 0%",    "annual_rate":  0.0},
+   447→    {"label": "增長 +10%",  "annual_rate":  0.0094},  # 15yr label "增長 +15%"
+   448→    {"label": "增長 +19%",  "annual_rate":  0.0177},  # 15yr label "增長 +30%"
+   449→    {"label": "增長 +31%",  "annual_rate":  0.0274},  # 15yr label "增長 +50%"
+   450→    {"label": "增長 +48%",  "annual_rate":  0.0398},  # 15yr label "增長 +80%"
+   451→]
+   452→
+   453→# Calculate 10-year total changes
+   454→for p in var2_prop:
+   455→    total_change = (1 + p['annual_rate']) ** HOLD_YEARS - 1
+   456→    p['total_change'] = total_change
+   457→
+   458→# Calculate 84-scenario matrix
+   459→n_fx = len(var1_fx)
+   460→n_prop = len(var2_prop)
+   461→matrix_annualized = np.zeros((n_prop, n_fx))
+   462→matrix_total_roi = np.zeros((n_prop, n_fx))
+   463→loss_count = 0
+   464→
+   465→worst_ann = 999
+   466→worst_prop = ""
+   467→worst_fx = ""
+   468→best_ann = -999
+   469→best_prop = ""
+   470→best_fx = ""
+   471→
+   472→for pi, prop in enumerate(var2_prop):
+   473→    prop_value_10y = JPY_PROP * (1 + prop['total_change'])
+   474→    for fi, fx in enumerate(var1_fx):
+   475→        exit_rate = JPY_PER_HKD * (1 + fx['rate_change'])
+   476→        
+   477→        # Net rent in HKD per year
+   478→        net_rent_hkd_yr = net_rent_jpy / exit_rate
+   479→        cum_rent_hkd = net_rent_hkd_yr * HOLD_YEARS
+   480→        
+   481→        # Net exit = property value - remaining mortgage balance
+   482→        net_exit_jpy = prop_value_10y - balance_at_exit
+   483→        net_exit_hkd = net_exit_jpy / exit_rate
+   484→        
+   485→        total_hkd = cum_rent_hkd + net_exit_hkd
+   486→        roi = (total_hkd - INVESTED_HKD) / INVESTED_HKD * 100
+   487→        ann = ((total_hkd / INVESTED_HKD) ** (1/HOLD_YEARS) - 1) * 100
+   488→        
+   489→        matrix_annualized[pi][fi] = ann
+   490→        matrix_total_roi[pi][fi] = roi
+   491→        
+   492→        if ann < worst_ann:
+   493→            worst_ann = ann
+   494→            worst_prop = prop['label']
+   495→            worst_fx = fx['label']
+   496→        if ann > best_ann:
+   497→            best_ann = ann
+   498→            best_prop = prop['label']
+   499→            best_fx = fx['label']
+   500→        if roi < 0:
+   501→            loss_count += 1
+   502→
+   503→print(f"\n=== 2-Variable Stress Test (10yr) ===")
+   504→print(f"Scenarios: {n_fx} x {n_prop} = {n_fx*n_prop}")
+   505→print(f"Loss scenarios: {loss_count}")
+   506→print(f"Worst: {worst_prop} + {worst_fx} = {worst_ann:.2f}% annualized")
+   507→print(f"Best: {best_prop} + {best_fx} = {best_ann:.2f}% annualized")
+   508→print(f"Base (0%, 0%): {matrix_annualized[2][5]:.2f}% annualized")
+   509→
+   510→# ── CHART 6: 2-Variable Heatmap ──
+   511→fig, ax = plt.subplots(figsize=(14, 7))
+   512→fig.patch.set_facecolor(LIGHT_BG)
+   513→
+   514→# Custom colormap
+   515→cmap = mcolors.LinearSegmentedColormap.from_list('pzc', [
+   516→    '#C0392B', '#E74C3C', '#F39C12', '#F1C40F', '#C9A84C',
+   517→    '#82E0AA', '#27AE60', '#1E8449'
+   518→], N=256)
+   519→
+   520→im = ax.imshow(matrix_annualized, cmap=cmap, aspect='auto', vmin=0, vmax=max(best_ann, 10))
+   521→
+   522→# Labels
+   523→fx_labels_short = [f['label'] for f in var1_fx]
+   524→prop_labels_short = [p['label'] for p in var2_prop]
+   525→
+   526→ax.set_xticks(range(n_fx))
+   527→ax.set_xticklabels(fx_labels_short, fontsize=8.5, rotation=45, ha='right')
+   528→ax.set_yticks(range(n_prop))
+   529→ax.set_yticklabels(prop_labels_short, fontsize=9.5)
+   530→
+   531→# Add text annotations
+   532→for pi in range(n_prop):
+   533→    for fi in range(n_fx):
+   534→        v = matrix_annualized[pi][fi]
+   535→        text_color = 'white' if v < 4 or v > 10 else DARK
+   536→        ax.text(fi, pi, '{:.1f}%'.format(v), ha='center', va='center',
+   537→                fontsize=7.5, fontweight='bold', color=text_color)
+   538→
+   539→# Highlight base scenario
+   540→ax.add_patch(plt.Rectangle((5-0.5, 2-0.5), 1, 1, fill=False, edgecolor='white', linewidth=2.5))
+   541→
+   542→cbar = plt.colorbar(im, ax=ax, shrink=0.8, pad=0.02)
+   543→cbar.set_label('年化回報率 (%)', fontsize=11, fontweight='bold')
+   544→
+   545→ax.set_xlabel('匯率情景 (FX Rate)', fontsize=12, fontweight='bold')
+   546→ax.set_ylabel('物業價值情景', fontsize=12, fontweight='bold')
+   547→ax.set_title('雙變量壓力測試 — 84個情景年化回報矩陣 (10年持倉)', fontsize=14, fontweight='bold', color=DARK, pad=15)
+   548→
+   549→plt.tight_layout()
+   550→plt.savefig(f'{OUT}/stress_2var_heatmap.png', dpi=200, bbox_inches='tight', facecolor=LIGHT_BG)
+   551→plt.close()
+   552→print("OK stress_2var_heatmap.png")
+   553→
+   554→# ── CHART 7: Sensitivity Lines ──
+   555→fig, ax = plt.subplots(figsize=(13, 7))
+   556→fig.patch.set_facecolor(LIGHT_BG)
+   557→ax.set_facecolor(LIGHT_BG)
+   558→
+   559→prop_colors = ['#C0392B', '#E74C3C', '#F39C12', GOLD, '#82E0AA', '#27AE60', '#1E8449']
+   560→fx_rate_range = [JPY_PER_HKD * (1 + f['rate_change']) for f in var1_fx]
+   561→
+   562→for pi, (prop, color) in enumerate(zip(var2_prop, prop_colors)):
+   563→    anns = matrix_annualized[pi]
+   564→    ax.plot(fx_rate_range, anns, 'o-', color=color, linewidth=2, markersize=6,
+   565→            label=prop['label'], markeredgecolor='white', markeredgewidth=1)
+   566→
+   567→ax.axvline(x=JPY_PER_HKD, color=RED, linestyle=':', alpha=0.6, linewidth=1.5)
+   568→ax.text(JPY_PER_HKD + 0.3, best_ann * 0.95, '基準匯率', fontsize=9, color=RED)
+   569→ax.axhline(y=0, color=RED, linewidth=1, alpha=0.5)
+   570→
+   571→ax.set_xlabel('JPY/HKD 匯率', fontsize=12, fontweight='bold')
+   572→ax.set_ylabel('年化回報率 (%)', fontsize=12, fontweight='bold')
+   573→ax.set_title('不同房價情景下的匯率敏感度曲線 (10年持倉)', fontsize=14, fontweight='bold', color=DARK, pad=15)
+   574→ax.legend(loc='best', fontsize=9, facecolor='white', edgecolor=GOLD, ncol=2)
+   575→ax.grid(alpha=0.3)
+   576→plt.tight_layout()
+   577→plt.savefig(f'{OUT}/stress_2var_lines.png', dpi=200, bbox_inches='tight', facecolor=LIGHT_BG)
+   578→plt.close()
+   579→print("OK stress_2var_lines.png")
+   580→
+   581→# ── CHART 8: Contour / Risk Map ──
+   582→fig, ax = plt.subplots(figsize=(13, 7))
+   583→fig.patch.set_facecolor(LIGHT_BG)
+   584→ax.set_facecolor(LIGHT_BG)
+   585→
+   586→# Create grid for contour
+   587→fx_grid = np.array([JPY_PER_HKD * (1 + f['rate_change']) for f in var1_fx])
+   588→prop_total_grid = np.array([(1 + p['total_change']) for p in var2_prop])
+   589→
+   590→FX_G, PROP_G = np.meshgrid(fx_grid, prop_total_grid)
+   591→
+   592→# Interpolate for smooth contour
+   593→from scipy.interpolate import RegularGridInterpolator
+   594→interp = RegularGridInterpolator((prop_total_grid, fx_grid), matrix_annualized, method='cubic')
+   595→
+   596→fx_fine = np.linspace(min(fx_grid), max(fx_grid), 200)
+   597→prop_fine = np.linspace(min(prop_total_grid), max(prop_total_grid), 200)
+   598→FX_F, PROP_F = np.meshgrid(fx_fine, prop_fine)
+   599→pts = np.column_stack([PROP_F.ravel(), FX_F.ravel()])
+   600→Z = interp(pts).reshape(PROP_F.shape)
+   601→
+   602→levels = np.arange(0, max(best_ann, 12), 1)
+   603→cs = ax.contourf(FX_F, PROP_F, Z, levels=levels, cmap=cmap, extend='both')
+   604→ax.contour(FX_F, PROP_F, Z, levels=[0], colors=['#FF0000'], linewidths=3)
+   605→
+   606→# Mark the base scenario
+   607→ax.plot(JPY_PER_HKD, 1.0, 's', color='white', markersize=12, zorder=5, markeredgecolor=DARK, markeredgewidth=2)
+   608→ax.annotate('基準', xy=(JPY_PER_HKD, 1.0), xytext=(JPY_PER_HKD + 1.5, 1.05),
+   609→            fontsize=11, fontweight='bold', color=DARK,
+   610→            arrowprops=dict(arrowstyle='->', color=DARK, lw=1.5))
+   611→
+   612→# Mark 2022 crisis
+   613→crisis_rate = JPY_PER_HKD * 1.31
+   614→ax.plot(crisis_rate, 0.70, 'X', color=RED, markersize=14, zorder=5, markeredgecolor='white', markeredgewidth=2)
+   615→ax.annotate('2022危機', xy=(crisis_rate, 0.70), xytext=(crisis_rate - 2, 0.62),
+   616→            fontsize=10, fontweight='bold', color=RED,
+   617→            arrowprops=dict(arrowstyle='->', color=RED, lw=1.5))
+   618→
+   619→cbar = plt.colorbar(cs, ax=ax, shrink=0.8, pad=0.02)
+   620→cbar.set_label('年化回報率 (%)', fontsize=11, fontweight='bold')
+   621→
+   622→ax.set_xlabel('JPY/HKD 匯率', fontsize=12, fontweight='bold')
+   623→ax.set_ylabel('物業價值倍數 (10年)', fontsize=12, fontweight='bold')
+   624→ax.set_title('盈虧平衡風險地圖 — FX Rate x Property Value (10年)', fontsize=14, fontweight='bold', color=DARK, pad=15)
+   625→ax.grid(alpha=0.2, color='white')
+   626→
+   627→plt.tight_layout()
+   628→plt.savefig(f'{OUT}/stress_2var_contour.png', dpi=200, bbox_inches='tight', facecolor=LIGHT_BG)
+   629→plt.close()
+   630→print("OK stress_2var_contour.png")
+   631→
+   632→# ══════════════════════════════════════════════════════
+   633→# SAVE DATA FOR PPTX
+   634→# ══════════════════════════════════════════════════════
+   635→data = {
+   636→    "constants": {
+   637→        "property_hkd": HKD_PROP,
+   638→        "property_jpy": JPY_PROP,
+   639→        "fx_base": JPY_PER_HKD,
+   640→        "ltv": LTV,
+   641→        "rate": RATE_ANNUAL,
+   642→        "mortgage_term_years": TERM_YEARS,
+   643→        "hold_years": HOLD_YEARS,
+   644→        "monthly_payment_jpy": round(monthly_payment, 0),
+   645→        "annual_rent_jpy": gross_rent_jpy,
+   646→        "net_rent_jpy": round(net_rent_jpy, 0),
+   647→        "invested_hkd": INVESTED_HKD,
+   648→        "balance_at_exit_jpy": round(balance_at_exit, 0),
+   649→        "principal_paid_10y_jpy": round(total_principal_paid_10y, 0),
+   650→    },
+   651→    "variable1_fx": var1_fx,
+   652→    "variable2_property": var2_prop,
+   653→    "matrix_annualized": matrix_annualized.tolist(),
+   654→    "matrix_total_roi_pct": matrix_total_roi.tolist(),
+   655→    "worst": {"property": worst_prop, "fx": worst_fx, "annualized": round(worst_ann, 2)},
+   656→    "best": {"property": best_prop, "fx": best_fx, "annualized": round(best_ann, 2)},
+   657→    "loss_scenarios": loss_count,
+   658→    "total_scenarios": n_fx * n_prop,
+   659→    "base_annualized": round(matrix_annualized[2][5], 2),
+   660→}
+   661→
+   662→with open('{}/stress_2var_data.json'.format(OUT), 'w', encoding='utf-8') as f:
+   663→    json.dump(data, f, ensure_ascii=False, indent=2)
+   664→
+   665→# Also save FX scenario data
+   666→fx_data = {
+   667→    "summary": {
+   668→        "property_hkd": HKD_PROP,
+   669→        "property_jpy": JPY_PROP,
+   670→        "fx_rate": JPY_PER_HKD,
+   671→        "down_payment_jpy": round(DOWN_JPY, 0),
+   672→        "down_payment_hkd": round(INVESTED_HKD, 0),
+   673→        "loan_jpy": round(LOAN_JPY, 0),
+   674→        "loan_hkd": round(LOAN_JPY / JPY_PER_HKD, 0),
+   675→        "monthly_payment_jpy": round(monthly_payment, 0),
+   676→        "annual_payment_jpy": round(annual_payment, 0),
+   677→        "gross_rent_jpy": gross_rent_jpy,
+   678→        "net_rent_jpy": round(net_rent_jpy, 0),
+   679→        "net_yield_pct": round(net_rent_jpy / DOWN_JPY * 100, 2),
+   680→        "mortgage_term_years": TERM_YEARS,
+   681→        "hold_years": HOLD_YEARS,
+   682→        "balance_at_exit_jpy": round(balance_at_exit, 0),
+   683→    },
+   684→    "scenarios": [],
+   685→}
+   686→for i, (label, rate, change) in enumerate(zip(fx_labels, fx_rates, fx_rate_changes)):
+   687→    fx_data["scenarios"].append({
+   688→        "label": label.replace('\n', ' '),
+   689→        "fx_rate": round(rate, 2),
+   690→        "change_pct": round(change * 100, 1),
+   691→        "jpy_move": round(-change * 100, 1),
+   692→        "annual_net_hkd": round(annual_net_income_hkd[i], 2),
+   693→        "net_yield_pct": round(yields_hkd[i], 2),
+   694→        "cum_10y_hkd": round(cum_net_income_hkd[i], 2),
+   695→        "exit_value_hkd": round(net_exit_jpy_base / rate, 2),
+   696→        "total_return_hkd": round(total_return_hkd[i], 2),
+   697→        "roi_pct": round(roi_list[i], 2),
+   698→        "annualized_roi": round(annualized_roi[i], 2),
+   699→    })
+   700→
+   701→with open('{}/fx_analysis_data.json'.format(OUT), 'w', encoding='utf-8') as f:
+   702→    json.dump(fx_data, f, ensure_ascii=False, indent=2)
+   703→
+   704→print("\n=== ALL CHARTS + DATA GENERATED (10-Year) ===")
+   705→print(f"Base annualized return: {data['base_annualized']}%")
+   706→print(f"Total scenarios: {data['total_scenarios']}, Loss: {data['loss_scenarios']}")
+   707→print(f"Range: {data['worst']['annualized']}% ~ {data['best']['annualized']}%")
