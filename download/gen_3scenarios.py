@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-PZC Group — JPY Property 3-Scenario Comparison Card
-Matching the style of the uploaded reference image
+PZC Group — JPY Property 3-Scenario Comparison Card (10-Year)
+Based on research-backed property price forecasts
+保守: 房價-1.5%/年  |  最可能: 房價+2.5%/年  |  樂觀: 房價+5.0%/年
+All at base FX rate (JPY/HKD 19.5)
 """
 import matplotlib
 matplotlib.use('Agg')
@@ -21,82 +23,81 @@ OUT = '/home/z/my-project/download/ppt_charts'
 # ── Colors ──
 DARK_BG   = '#0F0F0F'
 CARD_BG   = '#1A1A1E'
-CONSERVATIVE = '#F39C12'   # orange
-LIKELY      = '#2ECC71'   # green
-OPTIMISTIC  = '#1E8449'   # dark green
+CONSERVATIVE = '#F39C12'
+LIKELY      = '#2ECC71'
+OPTIMISTIC  = '#1E8449'
 WHITE  = '#FFFFFF'
 GREY   = '#888888'
 GOLD   = '#C9A84C'
 
-# ── Data (10-year holding) ──
-# Conservative: worst stress test (崩盤-22% + JPY貶31%) = 1.29% annualized
-# Most Likely: base (持平0% + 基準匯率) = 6.39% annualized  
-# Optimistic: best (增長+48% + JPY升+25%) = 13.47% annualized
+# ── Investment parameters ──
+invested_hkd = 2_400_000
+jpy_prop = 78_000_000
+fx_base = 19.5
+net_rent_jpy = 2_094_462  # per year
+hold = 10
+balance_at_exit = 11_990_939  # mortgage remaining at year 10
 
-invested = 2_400_000
-ann_cons = 1.29
-ann_likely = 6.39
-ann_opt = 13.47
-
-total_cons = invested * (1 + ann_cons/100)**10
-total_likely = invested * (1 + ann_likely/100)**10
-total_opt = invested * (1 + ann_opt/100)**10
-
-roi_cons = (total_cons - invested) / invested * 100
-roi_likely = (total_likely - invested) / invested * 100
-roi_opt = (total_opt - invested) / invested * 100
-
-scenarios = [
+# ── 3 Scenarios: property price annual change at base FX ──
+scenarios_data = [
     {
         'label': '保守',
-        'subtitle': '年化回報率 1.29%\n(房價跌22% + JPY貶31%)',
-        'total': total_cons,
-        'roi': roi_cons,
-        'note': '240萬投入 → 10年後 {:,.0f}萬'.format(total_cons/10000),
+        'prop_ann': -0.015,
         'color': CONSERVATIVE,
-        'ann_display': '1.29%',
+        'reason': '人口下降加速\nBOJ加息超預期\n全球经济衰退',
     },
     {
         'label': '最可能',
-        'subtitle': '年化回報率 6.39%\n(房價持平 + 基準匯率)',
-        'total': total_likely,
-        'roi': roi_likely,
-        'note': '240萬投入 → 10年後 {:,.0f}萬'.format(total_likely/10000),
+        'prop_ann': 0.025,
         'color': LIKELY,
-        'ann_display': '6.39%',
+        'reason': '延續當前趨勢\n通脹2~3%支撐\n供應持續減少',
     },
     {
         'label': '樂觀',
-        'subtitle': '年化回報率 13.47%\n(房價漲48% + JPY升25%)',
-        'total': total_opt,
-        'roi': roi_opt,
-        'note': '240萬投入 → 10年後 {:,.0f}萬'.format(total_opt/10000),
+        'prop_ann': 0.05,
         'color': OPTIMISTIC,
-        'ann_display': '13.47%',
+        'reason': '日圓偏弱吸引外資\n通脹超預期\n供應嚴重不足',
     },
 ]
 
-fig, ax = plt.subplots(figsize=(14, 7))
+for s in scenarios_data:
+    prop_10y = jpy_prop * (1 + s['prop_ann'])**hold
+    net_exit_jpy = prop_10y - balance_at_exit
+    net_exit_hkd = net_exit_jpy / fx_base
+    rent_10y_hkd = (net_rent_jpy / fx_base) * hold
+    total_hkd = rent_10y_hkd + net_exit_hkd
+    roi = (total_hkd - invested_hkd) / invested_hkd * 100
+    ann = ((total_hkd / invested_hkd)**(1/hold) - 1) * 100
+    s['prop_10y'] = prop_10y
+    s['total_hkd'] = total_hkd
+    s['roi'] = roi
+    s['ann'] = ann
+    s['prop_change_pct'] = (prop_10y / jpy_prop - 1) * 100
+
+# ── Draw ──
+fig, ax = plt.subplots(figsize=(14, 7.5))
 fig.patch.set_facecolor(DARK_BG)
 ax.set_facecolor(DARK_BG)
 ax.set_xlim(0, 14)
-ax.set_ylim(0, 7)
+ax.set_ylim(0, 7.5)
 ax.axis('off')
 
 # ── Title ──
-ax.text(7, 6.5, '10年後你有幾多錢？', fontsize=28, fontweight='bold',
-        color=WHITE, ha='center', va='center', fontfamily='Sarasa Mono SC')
-ax.text(7, 6.05, '日本物業投資 HKD 2,400,000 | 40% LTV @ 3% | 6%租金回報 | 10年持倉期',
-        fontsize=11, color=GREY, ha='center', va='center', fontfamily='Sarasa Mono SC')
+ax.text(7, 7.0, '10年後你有幾多錢？', fontsize=30, fontweight='bold',
+        color=WHITE, ha='center', va='center')
+ax.text(7, 6.5, '日本物業投資 HKD 2,400,000 ｜ 40% LTV @ 3% ｜ 6%租金回報 ｜ 10年持倉期',
+        fontsize=10.5, color=GREY, ha='center', va='center')
+ax.text(7, 6.2, '假設儲蓄不變，基準匯率（JPY/HKD 19.5）下作預測',
+        fontsize=9.5, color='#666666', ha='center', va='center')
 
 # ── 3 Cards ──
 card_w = 3.8
-card_h = 4.5
-card_y = 0.8
+card_h = 4.8
+card_y = 0.65
 gap = 0.55
 start_x = (14 - 3*card_w - 2*gap) / 2
 
-for i, s in enumerate(scenarios):
+for i, s in enumerate(scenarios_data):
     x = start_x + i * (card_w + gap)
     c = s['color']
     
@@ -107,45 +108,56 @@ for i, s in enumerate(scenarios):
                                    linewidth=2.5)
     ax.add_patch(card)
     
-    # Strategy label (colored bar at top)
-    label_bar = patches.FancyBboxPatch((x + 0.3, card_y + card_h - 0.7), card_w - 0.6, 0.5,
+    # Strategy label bar
+    label_bar = patches.FancyBboxPatch((x + 0.3, card_y + card_h - 0.65), card_w - 0.6, 0.45,
                                         boxstyle="round,pad=0.08",
                                         facecolor=c, edgecolor='none', alpha=0.9)
     ax.add_patch(label_bar)
-    ax.text(x + card_w/2, card_y + card_h - 0.45, s['label'],
+    ax.text(x + card_w/2, card_y + card_h - 0.425, s['label'],
             fontsize=16, fontweight='bold', color=WHITE, ha='center', va='center')
     
-    # Subtitle (scenario description)
-    ax.text(x + card_w/2, card_y + card_h - 1.1, s['subtitle'],
-            fontsize=9, color=GREY, ha='center', va='center', linespacing=1.4)
+    # Property price change
+    prop_sign = '+' if s['prop_change_pct'] >= 0 else ''
+    ax.text(x + card_w/2, card_y + card_h - 1.05,
+            '10年房價變動: {}{:.1f}%'.format(prop_sign, s['prop_change_pct']),
+            fontsize=10, color=GREY, ha='center', va='center')
+    
+    # Reason bullets
+    ax.text(x + card_w/2, card_y + card_h - 1.55, s['reason'],
+            fontsize=8.5, color='#777777', ha='center', va='center', linespacing=1.5)
     
     # Total amount (big number)
-    total_str = 'HKD {:,.0f}'.format(s['total'])
-    ax.text(x + card_w/2, card_y + card_h/2 - 0.2, total_str,
-            fontsize=22, fontweight='bold', color=WHITE, ha='center', va='center')
+    total_str = 'HKD {:,.0f}'.format(s['total_hkd'])
+    ax.text(x + card_w/2, card_y + card_h/2 - 0.45, total_str,
+            fontsize=23, fontweight='bold', color=WHITE, ha='center', va='center')
     
     # Annualized return
-    ax.text(x + card_w/2, card_y + card_h/2 - 0.7, '年化回報 {}'.format(s['ann_display']),
-            fontsize=13, fontweight='bold', color=c, ha='center', va='center')
+    ax.text(x + card_w/2, card_y + card_h/2 - 1.0,
+            '年化回報 {:.2f}%'.format(s['ann']),
+            fontsize=14, fontweight='bold', color=c, ha='center', va='center')
     
-    # ROI
-    ax.text(x + card_w/2, card_y + card_h/2 - 1.15, '10年總回報 +{:.1f}%'.format(s['roi']),
+    # Total ROI
+    ax.text(x + card_w/2, card_y + card_h/2 - 1.45,
+            '10年總回報 +{:.1f}%'.format(s['roi']),
             fontsize=11, color='#AAAAAA', ha='center', va='center')
     
     # Bottom note
-    ax.text(x + card_w/2, card_y + 0.45, s['note'],
+    ax.text(x + card_w/2, card_y + 0.4,
+            '240萬投入，10年後 {:,.0f}萬'.format(s['total_hkd']/10000),
             fontsize=9.5, color=GREY, ha='center', va='center')
 
 # ── Bottom disclaimer ──
-ax.text(7, 0.3, 'PZC Group 百盛大通 | MCLUB FX Risk Modeling Service | 基於84個壓力測試情景分析，0個蝕本情景 | 本資料僅供參考分析',
-        fontsize=8, color='#555555', ha='center', va='center')
+ax.text(7, 0.25,
+        'PZC Group 百盛大通 ｜ MCLUB FX Risk Modeling Service ｜ '
+        '房價預測基於2025-2026市場數據及業界CAGR 2.74% ｜ 本資料僅供參考分析',
+        fontsize=7.5, color='#444444', ha='center', va='center')
 
-plt.tight_layout(pad=0.5)
+plt.tight_layout(pad=0.3)
 plt.savefig('{}/ten_year_3scenarios.png'.format(OUT), dpi=200, bbox_inches='tight',
             facecolor=DARK_BG, edgecolor='none')
 plt.close()
 
 print("OK ten_year_3scenarios.png")
-print(f"Conservative: HKD {total_cons:,.0f} (年化 {ann_cons}%)")
-print(f"Most Likely:  HKD {total_likely:,.0f} (年化 {ann_likely}%)")
-print(f"Optimistic:   HKD {total_opt:,.0f} (年化 {ann_opt}%)")
+for s in scenarios_data:
+    print("{}: HKD {:,.0f} (年化 {:.2f}%, ROI +{:.1f}%, 房價{:+.1f}%)".format(
+        s['label'], s['total_hkd'], s['ann'], s['roi'], s['prop_change_pct']))
