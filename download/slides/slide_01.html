@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1280px;height:720px;overflow:hidden;font-family:'Noto Sans SC',sans-serif;position:relative}
+.bg{position:absolute;inset:0;background:linear-gradient(135deg,#060d1f 0%,#0a1a3a 40%,#0d2247 100%);z-index:0}
+.bg-orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.08;z-index:1}
+.orb1{width:500px;height:500px;background:#3a6ea5;top:-100px;right:-100px}
+.orb2{width:400px;height:400px;background:#1a3a6a;bottom:-80px;left:-80px}
+.content{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.header{position:absolute;top:36px;left:48px;z-index:10;font-size:12px;color:rgba(255,255,255,0.5);letter-spacing:2px;font-weight:300}
+.header-right{position:absolute;top:36px;right:48px;z-index:10;font-size:12px;color:rgba(255,255,255,0.5);letter-spacing:1px}
+.main-title{font-family:'Noto Serif SC',serif;font-size:68px;font-weight:700;color:#fff;text-align:center;line-height:1.15;letter-spacing:2px;margin-bottom:16px}
+.main-title span{display:block;font-size:32px;font-weight:300;color:rgba(255,255,255,0.7);margin-top:8px;letter-spacing:4px}
+.divider{width:80px;height:2px;background:rgba(255,255,255,0.4);margin:24px auto}
+.subtitle{font-size:15px;color:rgba(255,255,255,0.45);text-align:center;letter-spacing:6px;margin-bottom:40px}
+.features{display:flex;gap:32px;justify-content:center;align-items:center}
+.features span{font-size:13px;color:rgba(255,255,255,0.5);letter-spacing:1px}
+.dot{width:4px;height:4px;background:rgba(255,255,255,0.3);border-radius:50%;display:inline-block}
+.footer-left{position:absolute;bottom:36px;left:48px;z-index:10;font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:1px}
+.dots{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10}
+.dots span{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2)}
+.dots span:first-child{background:rgba(255,255,255,0.8)}
+</style></head><body>
+<div class="bg"></div><div class="bg-orb orb1"></div><div class="bg-orb orb2"></div>
+<div class="header">JAPAN PROPERTY INVESTMENT &middot; PZC GROUP</div>
+<div class="header-right">01 / 06</div>
+<div class="content">
+  <div class="main-title">&sup3;&Eacute;&frac34;&frac14;&sup1;&Iuml;&sup3;&ordf;&Ocirc;&Oacute;&para;&ETH;&para;&brvbar;&shy;<span>&sup1;&deg;&iquest;&micro;&sup1;&frac12;&ETH;&para;&Otilde;&iquest;&micro;&Agrave;&Oacute;&para;&ETH;&para;&brvbar;&shy;&iquest;&ETH;&sup2;&sup1;&cedil;</span></div>
+  <div class="divider"></div>
+  <div class="subtitle">FX RISK &middot; STRESS TESTING &middot; RETURN ANALYSIS</div>
+  <div class="features">
+    <span>&sup3;&Eacute;&ordm;&sup1;&Agrave;&sup1;&deg;&OElig;&para;&ETH;</span><span class="dot"></span>
+    <span>&sup1;&iquest;&sup1;&pound;&cedil;&micro;&Aring;&sup1;&frasl;</span><span class="dot"></span>
+    <span>&sup1;&deg;&iquest;&micro;&sup1;&frac12;&ETH;&para;&Otilde;&iquest;&micro;</span><span class="dot"></span>
+    <span>15&sup2;&ocirc;&sup1;&circ;&sup1;&frac12;&ETH;&para;&ETH;&sup3;&uml;&thinsp;&thinsp;&Ouml;&frac14;</span>
+  </div>
+</div>
+<div class="footer-left">PZC Group &sup1;&frac34;&frac12;&Uuml;&acute;&cedil;&acute;&szlig;&acute;&eth; &mdash; Wealth Management</div>
+<div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+</body></html>
