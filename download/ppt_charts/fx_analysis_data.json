@@ -1,0 +1,110 @@
+{
+  "summary": {
+    "property_hkd": 4000000,
+    "property_jpy": 78000000.0,
+    "fx_rate": 19.5,
+    "down_payment_jpy": 46800000.0,
+    "down_payment_hkd": 2400000.0,
+    "loan_jpy": 31200000.0,
+    "loan_hkd": 1600000.0,
+    "monthly_payment_jpy": 215461.47,
+    "annual_payment_jpy": 2585537.66,
+    "gross_rent_jpy": 4680000.0,
+    "net_rent_jpy": 2094462.34,
+    "net_yield_pct": 4.48,
+    "mortgage_term_years": 15
+  },
+  "scenarios": [
+    {
+      "label": "JPY大幅升值 (+20%)",
+      "fx_rate": 15.6,
+      "change_pct": -20.0,
+      "jpy_move": 20.0,
+      "annual_net_hkd": 134260.41,
+      "net_yield_pct": 5.59,
+      "cum_15y_hkd": 2013906.09,
+      "exit_value_hkd": 5000000.0,
+      "total_return_hkd": 7013906.09,
+      "roi_pct": 192.25,
+      "annualized_roi": 7.41
+    },
+    {
+      "label": "JPY升值 (+10%)",
+      "fx_rate": 17.55,
+      "change_pct": -10.0,
+      "jpy_move": 10.0,
+      "annual_net_hkd": 119342.58,
+      "net_yield_pct": 4.97,
+      "cum_15y_hkd": 1790138.75,
+      "exit_value_hkd": 4444444.44,
+      "total_return_hkd": 6234583.2,
+      "roi_pct": 159.77,
+      "annualized_roi": 6.57
+    },
+    {
+      "label": "JPY小幅升值 (+5%)",
+      "fx_rate": 18.52,
+      "change_pct": -5.0,
+      "jpy_move": 5.0,
+      "annual_net_hkd": 113061.39,
+      "net_yield_pct": 4.71,
+      "cum_15y_hkd": 1695920.92,
+      "exit_value_hkd": 4210526.32,
+      "total_return_hkd": 5906447.24,
+      "roi_pct": 146.1,
+      "annualized_roi": 6.19
+    },
+    {
+      "label": "基準情景 (現匯率)",
+      "fx_rate": 19.5,
+      "change_pct": 0,
+      "jpy_move": 0,
+      "annual_net_hkd": 107408.33,
+      "net_yield_pct": 4.48,
+      "cum_15y_hkd": 1611124.88,
+      "exit_value_hkd": 4000000.0,
+      "total_return_hkd": 5611124.88,
+      "roi_pct": 133.8,
+      "annualized_roi": 5.83
+    },
+    {
+      "label": "JPY小幅貶值 (-5%)",
+      "fx_rate": 20.48,
+      "change_pct": 5.0,
+      "jpy_move": -5.0,
+      "annual_net_hkd": 102293.64,
+      "net_yield_pct": 4.26,
+      "cum_15y_hkd": 1534404.64,
+      "exit_value_hkd": 3809523.81,
+      "total_return_hkd": 5343928.45,
+      "roi_pct": 122.66,
+      "annualized_roi": 5.48
+    },
+    {
+      "label": "JPY貶值 (-10%)",
+      "fx_rate": 21.45,
+      "change_pct": 10.0,
+      "jpy_move": -10.0,
+      "annual_net_hkd": 97643.93,
+      "net_yield_pct": 4.07,
+      "cum_15y_hkd": 1464658.98,
+      "exit_value_hkd": 3636363.64,
+      "total_return_hkd": 5101022.61,
+      "roi_pct": 112.54,
+      "annualized_roi": 5.15
+    },
+    {
+      "label": "JPY大幅貶值 (-20%)",
+      "fx_rate": 23.4,
+      "change_pct": 20.0,
+      "jpy_move": -20.0,
+      "annual_net_hkd": 89506.94,
+      "net_yield_pct": 3.73,
+      "cum_15y_hkd": 1342604.06,
+      "exit_value_hkd": 3333333.33,
+      "total_return_hkd": 4675937.4,
+      "roi_pct": 94.83,
+      "annualized_roi": 4.55
+    }
+  ]
+}
