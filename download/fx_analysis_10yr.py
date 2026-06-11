@@ -363,9 +363,9 @@ fig.patch.set_facecolor(LIGHT_BG)
 fig.suptitle('回報來源分解 — 10年持倉期', fontsize=15, fontweight='bold', color=DARK, y=1.02)
 
 price_scenarios = [
-    ('房價下跌2%', -0.02),
+    ('房價年跌-2.47%', -0.0247),
     ('房價持平0%', 0.0),
-    ('房價增長3%', 0.03),
+    ('房價年增+1.77%', 0.0177),
 ]
 
 for idx, (label, annual_price_growth) in enumerate(price_scenarios):
@@ -437,16 +437,17 @@ var1_fx = [
     {"label": "2022危機-31%", "rate_change": 0.31, "tier": "H"},
 ]
 
-# Variable 2: Property Value (7 scenarios, 10-year horizon)
-# Recalculate annual rates for 10-year period
+# Variable 2: Property Value (7 scenarios)
+# Use SAME annual rates as 15-year model; 10-yr total is naturally smaller
+# Labels show the ORIGINAL 15-year target for consistency; total_change shows actual 10-yr
 var2_prop = [
-    {"label": "崩盤 -30%",  "annual_rate": -0.0351},  # (0.7)^(1/10)-1
-    {"label": "下跌 -15%",  "annual_rate": -0.0162},  # (0.85)^(1/10)-1
+    {"label": "崩盤 -22%",  "annual_rate": -0.0247},  # 15yr label "崩盤 -30%"
+    {"label": "下跌 -10%",  "annual_rate": -0.0108},  # 15yr label "下跌 -15%"
     {"label": "持平 0%",    "annual_rate":  0.0},
-    {"label": "增長 +15%",  "annual_rate":  0.0141},  # (1.15)^(1/10)-1
-    {"label": "增長 +30%",  "annual_rate":  0.0266},  # (1.30)^(1/10)-1
-    {"label": "增長 +50%",  "annual_rate":  0.0414},  # (1.50)^(1/10)-1
-    {"label": "增長 +80%",  "annual_rate":  0.0606},  # (1.80)^(1/10)-1
+    {"label": "增長 +10%",  "annual_rate":  0.0094},  # 15yr label "增長 +15%"
+    {"label": "增長 +19%",  "annual_rate":  0.0177},  # 15yr label "增長 +30%"
+    {"label": "增長 +31%",  "annual_rate":  0.0274},  # 15yr label "增長 +50%"
+    {"label": "增長 +48%",  "annual_rate":  0.0398},  # 15yr label "增長 +80%"
 ]
 
 # Calculate 10-year total changes
