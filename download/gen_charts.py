@@ -13,7 +13,7 @@ plt.rcParams['axes.unicode_minus'] = False
 
 OUT = '/home/z/my-project/download'
 
-# ── Historical Data ──
+# Historical Data
 usd_jpy = {
     1995:93.97, 1996:108.78, 1997:120.99, 1998:130.91, 1999:113.73,
     2000:107.77, 2001:121.53, 2002:125.22, 2003:115.94, 2004:108.15,
@@ -26,8 +26,8 @@ usd_jpy = {
 prop_idx = {
     1995:145.0, 1996:138.0, 1997:130.0, 1998:120.0, 1999:112.0,
     2000:105.0, 2001:98.0,  2002:93.0,  2003:89.0,  2004:87.0,
-    2005:87.0,  2006:88.0,  2007:88.0,  2008:86.0,  2009:84.0,
-    2010:84.0,  2011:82.0,  2012:83.0,  2013:86.0,  2014:90.0,
+    2005:87.0, 2006:88.0, 2007:88.0, 2008:86.0, 2009:84.0,
+    2010:84.0, 2011:82.0, 2012:83.0, 2013:86.0, 2014:90.0,
     2015:100.0, 2016:103.0, 2017:107.0, 2018:110.0, 2019:112.0,
     2020:110.0, 2021:113.0, 2022:117.0, 2023:122.0, 2024:130.0,
     2025:136.0
@@ -52,29 +52,29 @@ pr_w_val = pr_10yr[idx_pr_worst]; pr_w_yr = yr_10_start[idx_pr_worst]
 pr_b_val = pr_10yr[idx_pr_best]; pr_b_yr = yr_10_start[idx_pr_best]
 pr_a_val = sum(pr_10yr)/len(pr_10yr)
 
-# ── Chart 1: 30-year dual-axis ──
+# Chart 1: 30-year dual-axis
 fig, ax1 = plt.subplots(figsize=(10, 4.2))
-c1, c2 = '#207591', '#82713e'
+c1, c2 = '#1f7692', '#8b7a3a'
 ax1.plot(years, jpy_hkd, color=c1, lw=2, label='JPY/HKD')
 ax1.set_ylabel('JPY/HKD', color=c1, fontsize=10)
 ax1.tick_params(axis='y', labelcolor=c1)
 ax1.set_ylim(550, 1250)
 ax2 = ax1.twinx()
-ax2.plot(years, pvals, color=c2, lw=2, ls='--', label='Property Index (2015=100)')
-ax2.set_ylabel('Property Index', color=c2, fontsize=10)
+ax2.plot(years, pvals, color=c2, lw=2, ls='--', label='日本住宅物業指數 (2015=100)')
+ax2.set_ylabel('物業指數', color=c2, fontsize=10)
 ax2.tick_params(axis='y', labelcolor=c2)
 ax2.set_ylim(70, 170)
 h1, l1 = ax1.get_legend_handles_labels()
 h2, l2 = ax2.get_legend_handles_labels()
 ax1.legend(h1+h2, l1+l2, loc='upper left', fontsize=9)
-ax1.set_title('30-Year Trend: JPY/HKD vs Japan Residential Property Price', fontsize=11, fontweight='bold', pad=12)
+ax1.set_title('30年趨勢：JPY/HKD 匯率 vs 日本住宅物業價格', fontsize=11, fontweight='bold', pad=12)
 ax1.grid(True, alpha=0.3, ls='--')
 ax1.set_xlim(1995, 2025)
 plt.tight_layout()
 plt.savefig(f'{OUT}/chart_history.png', dpi=200, bbox_inches='tight', facecolor='white')
 plt.close()
 
-# ── UPDATED MODEL: HKD 3.2M ──
+# Model params: HKD 3.2M
 ENTRY_FX = 19.5
 PRICE = 62_400_000  # HKD 3.2M * 19.5
 LTV = 0.40
@@ -123,21 +123,21 @@ im = ax.imshow(mat, cmap='RdYlGn', norm=norm, aspect='auto')
 ax.set_xticks(range(7))
 ax.set_xticklabels([f'{f:.1f}' for f in FXS], fontsize=9)
 ax.set_yticks(range(4))
-ax.set_yticklabels([f'{r*100:+.0f}%/yr' for r in PAS], fontsize=9)
-ax.set_xlabel('Exit JPY/HKD Rate', fontsize=10)
-ax.set_ylabel('Property Price Change', fontsize=10)
-ax.set_title('ROI Heatmap (10-Year Holding, % Return on Equity)', fontsize=11, fontweight='bold', pad=10)
+ax.set_yticklabels([f'{r*100:+.0f}%/年' for r in PAS], fontsize=9)
+ax.set_xlabel('退出時 JPY/HKD 匯率', fontsize=10)
+ax.set_ylabel('物業價格年變動', fontsize=10)
+ax.set_title('投資回報率熱力圖（持有10年，股本回報率%）', fontsize=11, fontweight='bold', pad=10)
 for i in range(4):
     for j in range(7):
         v = mat[i][j]
         c = 'white' if abs(v)>50 or v<0 else 'black'
         ax.text(j, i, f'{v:.0f}%', ha='center', va='center', fontsize=9, color=c, fontweight='bold')
-plt.colorbar(im, ax=ax, label='ROI (%)', shrink=0.8)
+plt.colorbar(im, ax=ax, label='回報率 (%)', shrink=0.8)
 plt.tight_layout()
 plt.savefig(f'{OUT}/chart_heatmap.png', dpi=200, bbox_inches='tight', facecolor='white')
 plt.close()
 
-# ── Chart 3: Historical 3-scenario summary BAR chart ──
+# Chart 3: Historical 3-scenario summary
 def hist_sc(fx_pct, pr_pct, t=10):
     efx = ENTRY_FX*(1+fx_pct/100)
     pa2 = (1+pr_pct/100)**(1/t)-1
@@ -157,19 +157,19 @@ hb = hist_sc(fx_b_val, pr_b_val)
 fig, axes = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'width_ratios': [1, 1.2]})
 
 # Left: 30-year change bars
-categories = ['FX (JPY/HKD)\n30yr Change', 'Property Price\n30yr Change']
+categories = ['JPY/HKD\n10年變動', '物業價格\n10年變動']
 worst_vals = [fx_w_val, pr_w_val]
 avg_vals = [fx_a_val, pr_a_val]
 best_vals = [fx_b_val, pr_b_val]
 x = np.arange(len(categories))
 w = 0.25
-bars1 = axes[0].bar(x - w, worst_vals, w, label='Worst 10yr', color='#904c46', alpha=0.85)
-bars2 = axes[0].bar(x, avg_vals, w, label='Average 10yr', color='#a5884e', alpha=0.85)
-bars3 = axes[0].bar(x + w, best_vals, w, label='Best 10yr', color='#3b8754', alpha=0.85)
+bars1 = axes[0].bar(x - w, worst_vals, w, label='最差10年', color='#904c46', alpha=0.85)
+bars2 = axes[0].bar(x, avg_vals, w, label='平均10年', color='#a5884e', alpha=0.85)
+bars3 = axes[0].bar(x + w, best_vals, w, label='最佳10年', color='#3b8754', alpha=0.85)
 axes[0].set_xticks(x)
 axes[0].set_xticklabels(categories, fontsize=8.5)
-axes[0].set_ylabel('10-Year Change (%)', fontsize=9)
-axes[0].set_title('Historical 10-Year Changes', fontsize=10, fontweight='bold')
+axes[0].set_ylabel('10年變動 (%)', fontsize=9)
+axes[0].set_title('歷史10年實際變動幅度', fontsize=10, fontweight='bold')
 axes[0].axhline(y=0, color='gray', lw=0.5)
 axes[0].legend(loc='best', fontsize=8)
 axes[0].grid(axis='y', alpha=0.3, ls='--')
@@ -180,26 +180,45 @@ for bars in [bars1, bars2, bars3]:
                     f'{h:+.1f}%', ha='center', va='bottom' if h >= 0 else 'top', fontsize=7.5)
 
 # Right: Investment ROI outcomes
-scenarios = ['Worst\nCase', 'Average\nCase', 'Best\nCase']
+scenarios = ['最差情景', '平均情景', '最佳情景']
 roi_vals = [hw['roi'], ha['roi'], hb['roi']]
 gain_vals = [hw['gain']/1e4, ha['gain']/1e4, hb['gain']/1e4]
 bar_colors = ['#904c46', '#a5884e', '#3b8754']
 bars = axes[1].bar(scenarios, roi_vals, color=bar_colors, alpha=0.85, width=0.55)
-axes[1].set_ylabel('ROI (%)', fontsize=9)
-axes[1].set_title('Your Investment Return (10yr, based on history)', fontsize=10, fontweight='bold')
+axes[1].set_ylabel('回報率 (%)', fontsize=9)
+axes[1].set_title('您的投資回報（10年，基於歷史數據）', fontsize=10, fontweight='bold')
 axes[1].axhline(y=0, color='gray', lw=0.5)
 axes[1].grid(axis='y', alpha=0.3, ls='--')
 for bar, roi, gain in zip(bars, roi_vals, gain_vals):
     h = bar.get_height()
     sign = '+' if gain >= 0 else ''
     axes[1].text(bar.get_x() + bar.get_width()/2, h + (3 if h >= 0 else -8),
-                f'{roi:+.1f}%\n{sign}HKD {gain:.0f} wan',
+                f'{roi:+.1f}%\n{sign}HKD {gain:.0f}萬',
                 ha='center', va='bottom' if h >= 0 else 'top', fontsize=8, fontweight='bold')
 
 plt.tight_layout()
 plt.savefig(f'{OUT}/chart_summary.png', dpi=200, bbox_inches='tight', facecolor='white')
 plt.close()
 print("Summary chart saved")
+
+# Chart 4: Cashflow breakdown bar chart
+fig, ax = plt.subplots(figsize=(6, 3.5))
+cf_items = ['毛租金收入', '稅+保險', '按揭供款', '淨現金流']
+cf_vals = [AR/1e4, -AC/1e4, -AM/1e4, CF/1e4]
+cf_colors = ['#3b8754', '#904c46', '#904c46', '#1f7692']
+bars = ax.barh(cf_items, cf_vals, color=cf_colors, alpha=0.85, height=0.5)
+ax.set_xlabel('金額（萬日元/年）', fontsize=9)
+ax.set_title('年度現金流結構', fontsize=10, fontweight='bold')
+ax.axvline(x=0, color='gray', lw=0.5)
+ax.grid(axis='x', alpha=0.3, ls='--')
+for bar, val in zip(bars, cf_vals):
+    sign = '+' if val >= 0 else ''
+    ax.text(val + (1 if val >= 0 else -1), bar.get_y() + bar.get_height()/2,
+            f'{sign}{val:.1f}萬', ha='left' if val >= 0 else 'right', va='center', fontsize=8)
+plt.tight_layout()
+plt.savefig(f'{OUT}/chart_cashflow.png', dpi=200, bbox_inches='tight', facecolor='white')
+plt.close()
+print("Cashflow chart saved")
 
 # Save data
 out = {
@@ -216,7 +235,7 @@ out = {
         'pr_best10':pr_b_val,'pr_best10_yr':f"{pr_b_yr}-{pr_b_yr+10}",
         'pr_avg10':pr_a_val,
     },
-    'hist':{'worst':{k:round(v,2) for k,v in hw.items()},'avg':{k:round(v,2) for k,v in ha.items()},'best':{k:round(v,2) for k,v in hb.items()}},
+    'hist':{'worst':{k:round(v,2) if isinstance(v,float) else v for k,v in hw.items()},'avg':{k:round(v,2) if isinstance(v,float) else v for k,v in ha.items()},'best':{k:round(v,2) if isinstance(v,float) else v for k,v in hb.items()}},
     'scenarios':[{k:round(v,2) if isinstance(v,float) else v for k,v in s.items()} for s in scens],
     'loan_bal':{t:round(lb(t),0) for t in HS},
 }

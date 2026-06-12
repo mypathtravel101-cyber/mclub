@@ -5,17 +5,15 @@
 <style>
 @page { size: 210mm 297mm; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { width: 210mm; height: 297mm; background: #f1f0ee; font-family: 'Noto Serif SC', 'SimHei', serif; }
+body { width: 210mm; height: 297mm; background: #edecea; font-family: 'Noto Serif SC', 'WenQuanYi Zen Hei', serif; }
 .cover {
   width: 210mm; height: 297mm; position: relative;
-  background: linear-gradient(160deg, #f1f0ee 0%, #e9e8e7 100%);
+  background: linear-gradient(160deg, #edecea 0%, #e5e3df 100%);
 }
-/* Layer 0: Background fill */
 .bg-fill {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  background: #f1f0ee;
+  background: #edecea;
 }
-/* Layer 1: Decorative */
 .deco-line-v {
   position: absolute; left: 8%; top: 12%; width: 1px; height: 35%;
   background: #d5cfbe;
@@ -26,30 +24,29 @@ body { width: 210mm; height: 297mm; background: #f1f0ee; font-family: 'Noto Seri
 }
 .deco-block {
   position: absolute; right: 0; top: 0; width: 35%; height: 100%;
-  background: linear-gradient(180deg, rgba(32,117,145,0.04) 0%, rgba(130,113,62,0.06) 100%);
+  background: linear-gradient(180deg, rgba(31,118,146,0.04) 0%, rgba(139,122,58,0.06) 100%);
   clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%);
 }
-/* Layer 2: Text */
 .kicker {
   position: absolute; left: 10%; top: 22%;
-  font-size: 11pt; letter-spacing: 4pt; color: #7b7972;
+  font-size: 11pt; letter-spacing: 4pt; color: #7a766f;
   text-transform: uppercase; font-weight: normal;
 }
 .hero {
   position: absolute; left: 10%; top: 28%; width: 55%;
-  font-size: 32pt; font-weight: 700; color: #262523;
+  font-size: 30pt; font-weight: 700; color: #1b1a18;
   line-height: 1.3;
 }
 .hero-accent {
-  color: #207591;
+  color: #1f7692;
 }
 .summary-block {
   position: absolute; left: 10%; top: 52%; width: 50%;
-  font-size: 11pt; color: #7b7972; line-height: 1.8;
+  font-size: 11pt; color: #7a766f; line-height: 1.8;
 }
 .meta-block {
   position: absolute; left: 10%; bottom: 12%;
-  font-size: 9.5pt; color: #7b7972; line-height: 1.7;
+  font-size: 9.5pt; color: #7a766f; line-height: 1.7;
 }
 .footer-line {
   position: absolute; left: 10%; bottom: 8%; width: 30%; height: 1px;
@@ -58,12 +55,10 @@ body { width: 210mm; height: 297mm; background: #f1f0ee; font-family: 'Noto Seri
 .footer-text {
   position: absolute; left: 10%; bottom: 5%;
   font-size: 8pt; color: #a09d95; letter-spacing: 2pt;
-  text-transform: uppercase;
 }
-/* Accent dot */
 .accent-dot {
   position: absolute; left: 10%; top: 47.5%; width: 6px; height: 6px;
-  background: #207591; border-radius: 50%;
+  background: #1f7692; border-radius: 50%;
 }
 </style>
 </head>
@@ -74,22 +69,22 @@ body { width: 210mm; height: 297mm; background: #f1f0ee; font-family: 'Noto Seri
   <div class="deco-line-v"></div>
   <div class="deco-line-h"></div>
   <div class="accent-dot"></div>
-  <div class="kicker">Investment Risk Analysis Report</div>
+  <div class="kicker">投資風險分析報告</div>
   <div class="hero">
-    <span class="hero-accent">84 Scenario</span><br>
-    Risk Model<br>
-    <span style="font-size:22pt; font-weight:400; color:#7b7972;">Japan Property Investment</span>
+    <span class="hero-accent">84情景</span><br>
+    風險模型<br>
+    <span style="font-size:20pt; font-weight:400; color:#7a766f;">日本物業投資</span>
   </div>
   <div class="summary-block">
-    Based on 30 years of historical FX and property data, this report models 84 possible investment outcomes across 7 exchange rate scenarios, 4 property price trajectories, and 3 holding periods to provide a comprehensive risk assessment for Hong Kong investors.
+    基於30年歷史匯率及物業價格數據，本報告透過7種匯率情景、4種物業價格走勢及3種持有期的交叉組合，共生成84個投資情景，為香港投資者提供全面的風險評估分析。
   </div>
   <div class="meta-block">
-    Sample Property: Osaka Ten-no-Chaya Area<br>
-    Investment: JPY 62,400,000 / HKD 3,200,000<br>
-    Model: 7 FX x 4 Property Price x 3 Holding Periods
+    標的物業：大阪天王寺茶屋町地區<br>
+    投資金額：日圓 62,400,000 / 港幣 3,200,000<br>
+    模型：7 匯率 x 4 物業價格 x 3 持有期
   </div>
   <div class="footer-line"></div>
-  <div class="footer-text">Confidential</div>
+  <div class="footer-text">機密文件</div>
 </div>
 </body>
 </html>
