@@ -1,0 +1,81 @@
+{
+  "fixed": {
+    "prop_jpy": 78000000,
+    "prop_hkd": 4000000,
+    "fx_base": 19.5,
+    "ltv": 0.4,
+    "rate": 0.03,
+    "mtg_years": 15,
+    "hold_years": 10,
+    "down_jpy": 46800000.0,
+    "down_hkd": 2400000,
+    "loan_jpy": 31200000.0,
+    "loan_hkd": 1600000,
+    "monthly_payment_jpy": 215461,
+    "gross_rent_annual_jpy": 4680000.0,
+    "net_rent_annual_jpy": 4563000,
+    "balance_at_exit_jpy": 11990939
+  },
+  "matrix": [
+    [
+      {
+        "annualized": 13.95,
+        "total_return_hkd": 6455002,
+        "cum_rent_hkd": 2925000,
+        "net_exit_hkd": 3530002
+      },
+      {
+        "annualized": 12.16,
+        "total_return_hkd": 5164002,
+        "cum_rent_hkd": 2340000,
+        "net_exit_hkd": 2824002
+      },
+      {
+        "annualized": 10.82,
+        "total_return_hkd": 4303335,
+        "cum_rent_hkd": 1950000,
+        "net_exit_hkd": 2353335
+      }
+    ],
+    [
+      {
+        "annualized": 14.82,
+        "total_return_hkd": 7156350,
+        "cum_rent_hkd": 2925000,
+        "net_exit_hkd": 4231350
+      },
+      {
+        "annualized": 12.97,
+        "total_return_hkd": 5725080,
+        "cum_rent_hkd": 2340000,
+        "net_exit_hkd": 3385080
+      },
+      {
+        "annualized": 11.57,
+        "total_return_hkd": 4770900,
+        "cum_rent_hkd": 1950000,
+        "net_exit_hkd": 2820900
+      }
+    ],
+    [
+      {
+        "annualized": 16.4,
+        "total_return_hkd": 8556773,
+        "cum_rent_hkd": 2925000,
+        "net_exit_hkd": 5631773
+      },
+      {
+        "annualized": 14.44,
+        "total_return_hkd": 6845418,
+        "cum_rent_hkd": 2340000,
+        "net_exit_hkd": 4505418
+      },
+      {
+        "annualized": 12.94,
+        "total_return_hkd": 5704515,
+        "cum_rent_hkd": 1950000,
+        "net_exit_hkd": 3754515
+      }
+    ]
+  ]
+}
