@@ -137,3 +137,25 @@ Stage Summary:
 - Created 2 new files: src/app/api/notices/route.ts, src/components/crm/NoticesPage.tsx
 - Modified 7 files: prisma/schema.prisma, src/store/app.ts, src/components/crm/Sidebar.tsx, src/app/page.tsx, src/components/crm/DashboardPage.tsx, src/lib/seed.ts
 - All lint errors in modified src/ files resolved (pre-existing errors in download/ and ui/carousel.tsx remain unchanged)
+---
+Task ID: 1
+Agent: Main Agent
+Task: Generate Japan Property Investment 84-Scenario Risk Analysis PDF Report
+
+Work Log:
+- Loaded PDF skill (report brief, palette cascade, cover system)
+- Searched web for 30-year JPY/HKD FX and Japan property price historical data
+- Attempted web-reader for detailed data extraction (macrotrends, globalpropertyguide) - failed due to timeouts
+- Constructed 30-year historical dataset from well-known macroeconomic data (USD/JPY annual averages 1995-2025, BIS residential property index)
+- Generated 2 matplotlib charts: 30-year dual-axis history chart + 84-scenario ROI heatmap
+- Built complete 84-scenario financial model: 7 FX rates x 4 property price trajectories x 3 holding periods
+- Model parameters: JPY 78M property, 40% LTV, 3% mortgage, 15yr term, 6% yield, 0.3% costs (tax+insurance only)
+- Generated HTML cover page via Playwright/html2poster.js
+- Generated body PDF via ReportLab with 6 sections
+- Merged cover + body via pypdf
+
+Stage Summary:
+- Key results: Worst historical 10yr ROI = -30.7% (HKD -0.74M), Average = +80.4% (HKD +1.93M), Best = +299.8% (HKD +7.20M)
+- 83 out of 84 scenarios produce positive returns (98.8%)
+- Output: /home/z/my-project/download/japan_property_84scenario_report.pdf (16 pages, 370KB)
+- Supporting files: chart_history.png, chart_heatmap.png, scenario_data.json, gen_charts.py, gen_body_pdf.py, gen_pdf_cover.html
