@@ -137,7 +137,7 @@ plt.tight_layout()
 plt.savefig(f'{OUT}/chart_heatmap.png', dpi=200, bbox_inches='tight', facecolor='white')
 plt.close()
 
-# Chart 3: Historical 3-scenario summary
+# Chart 3: Historical 3-scenario summary (SAME-PERIOD methodology)
 def hist_sc(fx_pct, pr_pct, t=10):
     efx = ENTRY_FX*(1+fx_pct/100)
     pa2 = (1+pr_pct/100)**(1/t)-1
@@ -150,17 +150,34 @@ def hist_sc(fx_pct, pr_pct, t=10):
     roi = (th-EQ_HKD)/EQ_HKD*100
     return {'fx_pct':fx_pct,'pr_pct':pr_pct,'efx':efx,'ev':ev,'bl':bl,'ne':ne,'ar':ar2,'tj':tj,'th':th,'roi':roi,'gain':th-EQ_HKD}
 
-hw = hist_sc(fx_w_val, pr_w_val)
-ha = hist_sc(fx_a_val, pr_a_val)
-hb = hist_sc(fx_b_val, pr_b_val)
+# Same-period: calculate all 16 periods, pick worst/avg/best COMBINED
+sp_results = []
+for i in range(len(years)-10):
+    fxi = fx_10yr[i]
+    pri = pr_10yr[i]
+    r = hist_sc(fxi, pri, 10)
+    r['period'] = str(years[i]) + '-' + str(years[i]+10)
+    sp_results.append(r)
+
+sp_sorted = sorted(sp_results, key=lambda x: x['roi'])
+hw = sp_sorted[0]   # worst same-period
+ha_result = sp_results  # all for average
+hb = sp_sorted[-1]  # best same-period
+
+# Average across all same-period results
+ha_keys = ['fx_pct','pr_pct','efx','ev','bl','ne','ar','tj','th','roi','gain']
+ha = {}
+for k in ha_keys:
+    ha[k] = sum(r[k] for r in ha_result) / len(ha_result)
+ha['period'] = '16 periods average'
 
 fig, axes = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'width_ratios': [1, 1.2]})
 
-# Left: 30-year change bars
+# Left: 30-year change bars (same-period)
 categories = ['JPY/HKD\n10年變動', '物業價格\n10年變動']
-worst_vals = [fx_w_val, pr_w_val]
-avg_vals = [fx_a_val, pr_a_val]
-best_vals = [fx_b_val, pr_b_val]
+worst_vals = [hw['fx_pct'], hw['pr_pct']]
+avg_vals = [ha['fx_pct'], ha['pr_pct']]
+best_vals = [hb['fx_pct'], hb['pr_pct']]
 x = np.arange(len(categories))
 w = 0.25
 bars1 = axes[0].bar(x - w, worst_vals, w, label='最差10年', color='#904c46', alpha=0.85)
@@ -228,12 +245,12 @@ out = {
         'annual_net_rental':ANR,'annual_cashflow':CF,
         'fx_30yr_pct':(jpy_hkd[-1]-jpy_hkd[0])/jpy_hkd[0]*100,
         'pr_30yr_pct':(pvals[-1]-pvals[0])/pvals[0]*100,
-        'fx_worst10':fx_w_val,'fx_worst10_yr':f"{fx_w_yr}-{fx_w_yr+10}",
-        'fx_best10':fx_b_val,'fx_best10_yr':f"{fx_b_yr}-{fx_b_yr+10}",
-        'fx_avg10':fx_a_val,
-        'pr_worst10':pr_w_val,'pr_worst10_yr':f"{pr_w_yr}-{pr_w_yr+10}",
-        'pr_best10':pr_b_val,'pr_best10_yr':f"{pr_b_yr}-{pr_b_yr+10}",
-        'pr_avg10':pr_a_val,
+        'fx_worst10':hw['fx_pct'],'fx_worst10_yr':hw['period'],
+        'fx_best10':hb['fx_pct'],'fx_best10_yr':hb['period'],
+        'fx_avg10':ha['fx_pct'],
+        'pr_worst10':hw['pr_pct'],'pr_worst10_yr':hw['period'],
+        'pr_best10':hb['pr_pct'],'pr_best10_yr':hb['period'],
+        'pr_avg10':ha['pr_pct'],
     },
     'hist':{'worst':{k:round(v,2) if isinstance(v,float) else v for k,v in hw.items()},'avg':{k:round(v,2) if isinstance(v,float) else v for k,v in ha.items()},'best':{k:round(v,2) if isinstance(v,float) else v for k,v in hb.items()}},
     'scenarios':[{k:round(v,2) if isinstance(v,float) else v for k,v in s.items()} for s in scens],

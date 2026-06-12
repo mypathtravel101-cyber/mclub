@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+@page { size: 210mm 297mm; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { width: 210mm; height: 297mm; background: #edecea; font-family: 'Carlito', 'DejaVu Sans', serif; }
+.cover {
+  width: 210mm; height: 297mm; position: relative;
+  background: linear-gradient(160deg, #edecea 0%, #e5e3df 100%);
+}
+.bg-fill { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #edecea; }
+.deco-line-v { position: absolute; left: 8%; top: 12%; width: 1px; height: 35%; background: #d5cfbe; }
+.deco-line-h { position: absolute; left: 8%; top: 47%; width: 25%; height: 1px; background: #d5cfbe; }
+.deco-block { position: absolute; right: 0; top: 0; width: 35%; height: 100%; background: linear-gradient(180deg, rgba(31,118,146,0.04) 0%, rgba(139,122,58,0.06) 100%); clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%); }
+.kicker { position: absolute; left: 10%; top: 22%; font-size: 11pt; letter-spacing: 4pt; color: #7a766f; text-transform: uppercase; }
+.hero { position: absolute; left: 10%; top: 28%; width: 55%; font-size: 30pt; font-weight: 700; color: #1b1a18; line-height: 1.3; }
+.hero-accent { color: #1f7692; }
+.summary-block { position: absolute; left: 10%; top: 52%; width: 50%; font-size: 11pt; color: #7a766f; line-height: 1.8; }
+.meta-block { position: absolute; left: 10%; bottom: 12%; font-size: 9.5pt; color: #7a766f; line-height: 1.7; }
+.footer-line { position: absolute; left: 10%; bottom: 8%; width: 30%; height: 1px; background: #d5cfbe; }
+.footer-text { position: absolute; left: 10%; bottom: 5%; font-size: 8pt; color: #a09d95; letter-spacing: 2pt; text-transform: uppercase; }
+.accent-dot { position: absolute; left: 10%; top: 47.5%; width: 6px; height: 6px; background: #1f7692; border-radius: 50%; }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="bg-fill"></div>
+  <div class="deco-block"></div>
+  <div class="deco-line-v"></div>
+  <div class="deco-line-h"></div>
+  <div class="accent-dot"></div>
+  <div class="kicker">Investment Risk Analysis Report</div>
+  <div class="hero">
+    <span class="hero-accent">84 Scenario</span><br>
+    Risk Model<br>
+    <span style="font-size:20pt; font-weight:400; color:#7a766f;">Japan Property Investment</span>
+  </div>
+  <div class="summary-block">
+    Based on 30 years of historical FX and property data, this report models 84 possible investment outcomes across 7 exchange rate scenarios, 4 property price trajectories, and 3 holding periods to provide a comprehensive risk assessment for Hong Kong investors.
+  </div>
+  <div class="meta-block">
+    Sample Property: Osaka Ten-no-Chaya Area<br>
+    Investment: JPY 62,400,000 / HKD 3,200,000<br>
+    Model: 7 FX x 4 Property Price x 3 Holding Periods
+  </div>
+  <div class="footer-line"></div>
+  <div class="footer-text">Confidential</div>
+</div>
+</body>
+</html>
