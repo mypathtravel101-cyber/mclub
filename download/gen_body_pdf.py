@@ -253,7 +253,7 @@ for hold_t in [5, 7, 10]:
         for fx in FXS:
             s = next(x for x in SC if x['fx']==fx and abs(x['pa']-pa)<0.001 and x['t']==hold_t)
             roi = s['roi']; g = s['gain']
-            clr = colors.white if roi < 0 or roi > 100 else TEXT_PRIMARY
+            clr = SEM_ERROR if roi < 0 else TEXT_PRIMARY
             cs = ParagraphStyle('cc', parent=sTC, textColor=clr)
             row.append(P(f'{roi:+.0f}%<br/>{g/1e4:+.0f}萬', cs))
         rows.append(row)
