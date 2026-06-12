@@ -1,0 +1,166 @@
+{
+  "ml_predictions": {
+    "fx_10yr": {
+      "mean": -6.2,
+      "std": 52.2,
+      "p5": -78.2,
+      "p25": -30.3,
+      "p50": -6.6,
+      "p75": 18.2,
+      "p95": 68.6
+    },
+    "property_10yr": {
+      "mean": 11.3,
+      "std": 40.1,
+      "p5": -44.0,
+      "p25": -7.2,
+      "p50": 11.0,
+      "p75": 30.1,
+      "p95": 68.8
+    },
+    "arima_fx": -0.9,
+    "arima_property": 29.5
+  },
+  "model_performance": {
+    "fx": {
+      "XGBoost": {
+        "cv_mae": 23.36
+      },
+      "LightGBM": {
+        "cv_mae": 35.27
+      },
+      "RandomForest": {
+        "cv_mae": 29.05
+      },
+      "GBR": {
+        "cv_mae": 28.38
+      }
+    },
+    "property": {
+      "XGBoost": {
+        "cv_mae": 20.17
+      },
+      "LightGBM": {
+        "cv_mae": 29.33
+      },
+      "RandomForest": {
+        "cv_mae": 21.74
+      },
+      "GBR": {
+        "cv_mae": 21.1
+      }
+    },
+    "fx_best": "XGBoost",
+    "property_best": "XGBoost"
+  },
+  "weighted_returns": {
+    "5": {
+      "weighted_roi": 46.6,
+      "simple_roi": 43.4,
+      "top5_scenarios": [
+        {
+          "fx": 19.5,
+          "price_rate": 0.03,
+          "roi": 68.8,
+          "prob_pct": 4.2
+        },
+        {
+          "fx": 19.5,
+          "price_rate": 0.015,
+          "roi": 55.2,
+          "prob_pct": 4.2
+        },
+        {
+          "fx": 16.0,
+          "price_rate": 0.03,
+          "roi": 105.8,
+          "prob_pct": 4.1
+        },
+        {
+          "fx": 19.5,
+          "price_rate": 0.0,
+          "roi": 42.3,
+          "prob_pct": 4.1
+        },
+        {
+          "fx": 16.0,
+          "price_rate": 0.015,
+          "roi": 89.1,
+          "prob_pct": 4.1
+        }
+      ]
+    },
+    "7": {
+      "weighted_roi": 65.8,
+      "simple_roi": 62.1,
+      "top5_scenarios": [
+        {
+          "fx": 19.5,
+          "price_rate": 0.03,
+          "roi": 97.5,
+          "prob_pct": 4.2
+        },
+        {
+          "fx": 19.5,
+          "price_rate": 0.015,
+          "roi": 77.5,
+          "prob_pct": 4.2
+        },
+        {
+          "fx": 16.0,
+          "price_rate": 0.03,
+          "roi": 140.7,
+          "prob_pct": 4.1
+        },
+        {
+          "fx": 19.5,
+          "price_rate": 0.0,
+          "roi": 59.2,
+          "prob_pct": 4.1
+        },
+        {
+          "fx": 16.0,
+          "price_rate": 0.015,
+          "roi": 116.3,
+          "prob_pct": 4.1
+        }
+      ]
+    },
+    "10": {
+      "weighted_roi": 95.2,
+      "simple_roi": 90.7,
+      "top5_scenarios": [
+        {
+          "fx": 19.5,
+          "price_rate": 0.03,
+          "roi": 141.7,
+          "prob_pct": 4.2
+        },
+        {
+          "fx": 19.5,
+          "price_rate": 0.015,
+          "roi": 111.2,
+          "prob_pct": 4.2
+        },
+        {
+          "fx": 16.0,
+          "price_rate": 0.03,
+          "roi": 194.6,
+          "prob_pct": 4.1
+        },
+        {
+          "fx": 19.5,
+          "price_rate": 0.0,
+          "roi": 84.4,
+          "prob_pct": 4.1
+        },
+        {
+          "fx": 16.0,
+          "price_rate": 0.015,
+          "roi": 157.4,
+          "prob_pct": 4.1
+        }
+      ]
+    }
+  }
+}
