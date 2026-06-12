@@ -1,0 +1,188 @@
+{
+  "document_title": "夢羽3區画 謄本（全部事項証明書・土地）",
+  "document_type": "土地登記簿謄本（Land Registry Certificate）",
+  "issuing_date": "令和7年4月25日（2025-04-25）",
+  "issuing_office": "大阪法務局天王寺出張所",
+  "registration_officer": "澤崎謙次",
+  "jurisdiction": "大阪法務局管轄",
+  "remarks": "乙区（他項権利＝抵押権等）無記載＝無任何抵押或負擔登記",
+  "parcels": [
+    {
+      "page": 1,
+      "parcel_id": "K42945",
+      "address": "大阪府大阪市西成区天下茶屋1丁目6番52",
+      "address_short": "天下茶屋1丁目6-52",
+      "city": "大阪市西成区",
+      "district": "天下茶屋一丁目",
+      "land_number": "6番52",
+      "land_use": "宅地（住宅用地）",
+      "original_area_tsubo": "720坪94 → 經多次分筆後 → 51.27㎡",
+      "current_area_sqm": 51.27,
+      "property_id": "1200005120611",
+      "survey_map_number": null,
+      "boundary_survey": null,
+      "history": {
+        "original_registration": "大正3年（1914年）10月15日 木村権右衛門 家督相続",
+        "subdivisions": [
+          "昭和35年（1960年）11月19日 → 分筆為6番1、7",
+          "昭和36年（1961年）3月4日 → 分筆為6番1、8、9",
+          "昭和36年（1961年）12月13日 → 分筆為6番1、10、11",
+          "昭和37年（1962年）12月18日 → 分筆為6番1、13",
+          "昭和38年（1963年）11月19日 → 分筆為6番1、15、16、17",
+          "昭和38年（1963年）12月17日 → 分筆為6番1、20",
+          "昭和39年（1964年）2月12日 → 分筆為6番1、22-29",
+          "昭和39年（1964年）8月17日 → 分筆為6番1、31-35",
+          "昭和39年（1964年）10月21日 → 分筆為6番1、36",
+          "昭和44年（1969年）2月27日 → 分筆為6番1、37",
+          "昭和59年（1984年）2月20日 → 地番變更為6番52",
+          "平成12年（2000年）9月11日 → 面積錯誤訂正",
+          "平成15年（2003年）6月30日 → 管轄轉屬登記",
+          "令和7年（2025年）4月18日 → 分筆為6番52、6番88、6番89"
+        ]
+      },
+      "ownership_history": [
+        {
+          "order": 1,
+          "date_registered": "平成9年（1997年）12月9日",
+          "purpose": "所有権移転",
+          "reason": "大正3年（1914年）10月15日 木村権右衛門 家督相続",
+          "owner": null,
+          "notes": "順位2番の登記を移記"
+        },
+        {
+          "order": null,
+          "acceptance_number": "第20533号",
+          "purpose": null,
+          "reason": "相続",
+          "owner": "木村権右衛門 → 木村雅信（昭和46年/1971年）→ 木村憲明（平成8年/1996年）",
+          "owner_address": "兵庫県芦屋市山手町18番20号",
+          "owner_name": "木村 憲明",
+          "notes": "順位2番の登記を移記；管轄転属 平成15年（2003年）6月30日"
+        },
+        {
+          "order": 2,
+          "date_registered": "令和4年（2022年）9月26日",
+          "acceptance_number": "第40472号",
+          "purpose": "所有権移転",
+          "reason": "平成30年（2018年）3月14日 相続",
+          "owner_address": "兵庫県芦屋市山手町18番20号",
+          "owner_name": "木村 以差子",
+          "notes": "木村憲明の相続人"
+        },
+        {
+          "order": 3,
+          "date_registered": "令和4年（2022年）10月31日",
+          "acceptance_number": "第46912号",
+          "purpose": "所有権移転",
+          "reason": "令和4年（2022年）10月31日 売買",
+          "owner_address": "大阪府池田市井口堂二丁目2番3号",
+          "owner_name": "株式会社アーバンライフハウジング（Urban Life Housing Co., Ltd.）",
+          "notes": null
+        },
+        {
+          "order": 4,
+          "date_registered": "令和7年（2025年）2月27日",
+          "acceptance_number": "第8726号",
+          "purpose": "所有権移転",
+          "reason": "令和7年（2025年）2月27日 売買",
+          "owner_address": "東京都港区愛宕二丁目5番1号",
+          "owner_name": "キャストグローバル信託株式会社（Cast Global Trust Co., Ltd.）",
+          "corporate_id": "0100-01-218032",
+          "trust_catalog": "信託目録第38号",
+          "notes": "信託登記あり"
+        }
+      ],
+      "encumbrances": "乙区に記録されている事項はない（無抵押、無他項権利）"
+    },
+    {
+      "page": 3,
+      "parcel_id": "K42947",
+      "address": "大阪府大阪市西成区天下茶屋1丁目6番89",
+      "address_short": "天下茶屋1丁目6-89",
+      "city": "大阪市西成区",
+      "district": "天下茶屋一丁目",
+      "land_number": "6番89",
+      "land_use": "宅地（住宅用地）",
+      "current_area_sqm": 52.24,
+      "property_id": "1200010172765",
+      "survey_map_number": null,
+      "boundary_survey": null,
+      "origin": "6番52から分筆［令和7年（2025年）4月18日］",
+      "ownership": [
+        {
+          "order": 1,
+          "date_registered": "令和7年（2025年）2月27日",
+          "acceptance_number": "第8726号",
+          "purpose": "所有権移転",
+          "reason": "令和7年（2025年）2月27日 売買",
+          "owner_address": "東京都港区愛宕二丁目5番1号",
+          "owner_name": "キャストグローバル信託株式会社（Cast Global Trust Co., Ltd.）",
+          "corporate_id": "0100-01-218032",
+          "notes": "順位4番の登記を転写；令和7年4月18日受付第19231号"
+        }
+      ],
+      "trust": {
+        "catalog": "信託目録第38号 → 変更 → 信託目録第55号",
+        "change_date": "令和7年（2025年）4月18日付記"
+      },
+      "encumbrances": "乙区に記録されている事項はない（無抵押、無他項権利）"
+    },
+    {
+      "page": 4,
+      "parcel_id": "K42946",
+      "address": "大阪府大阪市西成区天下茶屋1丁目6番88",
+      "address_short": "天下茶屋1丁目6-88",
+      "city": "大阪市西成区",
+      "district": "天下茶屋一丁目",
+      "land_number": "6番88",
+      "land_use": "宅地（住宅用地）",
+      "current_area_sqm": 51.02,
+      "property_id": "1200010172764",
+      "survey_map_number": null,
+      "boundary_survey": null,
+      "origin": "6番52から分筆［令和7年（2025年）4月18日］",
+      "ownership": [
+        {
+          "order": 1,
+          "date_registered": "令和7年（2025年）2月27日",
+          "acceptance_number": "第8726号",
+          "purpose": "所有権移転",
+          "reason": "令和7年（2025年）2月27日 売買",
+          "owner_address": "東京都港区愛宕二丁目5番1号",
+          "owner_name": "キャストグローバル信託株式会社（Cast Global Trust Co., Ltd.）",
+          "corporate_id": "0100-01-218032",
+          "notes": "順位4番の登記を転写；令和7年4月18日受付第19231号"
+        }
+      ],
+      "trust": {
+        "catalog": "信託目録第38号 → 変更 → 信託目録第54号",
+        "change_date": "令和7年（2025年）4月18日付記"
+      },
+      "encumbrances": "乙区に記録されている事項はない（無抵押、無他項権利）",
+      "copy_mark": true
+    }
+  ],
+  "summary": {
+    "total_parcels": 3,
+    "original_parcel": "6番52（51.27㎡）",
+    "subdivided_on": "令和7年（2025年）4月18日",
+    "new_parcels": [
+      {"land_number": "6番88", "area_sqm": 51.02, "property_id": "1200010172764"},
+      {"land_number": "6番89", "area_sqm": 52.24, "property_id": "1200010172765"},
+      {"land_number": "6番52", "area_sqm": 51.27, "property_id": "1200005120611"}
+    ],
+    "total_area_after_subdivision_sqm": 154.53,
+    "current_owner_all": "キャストグローバル信託株式会社（Cast Global Trust Co., Ltd.）",
+    "owner_address": "東京都港区愛宕二丁目5番1号",
+    "corporate_id": "0100-01-218032",
+    "acquisition_method": "令和7年（2025年）2月27日 売買",
+    "trust_registered": true,
+    "trust_catalogs": [38, 54, 55],
+    "all_parcels_clean": true,
+    "no_mortgage": true,
+    "no_encumbrances": true,
+    "location": "大阪府大阪市西成区天下茶屋1丁目",
+    "nearest_station": "天下茶屋駅（Osaka Metro堺筋線・南海高野線）",
+    "certificate_issued": "令和7年（2025年）4月25日"
+  }
+}
