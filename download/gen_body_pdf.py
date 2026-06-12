@@ -78,7 +78,7 @@ def tbl_style(nrows):
     return TableStyle(cmds)
 
 doc = SimpleDocTemplate(PDF_PATH, pagesize=A4,
-    leftMargin=50*mm, rightMargin=50*mm, topMargin=40*mm, bottomMargin=40*mm,
+    leftMargin=35*mm, rightMargin=35*mm, topMargin=30*mm, bottomMargin=30*mm,
     title='日本物業投資84情景風險分析', author='Z.ai', subject='84情景風險模型')
 
 story = []
