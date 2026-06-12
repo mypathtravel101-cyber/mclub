@@ -36,14 +36,10 @@ years = list(range(1995, 2026))
 jpy_hkd = [usd_jpy[y]*7.80 for y in years]
 pvals = [prop_idx[y] for y in years]
 
-# 10-year rolling returns
 fx_10yr = [(jpy_hkd[i+10]-jpy_hkd[i])/jpy_hkd[i]*100 for i in range(len(years)-10)]
 pr_10yr = [(pvals[i+10]-pvals[i])/pvals[i]*100 for i in range(len(years)-10)]
 yr_10_start = [years[i] for i in range(len(years)-10)]
 
-# CRITICAL: For HKD investor, JPY/HKD going UP = JPY weakens = BAD
-# So worst FX = max(fx_10yr) = JPY weakened most
-# Best FX = min(fx_10yr) = JPY strengthened most
 idx_fx_worst = max(range(len(fx_10yr)), key=lambda i: fx_10yr[i])
 idx_fx_best = min(range(len(fx_10yr)), key=lambda i: fx_10yr[i])
 idx_pr_worst = min(range(len(pr_10yr)), key=lambda i: pr_10yr[i])
@@ -56,14 +52,7 @@ pr_w_val = pr_10yr[idx_pr_worst]; pr_w_yr = yr_10_start[idx_pr_worst]
 pr_b_val = pr_10yr[idx_pr_best]; pr_b_yr = yr_10_start[idx_pr_best]
 pr_a_val = sum(pr_10yr)/len(pr_10yr)
 
-print(f"FX 10yr Worst (for investor): {fx_w_yr}-{fx_w_yr+10}: {fx_w_val:.1f}% (JPY weakened)")
-print(f"FX 10yr Best (for investor): {fx_b_yr}-{fx_b_yr+10}: {fx_b_val:.1f}% (JPY strengthened)")
-print(f"FX 10yr Average: {fx_a_val:.1f}%")
-print(f"Prop 10yr Worst: {pr_w_yr}-{pr_w_yr+10}: {pr_w_val:.1f}%")
-print(f"Prop 10yr Best: {pr_b_yr}-{pr_b_yr+10}: {pr_b_val:.1f}%")
-print(f"Prop 10yr Average: {pr_a_val:.1f}%")
-
-# ── Chart 1: Dual-axis History ──
+# ── Chart 1: 30-year dual-axis ──
 fig, ax1 = plt.subplots(figsize=(10, 4.2))
 c1, c2 = '#207591', '#82713e'
 ax1.plot(years, jpy_hkd, color=c1, lw=2, label='JPY/HKD')
@@ -84,11 +73,10 @@ ax1.set_xlim(1995, 2025)
 plt.tight_layout()
 plt.savefig(f'{OUT}/chart_history.png', dpi=200, bbox_inches='tight', facecolor='white')
 plt.close()
-print("Chart 1 done")
 
-# ── Model parameters ──
+# ── UPDATED MODEL: HKD 3.2M ──
 ENTRY_FX = 19.5
-PRICE = 78_000_000
+PRICE = 62_400_000  # HKD 3.2M * 19.5
 LTV = 0.40
 LOAN = PRICE * LTV
 EQ_JPY = PRICE - LOAN
@@ -102,20 +90,14 @@ ANR = AR - AC
 CF = ANR - AM
 CN = (1+MR)**NM
 
-print(f"\nModel: Price={PRICE/1e6:.0f}M, Loan={LOAN/1e6:.1f}M, Equity_JPY={EQ_JPY/1e6:.1f}M, Equity_HKD={EQ_HKD/1e6:.2f}M")
-print(f"Rental={AR/1e6:.2f}M, Costs={AC/1e6:.3f}M, Mortgage/yr={AM/1e6:.2f}M, Net CF/yr={CF/1e6:.2f}M")
-
 def lb(t):
     ct = (1+MR)**(t*12)
     return LOAN * (CN - ct) / (CN - 1)
 
 FXS = [13.0, 15.0, 17.0, 19.5, 22.0, 25.0, 28.0]
-FXL = ['13.0 (JPY+33%)', '15.0 (JPY+23%)', '17.0 (JPY+13%)', '19.5 (Current)', '22.0 (JPY-13%)', '25.0 (JPY-28%)', '28.0 (JPY-44%)']
 PAS = [-0.03, -0.01, 0.01, 0.03]
-PAL = ['-3%/year', '-1%/year', '+1%/year', '+3%/year']
 HS = [5, 7, 10]
 
-# Compute 84 scenarios
 scens = []
 for fx in FXS:
     for pa in PAS:
@@ -129,12 +111,7 @@ for fx in FXS:
             roi = (th - EQ_HKD)/EQ_HKD*100
             scens.append({'fx':fx,'pa':pa,'t':t,'ev':ev,'bl':bl,'ne':ne,'ar':ar2,'tj':tj,'th':th,'roi':roi,'gain':th-EQ_HKD})
 
-# Print sample to verify
-for s in scens:
-    if s['fx']==19.5 and s['pa']==0.01 and s['t']==10:
-        print(f"Sample: FX=19.5, Prop=+1%/yr, 10yr => Exit={s['ev']/1e6:.1f}M, Loan={s['bl']/1e6:.1f}M, Net={s['ne']/1e6:.1f}M, Rental={s['ar']/1e6:.1f}M, Total={s['th']/1e6:.2f}M HKD, ROI={s['roi']:.1f}%")
-
-# ── Chart 2: Heatmap 10yr ──
+# Heatmap 10yr
 t10 = [s for s in scens if s['t']==10]
 mat = np.zeros((4,7))
 for s in t10:
@@ -146,10 +123,10 @@ im = ax.imshow(mat, cmap='RdYlGn', norm=norm, aspect='auto')
 ax.set_xticks(range(7))
 ax.set_xticklabels([f'{f:.1f}' for f in FXS], fontsize=9)
 ax.set_yticks(range(4))
-ax.set_yticklabels(PAL, fontsize=9)
+ax.set_yticklabels([f'{r*100:+.0f}%/yr' for r in PAS], fontsize=9)
 ax.set_xlabel('Exit JPY/HKD Rate', fontsize=10)
 ax.set_ylabel('Property Price Change', fontsize=10)
-ax.set_title('84-Scenario ROI Heatmap (10-Year Holding, % Return on Equity)', fontsize=11, fontweight='bold', pad=10)
+ax.set_title('ROI Heatmap (10-Year Holding, % Return on Equity)', fontsize=11, fontweight='bold', pad=10)
 for i in range(4):
     for j in range(7):
         v = mat[i][j]
@@ -159,9 +136,8 @@ plt.colorbar(im, ax=ax, label='ROI (%)', shrink=0.8)
 plt.tight_layout()
 plt.savefig(f'{OUT}/chart_heatmap.png', dpi=200, bbox_inches='tight', facecolor='white')
 plt.close()
-print("Chart 2 done")
 
-# ── Historical scenario summary ──
+# ── Chart 3: Historical 3-scenario summary BAR chart ──
 def hist_sc(fx_pct, pr_pct, t=10):
     efx = ENTRY_FX*(1+fx_pct/100)
     pa2 = (1+pr_pct/100)**(1/t)-1
@@ -178,12 +154,54 @@ hw = hist_sc(fx_w_val, pr_w_val)
 ha = hist_sc(fx_a_val, pr_a_val)
 hb = hist_sc(fx_b_val, pr_b_val)
 
-print(f"\nHistorical 10yr Scenarios:")
-print(f"  WORST:  FX {fx_w_val:.1f}% ({fx_w_yr}-{fx_w_yr+10}) + Prop {pr_w_val:.1f}% ({pr_w_yr}-{pr_w_yr+10}) => ROI {hw['roi']:.1f}%, Gain HKD {hw['gain']/1e6:.2f}M")
-print(f"  AVERAGE: FX {fx_a_val:.1f}% + Prop {pr_a_val:.1f}% => ROI {ha['roi']:.1f}%, Gain HKD {ha['gain']/1e6:.2f}M")
-print(f"  BEST:   FX {fx_b_val:.1f}% ({fx_b_yr}-{fx_b_yr+10}) + Prop {pr_b_val:.1f}% ({pr_b_yr}-{pr_b_yr+10}) => ROI {hb['roi']:.1f}%, Gain HKD {hb['gain']/1e6:.2f}M")
+fig, axes = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'width_ratios': [1, 1.2]})
 
-# Save all data
+# Left: 30-year change bars
+categories = ['FX (JPY/HKD)\n30yr Change', 'Property Price\n30yr Change']
+worst_vals = [fx_w_val, pr_w_val]
+avg_vals = [fx_a_val, pr_a_val]
+best_vals = [fx_b_val, pr_b_val]
+x = np.arange(len(categories))
+w = 0.25
+bars1 = axes[0].bar(x - w, worst_vals, w, label='Worst 10yr', color='#904c46', alpha=0.85)
+bars2 = axes[0].bar(x, avg_vals, w, label='Average 10yr', color='#a5884e', alpha=0.85)
+bars3 = axes[0].bar(x + w, best_vals, w, label='Best 10yr', color='#3b8754', alpha=0.85)
+axes[0].set_xticks(x)
+axes[0].set_xticklabels(categories, fontsize=8.5)
+axes[0].set_ylabel('10-Year Change (%)', fontsize=9)
+axes[0].set_title('Historical 10-Year Changes', fontsize=10, fontweight='bold')
+axes[0].axhline(y=0, color='gray', lw=0.5)
+axes[0].legend(loc='best', fontsize=8)
+axes[0].grid(axis='y', alpha=0.3, ls='--')
+for bars in [bars1, bars2, bars3]:
+    for bar in bars:
+        h = bar.get_height()
+        axes[0].text(bar.get_x() + bar.get_width()/2, h + (1 if h >= 0 else -3),
+                    f'{h:+.1f}%', ha='center', va='bottom' if h >= 0 else 'top', fontsize=7.5)
+
+# Right: Investment ROI outcomes
+scenarios = ['Worst\nCase', 'Average\nCase', 'Best\nCase']
+roi_vals = [hw['roi'], ha['roi'], hb['roi']]
+gain_vals = [hw['gain']/1e4, ha['gain']/1e4, hb['gain']/1e4]
+bar_colors = ['#904c46', '#a5884e', '#3b8754']
+bars = axes[1].bar(scenarios, roi_vals, color=bar_colors, alpha=0.85, width=0.55)
+axes[1].set_ylabel('ROI (%)', fontsize=9)
+axes[1].set_title('Your Investment Return (10yr, based on history)', fontsize=10, fontweight='bold')
+axes[1].axhline(y=0, color='gray', lw=0.5)
+axes[1].grid(axis='y', alpha=0.3, ls='--')
+for bar, roi, gain in zip(bars, roi_vals, gain_vals):
+    h = bar.get_height()
+    sign = '+' if gain >= 0 else ''
+    axes[1].text(bar.get_x() + bar.get_width()/2, h + (3 if h >= 0 else -8),
+                f'{roi:+.1f}%\n{sign}HKD {gain:.0f} wan',
+                ha='center', va='bottom' if h >= 0 else 'top', fontsize=8, fontweight='bold')
+
+plt.tight_layout()
+plt.savefig(f'{OUT}/chart_summary.png', dpi=200, bbox_inches='tight', facecolor='white')
+plt.close()
+print("Summary chart saved")
+
+# Save data
 out = {
     'params':{
         'entry_fx':ENTRY_FX,'price_jpy':PRICE,'ltv':LTV,'loan_jpy':LOAN,'eq_jpy':EQ_JPY,'eq_hkd':EQ_HKD,
@@ -198,14 +216,13 @@ out = {
         'pr_best10':pr_b_val,'pr_best10_yr':f"{pr_b_yr}-{pr_b_yr+10}",
         'pr_avg10':pr_a_val,
     },
-    'hist':{
-        'worst':{k:round(v,2) for k,v in hw.items()},
-        'avg':{k:round(v,2) for k,v in ha.items()},
-        'best':{k:round(v,2) for k,v in hb.items()},
-    },
+    'hist':{'worst':{k:round(v,2) for k,v in hw.items()},'avg':{k:round(v,2) for k,v in ha.items()},'best':{k:round(v,2) for k,v in hb.items()}},
     'scenarios':[{k:round(v,2) if isinstance(v,float) else v for k,v in s.items()} for s in scens],
     'loan_bal':{t:round(lb(t),0) for t in HS},
 }
 with open(f'{OUT}/scenario_data.json','w') as f:
     json.dump(out, f, indent=2)
-print("\nAll data saved.")
+
+print(f"EQ_HKD={EQ_HKD:,.0f} ({EQ_HKD/1e4:.2f}M), CF/yr={CF/1e4:.1f} wan JPY")
+print(f"Hist: Worst={hw['roi']:+.1f}%, Avg={ha['roi']:+.1f}%, Best={hb['roi']:+.1f}%")
+print(f"Hist HKD: Worst={hw['gain']/1e4:+.0f} wan, Avg={ha['gain']/1e4:+.0f} wan, Best={hb['gain']/1e4:+.0f} wan")
