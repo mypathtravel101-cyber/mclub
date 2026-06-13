@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<style>
+@page { size: 595.28pt 841.89pt; margin: 0; }
+html, body { margin: 0; padding: 0; background: #edebe8; width: 595.28pt; height: 841.89pt; }
+* { box-sizing: border-box; }
+
+.cover-page {
+  position: relative;
+  width: 595.28pt;
+  height: 841.89pt;
+  background: #edebe8;
+  overflow: hidden;
+}
+
+/* Layer 1: Background - grid pattern */
+.layer-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 1;
+}
+.grid-pattern {
+  width: 100%;
+  height: 100%;
+  background-image:
+    linear-gradient(rgba(38,114,139,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38,114,139,0.02) 1px, transparent 1px);
+  background-size: 50pt 50pt;
+}
+
+/* Layer 2: Structure */
+.layer-structure {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+.anchor-line {
+  position: absolute;
+  left: 71.4pt;  /* 0.12 * 595.28 */
+  top: 84.2pt;   /* 0.10 * 841.89 */
+  width: 6pt;
+  height: 672pt; /* 0.80 * 841.89 */
+  background: #26728b;
+}
+.meta-line {
+  position: absolute;
+  left: 101.4pt;
+  top: 640pt;
+  width: 238pt;
+  height: 1pt;
+  background: rgba(38,114,139,0.4);
+}
+
+/* Layer 3: Content */
+.layer-content {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
+.kicker {
+  position: absolute;
+  left: 101.4pt;
+  top: 126pt;   /* 0.15 * 841.89 */
+  font-family: 'Times New Roman', serif;
+  font-size: 16pt;
+  font-weight: normal;
+  letter-spacing: 3pt;
+  color: rgba(33,31,29,0.6);
+  text-transform: uppercase;
+}
+
+.hero-title {
+  position: absolute;
+  left: 101.4pt;
+  top: 252pt;   /* 0.30 * 841.89 */
+  font-family: 'Microsoft YaHei', 'SimHei', sans-serif;
+  font-size: 52pt;
+  font-weight: 900;
+  color: #211f1d;
+  line-height: 1.15;
+  max-width: 380pt;
+}
+
+.summary-block {
+  position: absolute;
+  left: 101.4pt;
+  top: 421pt;   /* 0.50 * 841.89 */
+  font-family: 'SimHei', 'Microsoft YaHei', sans-serif;
+  font-size: 16pt;
+  font-weight: normal;
+  color: rgba(33,31,29,0.85);
+  line-height: 1.6;
+  max-width: 357pt; /* 0.60 * 595.28 */
+}
+
+.meta-info {
+  position: absolute;
+  left: 101.4pt;
+  top: 660pt;   /* 0.75 * 841.89 - but adjusted after meta-line */
+  font-family: 'SimHei', 'Microsoft YaHei', sans-serif;
+  font-size: 14pt;
+  color: rgba(33,31,29,0.85);
+  line-height: 2.0;
+}
+
+.footer-text {
+  position: absolute;
+  left: 101.4pt;
+  bottom: 30pt;
+  font-family: 'Times New Roman', serif;
+  font-size: 12pt;
+  color: rgba(33,31,29,0.4);
+  letter-spacing: 1pt;
+}
+</style>
+</head>
+<body>
+<div class="cover-page">
+  <div class="layer-bg">
+    <div class="grid-pattern"></div>
+  </div>
+  <div class="layer-structure">
+    <div class="anchor-line"></div>
+    <div class="meta-line"></div>
+  </div>
+  <div class="layer-content">
+    <div class="kicker">ML V2 Probability-Weighted Analysis</div>
+    <div class="hero-title">日本物業<br>投資評估報告</div>
+    <div class="summary-block">基於 FRED 真實數據，運用 XGBoost、LightGBM、RandomForest、GBR 四模型集成學習，結合 Monte Carlo 模擬，對 84 種匯率與樓價情景進行機率加權分析，以實際港元金額呈現物業資本價值變動。</div>
+    <div class="meta-info">客戶: Andy<br>物業總價: HKD 320萬<br>自付首期: HKD 192萬 (60%)<br>銀行按揭: HKD 128萬 (40% LTV)</div>
+    <div class="footer-text">PZC GROUP &middot; RISK MODELLING</div>
+  </div>
+</div>
+</body>
+</html>
