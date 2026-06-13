@@ -159,3 +159,26 @@ Stage Summary:
 - 83 out of 84 scenarios produce positive returns (98.8%)
 - Output: /home/z/my-project/download/japan_property_84scenario_report.pdf (16 pages, 370KB)
 - Supporting files: chart_history.png, chart_heatmap.png, scenario_data.json, gen_charts.py, gen_body_pdf.py, gen_pdf_cover.html
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Rebuild Andy Japan Property ML V2 Report from scratch (V4)
+
+Work Log:
+- Read V3 report script, ML results JSON, and verified chart PNGs exist
+- Generated color palette via pdf.py palette.generate (seed 42, minimal mode)
+- Built cover HTML (Template 01 HUD Data Terminal style) with Noto Serif SC
+- Validated cover HTML via poster_validate.py, generated cover PDF via html2poster.js
+- Wrote V4 body script with critical change: summary uses formula "投資淨回報 = 房價變動 + 匯率變動 + 租金收入 - 稅費 - 銀行供款費用" with all HKD amounts, NO ROI
+- All returns decomposed into 5 line items in HKD wan across all scenarios
+- Generated body PDF (11 pages), merged with cover (total 12 pages)
+- Added metadata via meta.brand, ran pdf_qa.py (all critical checks passed)
+- Verified formula text appears on pages 3, 8, 9, 10 of final PDF
+
+Stage Summary:
+- Final PDF: /home/z/my-project/download/Andy_JP_Property_ML_Report.pdf (12 pages, 1.6MB)
+- ML 10yr net return: HKD +132.8萬 (rent-driven)
+- Best scenario (FX=13, +3%/yr): HKD +508.9萬
+- Worst scenario (FX=28, -3%/yr): HKD -93.1萬
+- Key: Rent income (HKD +169.2萬) is the primary profit driver, not capital appreciation
