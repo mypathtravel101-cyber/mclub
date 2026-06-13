@@ -1,0 +1,81 @@
+{
+  "version": "V2",
+  "data_sources": {
+    "EXJPUS": "JPY/USD, 665 monthly points (FRED)",
+    "QJPN628BIS": "Japan Property, 284 quarterly points (BIS/FRED)",
+    "FEDFUNDS": "US Rate, 863 monthly points (FRED)",
+    "IRSTCI01JPM156N": "Japan Rate, 490 monthly points (FRED)"
+  },
+  "training_samples": 104,
+  "v1_samples": 16,
+  "ml_predictions": {
+    "fx_10yr": {
+      "ml_point": 0.2,
+      "blended": 7.8,
+      "arima": -1.9,
+      "mc_mean": 7.6,
+      "mc_p5": -31.1,
+      "mc_p50": 7.6,
+      "mc_p95": 47.1
+    },
+    "property_10yr": {
+      "ml_point": 0.0,
+      "blended": 5.0,
+      "arima": 21.2,
+      "mc_mean": 4.8,
+      "mc_p5": -24.7,
+      "mc_p50": 4.8,
+      "mc_p95": 35.0
+    }
+  },
+  "model_performance": {
+    "fx": {
+      "XGBoost": {
+        "cv_mae": 20.69
+      },
+      "LightGBM": {
+        "cv_mae": 22.88
+      },
+      "RandomForest": {
+        "cv_mae": 23.74
+      },
+      "GBR": {
+        "cv_mae": 19.7
+      }
+    },
+    "property": {
+      "XGBoost": {
+        "cv_mae": 16.08
+      },
+      "LightGBM": {
+        "cv_mae": 20.69
+      },
+      "RandomForest": {
+        "cv_mae": 16.23
+      },
+      "GBR": {
+        "cv_mae": 15.57
+      }
+    }
+  },
+  "weighted_returns": {
+    "5": {
+      "weighted_roi": 38.1,
+      "simple_roi": 43.4
+    },
+    "7": {
+      "weighted_roi": 56.2,
+      "simple_roi": 62.1
+    },
+    "10": {
+      "weighted_roi": 84.0,
+      "simple_roi": 90.7
+    }
+  },
+  "v1_comparison": {
+    "v1_fx_mae": 23.36,
+    "v2_fx_mae": 19.7,
+    "v1_prop_mae": 20.17,
+    "v2_prop_mae": 15.57
+  }
+}
