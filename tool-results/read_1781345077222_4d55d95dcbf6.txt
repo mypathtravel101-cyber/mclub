@@ -1,0 +1,624 @@
+     1→#!/usr/bin/env python3
+     2→# -*- coding: utf-8 -*-
+     3→"""Andy Japan Property ML V2 Report - V4 Body (ReportLab)
+     4→   Key requirement: Summary uses formula:
+     5→     房價變動 + 匯率變動 + 租金收入 - 稅費 - 銀行供款費用
+     6→   All in HKD amounts, NO ROI percentages.
+     7→"""
+     8→
+     9→import os
+    10→
+    11→from reportlab.lib.pagesizes import A4
+    12→from reportlab.lib.units import cm, mm
+    13→from reportlab.lib import colors
+    14→from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_JUSTIFY, TA_RIGHT
+    15→from reportlab.lib.styles import ParagraphStyle
+    16→from reportlab.platypus import (
+    17→    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+    18→    Image, PageBreak, KeepTogether, HRFlowable
+    19→)
+    20→from reportlab.pdfbase import pdfmetrics
+    21→from reportlab.pdfbase.ttfonts import TTFont
+    22→from reportlab.pdfbase.pdfmetrics import registerFontFamily
+    23→
+    24→# ═══════════════════════════════════════════════════
+    25→# FONTS
+    26→# ═══════════════════════════════════════════════════
+    27→pdfmetrics.registerFont(TTFont('NotoSerifSC', '/usr/share/fonts/truetype/noto-serif-sc/NotoSerifSC-Regular.ttf'))
+    28→pdfmetrics.registerFont(TTFont('NotoSerifSCBold', '/usr/share/fonts/truetype/noto-serif-sc/NotoSerifSC-Bold.ttf'))
+    29→pdfmetrics.registerFont(TTFont('WenQuanYi', '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc', subfontIndex=0))
+    30→pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+    31→registerFontFamily('NotoSerifSC', normal='NotoSerifSC', bold='NotoSerifSCBold')
+    32→
+    33→# ═══════════════════════════════════════════════════
+    34→# COLOR PALETTE (auto-generated)
+    35→# ═══════════════════════════════════════════════════
+    36→ACCENT = colors.HexColor('#1f7692')
+    37→TEXT_PRIMARY = colors.HexColor('#1b1a18')
+    38→TEXT_MUTED = colors.HexColor('#7a766f')
+    39→BG_SURFACE = colors.HexColor('#e5e3df')
+    40→BG_PAGE = colors.HexColor('#edecea')
+    41→TABLE_HEADER_COLOR = ACCENT
+    42→TABLE_HEADER_TEXT = colors.white
+    43→TABLE_ROW_EVEN = colors.white
+    44→TABLE_ROW_ODD = BG_SURFACE
+    45→POSITIVE_COLOR = colors.HexColor('#2d6a4f')
+    46→NEGATIVE_COLOR = colors.HexColor('#9b2226')
+    47→
+    48→# ═══════════════════════════════════════════════════
+    49→# STYLES
+    50→# ═══════════════════════════════════════════════════
+    51→W, H = A4
+    52→LM, RM, TM, BM = 2.2*cm, 2.2*cm, 2.5*cm, 2.5*cm
+    53→CW = W - LM - RM
+    54→
+    55→def make_styles():
+    56→    s = {}
+    57→    s['h1'] = ParagraphStyle('H1', fontName='NotoSerifSC', fontSize=20, leading=28,
+    58→        textColor=TEXT_PRIMARY, spaceBefore=24, spaceAfter=12, alignment=TA_LEFT)
+    59→    s['h2'] = ParagraphStyle('H2', fontName='NotoSerifSC', fontSize=15, leading=22,
+    60→        textColor=ACCENT, spaceBefore=18, spaceAfter=8, alignment=TA_LEFT)
+    61→    s['h3'] = ParagraphStyle('H3', fontName='NotoSerifSC', fontSize=12, leading=18,
+    62→        textColor=TEXT_PRIMARY, spaceBefore=12, spaceAfter=6, alignment=TA_LEFT)
+    63→    s['body'] = ParagraphStyle('Body', fontName='NotoSerifSC', fontSize=10.5, leading=18,
+    64→        textColor=TEXT_PRIMARY, spaceBefore=3, spaceAfter=6, alignment=TA_JUSTIFY, wordWrap='CJK')
+    65→    s['body_left'] = ParagraphStyle('BodyL', fontName='NotoSerifSC', fontSize=10.5, leading=18,
+    66→        textColor=TEXT_PRIMARY, spaceBefore=3, spaceAfter=6, alignment=TA_LEFT, wordWrap='CJK')
+    67→    s['caption'] = ParagraphStyle('Cap', fontName='NotoSerifSC', fontSize=9, leading=14,
+    68→        textColor=TEXT_MUTED, spaceBefore=4, spaceAfter=8, alignment=TA_CENTER, wordWrap='CJK')
+    69→    s['callout'] = ParagraphStyle('Callout', fontName='NotoSerifSC', fontSize=11, leading=18,
+    70→        textColor=ACCENT, spaceBefore=6, spaceAfter=6, alignment=TA_LEFT, wordWrap='CJK',
+    71→        leftIndent=12, borderColor=ACCENT, borderWidth=2, borderPadding=8)
+    72→    s['small'] = ParagraphStyle('Small', fontName='NotoSerifSC', fontSize=9, leading=14,
+    73→        textColor=TEXT_MUTED, spaceBefore=2, spaceAfter=4, alignment=TA_LEFT, wordWrap='CJK')
+    74→    s['formula_title'] = ParagraphStyle('FormulaTitle', fontName='NotoSerifSC', fontSize=12, leading=18,
+    75→        textColor=TEXT_PRIMARY, spaceBefore=8, spaceAfter=4, alignment=TA_CENTER, wordWrap='CJK')
+    76→    return s
+    77→
+    78→STY = make_styles()
+    79→
+    80→# ═══════════════════════════════════════════════════
+    81→# HELPERS
+    82→# ═══════════════════════════════════════════════════
+    83→def h1(t): return Paragraph(f'<b>{t}</b>', STY['h1'])
+    84→def h2(t): return Paragraph(f'<b>{t}</b>', STY['h2'])
+    85→def h3(t): return Paragraph(f'<b>{t}</b>', STY['h3'])
+    86→def p(t): return Paragraph(t, STY['body'])
+    87→def pl(t): return Paragraph(t, STY['body_left'])
+    88→def cap(t): return Paragraph(t, STY['caption'])
+    89→def callout(t): return Paragraph(t, STY['callout'])
+    90→def small(t): return Paragraph(t, STY['small'])
+    91→def hr(): return HRFlowable(width='100%', thickness=0.5, color=ACCENT, spaceBefore=8, spaceAfter=8, opacity=0.3)
+    92→def formula_title(t): return Paragraph(f'<b>{t}</b>', STY['formula_title'])
+    93→
+    94→def make_table(headers, rows, col_widths=None):
+    95→    cw = col_widths or [CW / len(headers)] * len(headers)
+    96→    th_style = ParagraphStyle('TH', fontName='NotoSerifSC', fontSize=9.5, leading=14,
+    97→        textColor=TABLE_HEADER_TEXT, alignment=TA_CENTER, wordWrap='CJK')
+    98→    td_style = ParagraphStyle('TD', fontName='NotoSerifSC', fontSize=9.5, leading=14,
+    99→        textColor=TEXT_PRIMARY, alignment=TA_CENTER, wordWrap='CJK')
+   100→    td_left = ParagraphStyle('TDL', fontName='NotoSerifSC', fontSize=9.5, leading=14,
+   101→        textColor=TEXT_PRIMARY, alignment=TA_LEFT, wordWrap='CJK')
+   102→
+   103→    data = [[Paragraph(h, th_style) for h in headers]]
+   104→    for row in rows:
+   105→        data.append([Paragraph(str(c), td_left if i == 0 else td_style) for i, c in enumerate(row)])
+   106→
+   107→    t = Table(data, colWidths=cw, repeatRows=1, hAlign='CENTER')
+   108→    style_cmds = [
+   109→        ('BACKGROUND', (0, 0), (-1, 0), TABLE_HEADER_COLOR),
+   110→        ('TEXTCOLOR', (0, 0), (-1, 0), TABLE_HEADER_TEXT),
+   111→        ('FONTNAME', (0, 0), (-1, 0), 'NotoSerifSC'),
+   112→        ('FONTSIZE', (0, 0), (-1, 0), 9.5),
+   113→        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+   114→        ('TOPPADDING', (0, 0), (-1, 0), 8),
+   115→        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+   116→        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+   117→        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+   118→        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [TABLE_ROW_EVEN, TABLE_ROW_ODD]),
+   119→    ]
+   120→    t.setStyle(TableStyle(style_cmds))
+   121→    return t
+   122→
+   123→def fmt(val_wan, prefix='HKD '):
+   124→    """Format HKD value in wan. Shows +/- sign."""
+   125→    if val_wan >= 0:
+   126→        return f'{prefix}+{val_wan:.1f}萬'
+   127→    else:
+   128→        return f'{prefix}{val_wan:.1f}萬'
+   129→
+   130→def fmt_abs(val_wan):
+   131→    return f'HKD {abs(val_wan):.1f}萬'
+   132→
+   133→def fmt_plain(val_wan):
+   134→    return f'HKD {val_wan:.1f}萬'
+   135→
+   136→# ═══════════════════════════════════════════════════
+   137→# FINANCIAL DATA CALCULATIONS
+   138→# ═══════════════════════════════════════════════════
+   139→ENTRY_FX = 19.5           # JPY per HKD
+   140→PRICE_JPY = 62_400_000    # JPY
+   141→PRICE_HKD_WAN = 320.0     # HKD wan
+   142→EQUITY_HKD_WAN = 192.0    # HKD wan (60%)
+   143→LOAN_JPY = 24_960_000     # JPY (40%)
+   144→LOAN_HKD_WAN = 128.0      # HKD wan
+   145→RATE_ANNUAL = 0.03
+   146→MONTHLY_RATE = RATE_ANNUAL / 12
+   147→N_MONTHS_10 = 120
+   148→
+   149→# Mortgage calculation
+   150→MP_JPY = LOAN_JPY * MONTHLY_RATE * (1 + MONTHLY_RATE)**N_MONTHS_10 / ((1 + MONTHLY_RATE)**N_MONTHS_10 - 1)
+   151→TOTAL_MORTGAGE_JPY = MP_JPY * N_MONTHS_10
+   152→TOTAL_INTEREST_JPY = TOTAL_MORTGAGE_JPY - LOAN_JPY
+   153→INTEREST_HKD_WAN = TOTAL_INTEREST_JPY / ENTRY_FX / 10000  # in HKD wan
+   154→
+   155→# Rent calculation
+   156→ANNUAL_RENT_JPY = PRICE_JPY * 0.06        # JPY 374.4萬
+   157→ANNUAL_COST_JPY = PRICE_JPY * 0.003       # JPY 18.7萬 (management + property tax)
+   158→ANNUAL_NET_RENT_JPY = ANNUAL_RENT_JPY - ANNUAL_COST_JPY  # JPY 355.7萬
+   159→
+   160→# Tax on sale (acquisition tax ~3%, already paid at entry; capital gains ~20% on gain)
+   161→# We treat "稅費" as the annual property tax / management cost embedded in rent calc above.
+   162→# For the summary formula: 稅費 = annual costs deducted from gross rent
+   163→ANNUAL_TAX_COST_JPY = ANNUAL_COST_JPY  # JPY 18.7萬/yr
+   164→
+   165→# ML Predictions (from v2_ml_results.json)
+   166→FX_BLENDED_10 = 7.8    # % JPY depreciation over 10yr
+   167→PR_BLENDED_10 = 5.0    # % property appreciation over 10yr
+   168→
+   169→def calc_full(fx_chg_pct, pr_chg_pct, years=10):
+   170→    """Full decomposition: property + FX + rent - tax - mortgage interest, all in HKD wan."""
+   171→    exit_fx = ENTRY_FX * (1 + fx_chg_pct / 100)
+   172→    exit_jpy = PRICE_JPY * (1 + pr_chg_pct / 100)
+   173→
+   174→    # Property value change (at entry FX rate, so pure property effect)
+   175→    prop_gain_wan = (exit_jpy - PRICE_JPY) / ENTRY_FX / 10000
+   176→
+   177→    # FX effect (at entry property value, so pure FX effect)
+   178→    fx_gain_wan = PRICE_JPY * (1 / exit_fx - 1 / ENTRY_FX) / 10000
+   179→
+   180→    # Rent income: total net rent converted at exit FX
+   181→    total_net_rent_jpy = ANNUAL_NET_RENT_JPY * years
+   182→    rent_hkd_wan = total_net_rent_jpy / exit_fx / 10000
+   183→
+   184→    # Tax/cost: total annual costs (already netted out of rent above, but for formula clarity)
+   185→    total_tax_cost_jpy = ANNUAL_TAX_COST_JPY * years
+   186→    tax_hkd_wan = total_tax_cost_jpy / exit_fx / 10000
+   187→
+   188→    # Mortgage interest (converted at entry FX - cost is fixed in JPY)
+   189→    interest_hkd_wan = INTEREST_HKD_WAN
+   190→
+   191→    # Net formula: property + FX + rent - tax - interest
+   192→    net = prop_gain_wan + fx_gain_wan + rent_hkd_wan - tax_hkd_wan - interest_hkd_wan
+   193→
+   194→    return {
+   195→        'exit_fx': exit_fx,
+   196→        'exit_jpy': exit_jpy,
+   197→        'prop_wan': prop_gain_wan,
+   198→        'fx_wan': fx_gain_wan,
+   199→        'rent_wan': rent_hkd_wan,
+   200→        'tax_wan': tax_hkd_wan,
+   201→        'interest_wan': interest_hkd_wan,
+   202→        'net_wan': net,
+   203→    }
+   204→
+   205→# Key scenarios
+   206→ml_10 = calc_full(FX_BLENDED_10, PR_BLENDED_10, 10)
+   207→ml_5 = calc_full(FX_BLENDED_10 * 5/10, PR_BLENDED_10 * 5/10, 5)
+   208→ml_7 = calc_full(FX_BLENDED_10 * 7/10, PR_BLENDED_10 * 7/10, 7)
+   209→
+   210→best_10 = calc_full((13.0 - 19.5) / 19.5 * 100, (1.03**10 - 1) * 100, 10)
+   211→worst_10 = calc_full((28.0 - 19.5) / 19.5 * 100, -30, 10)
+   212→fx_flat_10 = calc_full(0, (1.03**10 - 1) * 100, 10)
+   213→fx13_flat_10 = calc_full((13.0 - 19.5) / 19.5 * 100, 0, 10)
+   214→fx16_moderate_10 = calc_full((16.0 - 19.5) / 19.5 * 100, 15, 10)
+   215→fx22_flat_10 = calc_full((22.0 - 19.5) / 19.5 * 100, 0, 10)
+   216→fx24_decline_10 = calc_full((24.0 - 19.5) / 19.5 * 100, -30, 10)
+   217→
+   218→all_scenarios = [
+   219→    ('ML 加權預測 (10年)', ml_10),
+   220→    ('最好情景 (FX=13, +3%/年)', best_10),
+   221→    ('最差情景 (FX=28, -3%/年)', worst_10),
+   222→    ('FX 不變, 樓價 +3%/年', fx_flat_10),
+   223→    ('FX=13, 樓價不變', fx13_flat_10),
+   224→    ('FX=16, 樓價 +1.5%/年', fx16_moderate_10),
+   225→    ('FX=22, 樓價不變', fx22_flat_10),
+   226→    ('FX=24, 樓價 -3%/年', fx24_decline_10),
+   227→]
+   228→
+   229→# ═══════════════════════════════════════════════════
+   230→# BUILD DOCUMENT
+   231→# ═══════════════════════════════════════════════════
+   232→OUT = '/home/z/my-project/download/andy_report_body_v4.pdf'
+   233→CHART_DIR = '/home/z/my-project/download/ml_charts'
+   234→ARCH_PNG = '/home/z/my-project/download/model_architecture.png'
+   235→
+   236→doc = SimpleDocTemplate(
+   237→    OUT, pagesize=A4,
+   238→    leftMargin=LM, rightMargin=RM, topMargin=TM, bottomMargin=BM
+   239→)
+   240→
+   241→story = []
+   242→
+   243→# ═══════════════════════════════════════════════════
+   244→# CHAPTER 1: 投資概述
+   245→# ═══════════════════════════════════════════════════
+   246→story.append(h1('一、投資概述'))
+   247→
+   248→story.append(h2('1.1 物業基本資料'))
+   249→story.append(p('本報告評估對象為日本住宅物業，買入價為 HKD 320 萬（折合 JPY 6,240 萬，入場匯率 1 HKD = 19.5 JPY）。投資者 Andy 以自付首期 HKD 192 萬（佔物業總價 60%）作為初始資金投入，餘下 40% 即 HKD 128 萬（折合 JPY 2,496 萬）透過銀行按揭融資。此槓桿結構令 Andy 能以較少的自有資金控制更大規模的資產，同時按揭利息成本亦需在回報計算中扣減。整個投資分析的核心框架為：以入場時的物業價值 HKD 320 萬為基準，計算持有期內各項收入與支出對港元計價的最終影響。'))
+   250→
+   251→t1 = make_table(
+   252→    ['項目', '金額 / 參數'],
+   253→    [
+   254→        ['物業總價', 'HKD 320 萬 (JPY 6,240 萬)'],
+   255→        ['Andy 自付首期 (60%)', 'HKD 192 萬'],
+   256→        ['銀行按揭 (40% LTV)', 'HKD 128 萬 (JPY 2,496 萬)'],
+   257→        ['按揭利率', '每年 3%'],
+   258→        ['按揭年期', '10 年 (120 個月)'],
+   259→        ['入場匯率 (JPY/HKD)', '19.5'],
+   260→        ['預期年租金回報率', '6% (扣管理費後淨約 5.7%)'],
+   261→    ],
+   262→    col_widths=[CW * 0.40, CW * 0.60]
+   263→)
+   264→story.append(t1)
+   265→story.append(cap('表 1: 物業投資基本參數'))
+   266→
+   267→story.append(h2('1.2 按揭供款詳情'))
+   268→story.append(p('銀行按揭金額為 JPY 2,496 萬，年利率 3%，分 10 年（120 個月）等額本息攤還。經計算，每月供款為 JPY 241,016，10 年總供款額為 JPY 2,892.2 萬，其中本金 JPY 2,496 萬，利息總額 JPY 396.2 萬（按入場匯率折算約 HKD 20.3 萬）。換言之，Andy 在 10 年按揭期內，除歸還 128 萬本金外，需額外承擔約 HKD 20.3 萬的利息支出，此為投資的明確固定成本，無論物業價格或匯率如何變動，這筆利息支出都已經確定。'))
+   269→
+   270→t2 = make_table(
+   271→    ['按揭項目', '金額'],
+   272→    [
+   273→        ['貸款金額', 'JPY 2,496 萬 (HKD 128 萬)'],
+   274→        ['每月供款', 'JPY 241,016'],
+   275→        ['10 年總供款', 'JPY 2,892.2 萬'],
+   276→        ['其中本金', 'JPY 2,496 萬'],
+   277→        ['其中利息總額', 'JPY 396.2 萬 (HKD 20.3 萬)'],
+   278→        ['供款後貸款餘額 (10年後)', 'JPY 0 (已供滿)'],
+   279→    ],
+   280→    col_widths=[CW * 0.40, CW * 0.60]
+   281→)
+   282→story.append(t2)
+   283→story.append(cap('表 2: 按揭供款明細'))
+   284→
+   285→story.append(h2('1.3 租金收入與營運成本'))
+   286→story.append(p('物業預期年租金回報率為 6%，即每年租金收入 JPY 374.4 萬。扣除每年管理費及物業稅等營運成本（約物業價值的 0.3%，即 JPY 18.7 萬）後，每年淨租金收入為 JPY 355.7 萬。按入場匯率計算，每年淨租金折合約 HKD 18.2 萬。在 10 年持有期內，租金需先用於支付每月按揭供款（JPY 289.2 萬/年），餘下部分方為 Andy 的正現金流收入。值得注意的是，租金收入受出場匯率影響——若日圓貶值，同樣的日圓租金折算為港元會減少，這是匯率風險的另一個面向。'))
+   287→
+   288→story.append(h2('1.4 回報計算公式'))
+   289→story.append(p('本報告的核心分析方法是將投資回報分解為五個獨立組成部分，以港元金額直接呈現，讓 Andy 清楚看到每一項收入和支出的實際金額。回報計算公式如下：'))
+   290→
+   291→story.append(formula_title('投資淨回報 = 房價變動 + 匯率變動 + 租金收入 - 稅費 - 銀行供款費用'))
+   292→
+   293→story.append(p('其中各項的定義為：房價變動是日本物業價格本身的升跌，以入場匯率折算為港元差額；匯率變動是假設物業日圓價格不變，純粹因 JPY/HKD 匯率改變而產生的港元價值變化；租金收入是扣除管理費後的淨租金，按出場匯率折算為港元；稅費是持有期內的物業稅及管理費合計，按出場匯率折算為港元；銀行供款費用是按揭總利息支出，按入場匯率折算為港元。五項相加即為 Andy 在持有期內的投資淨回報，正數代表賺錢，負數代表虧損。'))
+   294→
+   295→
+   296→# ═══════════════════════════════════════════════════
+   297→# CHAPTER 2: ML 模型架構
+   298→# ═══════════════════════════════════════════════════
+   299→story.append(h1('二、ML 模型架構'))
+   300→
+   301→story.append(h2('2.1 數據來源'))
+   302→story.append(p('本模型採用美國聯邦儲備銀行 FRED 數據庫的真實歷史數據，涵蓋四個核心時間序列：JPY/USD 月度匯率（1971-2026 年，共 665 個數據點）、日本住宅價格指數季度數據（1955-2025 年，共 284 個數據點）、美國聯邦基金利率月度數據（1954-2026 年，共 863 個數據點）、以及日本政策利率月度數據（1985-2026 年，共 490 個數據點）。四個序列經季度對齊處理後，最終獲得 104 個有效訓練樣本，較 V1 版本的 16 個樣本大幅提升，顯著增強了模型對歷史規律的學習能力和預測可靠性。'))
+   303→
+   304→story.append(h2('2.2 模型方法'))
+   305→story.append(p('本模型採用四種機器學習算法進行集成預測：XGBoost、LightGBM、Random Forest 和 Gradient Boosting Regressor（GBR）。每個模型均使用時間序列交叉驗證（TimeSeriesSplit）進行評估，確保不會出現未來數據洩漏。集成預測時，以各模型交叉驗證 MAE（平均絕對誤差）的倒數平方作為權重，對四個模型的預測結果進行加權平均。匯率預測方面，表現最佳模型為 GBR（CV MAE 19.7%），物業價格預測方面同樣以 GBR 表現最佳（CV MAE 15.6%），整體預測精度較 V1 版本有顯著提升。'))
+   306→
+   307→img_mc = os.path.join(CHART_DIR, 'v2_model_comparison.png')
+   308→if os.path.exists(img_mc):
+   309→    story.append(Spacer(1, 8))
+   310→    story.append(Image(img_mc, width=CW, height=CW * 5 / 14))
+   311→    story.append(cap('圖 1: 四種 ML 模型交叉驗證 MAE 比較'))
+   312→
+   313→story.append(h2('2.3 Monte Carlo 機率模擬'))
+   314→story.append(p('在獲得 ML 集成預測點估計後，模型進一步結合歷史數據分佈特徵，採用 t 分佈（自由度 20）進行 Monte Carlo 模擬，生成 10,000 個隨機情景。t 分佈相比正態分佈具有更厚的尾部，能更好地捕捉金融市場中的極端事件風險。最終預測值為 ML 點估計（佔 55% 權重）與 Monte Carlo 歷史分佈均值（佔 45% 權重）的加權混合，兼顧了模型預測能力和歷史規律的穩健性。這 10,000 個模擬結果構成了後續 84 情景機率加權分析的基礎。'))
+   315→
+   316→if os.path.exists(ARCH_PNG):
+   317→    story.append(Spacer(1, 8))
+   318→    story.append(Image(ARCH_PNG, width=CW, height=CW * 0.45))
+   319→    story.append(cap('圖 2: ML V2 模型六階段分析架構'))
+   320→
+   321→
+   322→# ═══════════════════════════════════════════════════
+   323→# CHAPTER 3: 預測結果
+   324→# ═══════════════════════════════════════════════════
+   325→story.append(h1('三、預測結果'))
+   326→
+   327→story.append(h2('3.1 匯率預測'))
+   328→story.append(p('ML 模型對未來 10 年 JPY/HKD 匯率的加權混合預測為<b> +7.8%</b>，即由入場時的 19.5 JPY/HKD 上升至約 21.0 JPY/HKD。這代表日圓相對港元呈<b>貶值趨勢</b>：每 1 港元可兌換的日圓數量增加，意味著出場時將日圓資產換回港元會蒙受匯率損失。ARIMA 時間序列模型則預測匯率變化為 -1.9%（日圓微升），兩者方向不同，顯示匯率預測本身具有較大的不確定性。Monte Carlo 模擬的 10 年匯率變化分佈範圍極廣：第 5 百分位為 -31.1%（日圓大幅升值至 13.4），第 95 百分位為 +47.1%（日圓大幅貶值至 28.7），反映匯率是此投資的最大不確定性來源。'))
+   329→
+   330→t3 = make_table(
+   331→    ['預測方法', '10 年匯率變化', '出場 JPY/HKD', '方向'],
+   332→    [
+   333→        ['ML 集成預測', '+0.2%', '19.54', '基本不變'],
+   334→        ['混合預測 (ML + 歷史)', '+7.8%', '21.02', '日圓貶值'],
+   335→        ['ARIMA (1,1,1)', '-1.9%', '19.13', '日圓微升'],
+   336→        ['MC 模擬均值', '+7.6%', '20.98', '日圓貶值'],
+   337→        ['MC 第 5 百分位', '-31.1%', '13.43', '日圓大幅升值'],
+   338→        ['MC 第 95 百分位', '+47.1%', '28.68', '日圓大幅貶值'],
+   339→    ],
+   340→    col_widths=[CW * 0.30, CW * 0.22, CW * 0.22, CW * 0.26]
+   341→)
+   342→story.append(t3)
+   343→story.append(cap('表 3: JPY/HKD 匯率 10 年預測結果比較'))
+   344→
+   345→story.append(h2('3.2 物業價格預測'))
+   346→story.append(p('ML 模型對未來 10 年日本住宅價格的加權混合預測為<b> +5.0%</b>，即物業價格由 JPY 6,240 萬温和上升至約 JPY 6,552 萬。相比之下，ARIMA 模型預測物業價格將大幅上升 +21.2%，這主要反映了 ARIMA 對近期日本樓市復甦趨勢的線性外推傾向。Monte Carlo 模擬結果顯示，物業價格 10 年變化的均值為 +4.8%，但分佈較廣：第 5 百分位為 -24.7%（價格大幅下跌至 JPY 4,699 萬），第 95 百分位為 +35.0%（價格顯著上升至 JPY 8,424 萬）。整體而言，模型認為日本樓價在未來 10 年傾向温和上升，但下行風險不容忽視。'))
+   347→
+   348→t4 = make_table(
+   349→    ['預測方法', '10 年樓價變化', '出場物業 (JPY 萬)', '方向'],
+   350→    [
+   351→        ['ML 集成預測', '+0.0%', '6,240', '不變'],
+   352→        ['混合預測 (ML + 歷史)', '+5.0%', '6,552', '温和上升'],
+   353→        ['ARIMA (1,1,1)', '+21.2%', '7,563', '顯著上升'],
+   354→        ['MC 模擬均值', '+4.8%', '6,539', '温和上升'],
+   355→        ['MC 第 5 百分位', '-24.7%', '4,699', '大幅下跌'],
+   356→        ['MC 第 95 百分位', '+35.0%', '8,424', '顯著上升'],
+   357→    ],
+   358→    col_widths=[CW * 0.30, CW * 0.22, CW * 0.22, CW * 0.26]
+   359→)
+   360→story.append(t4)
+   361→story.append(cap('表 4: 日本住宅價格 10 年預測結果比較'))
+   362→
+   363→img_pd = os.path.join(CHART_DIR, 'v2_probability_distribution.png')
+   364→if os.path.exists(img_pd):
+   365→    story.append(Spacer(1, 8))
+   366→    story.append(Image(img_pd, width=CW, height=CW * 5.5 / 14))
+   367→    story.append(cap('圖 3: 匯率與物業價格 ML 預測機率分佈'))
+   368→
+   369→
+   370→# ═══════════════════════════════════════════════════
+   371→# CHAPTER 4: 物業資本價值分析
+   372→# ═══════════════════════════════════════════════════
+   373→story.append(h1('四、物業資本價值分析'))
+   374→
+   375→story.append(h2('4.1 分析方法說明'))
+   376→story.append(p('本章以入場時的物業價值 HKD 320 萬為基準，計算不同情景下出場時的物業港元價值，並將價值變動分解為兩個獨立組成部分：<b>房價變動</b>（假設匯率不變，純粹由日本樓價變動帶來的港元價值變化）和<b>匯率變動</b>（假設物業價格不變，純粹由 JPY/HKD 匯率變動帶來的港元價值變化）。此分析僅反映物業本身的資本價值變化，尚未包含租金收入和按揭成本。'))
+   377→
+   378→story.append(h2('4.2 ML 加權預測 — 10 年物業資本價值'))
+   379→
+   380→story.append(p(f'根據 ML 混合預測，10 年後匯率由 19.5 變動至 {ml_10["exit_fx"]:.2f} JPY/HKD（日圓貶值 +7.8%），物業價格由 JPY 6,240 萬上升至 JPY {ml_10["exit_jpy"]/10000:,.0f} 萬（升幅 +5.0%）。'))
+   381→
+   382→story.append(callout(f'ML 加權 10 年預測物業資本價值變動總和 = {fmt(ml_10["prop_wan"] + ml_10["fx_wan"])}'))
+   383→
+   384→story.append(pl(f'其中：'))
+   385→story.append(pl(f'  房價變動（樓價 +5.0%，假設匯率不變）：{fmt(ml_10["prop_wan"])}'))
+   386→story.append(pl(f'  匯率變動（日圓貶值，假設樓價不變）：{fmt(ml_10["fx_wan"])}'))
+   387→
+   388→story.append(p(f'此結果顯示，在 ML 預測的最可能情景下，物業資本價值實際上會<b>微跌約 HKD {abs(ml_10["prop_wan"] + ml_10["fx_wan"]):.1f} 萬</b>。原因是日圓貶值帶來的匯率損失超過了物業價格上升帶來的資本增值。這是一個重要發現：對於港元投資者而言，日圓匯率的走向對物業資本價值的影響，甚至可能超過日本本土樓價的升跌。即使日本樓價上升，若日圓同時貶值，港元投資者的資本價值仍可能下跌。'))
+   389→
+   390→story.append(h2('4.3 不同持有期的 ML 預測'))
+   391→story.append(p('以下為 ML 加權預測下 5 年、7 年及 10 年三個持有期的物業資本價值變動比較。持有期越長，物業升幅的累積效應越大，但匯率貶值的影響亦同步放大。兩者在較長的持有期內互相抵消的趨勢更為明顯。'))
+   392→
+   393→hold_rows = []
+   394→for sc, yrs in [(ml_5, 5), (ml_7, 7), (ml_10, 10)]:
+   395→    hold_rows.append([
+   396→        f'{yrs} 年',
+   397→        f'{sc["exit_fx"]:.2f}',
+   398→        fmt(sc['prop_wan']),
+   399→        fmt(sc['fx_wan']),
+   400→        fmt(sc['prop_wan'] + sc['fx_wan']),
+   401→    ])
+   402→
+   403→t5 = make_table(
+   404→    ['持有期', '出場匯率', '房價變動', '匯率變動', '資本價值總和'],
+   405→    hold_rows,
+   406→    col_widths=[CW*0.12, CW*0.14, CW*0.22, CW*0.22, CW*0.30]
+   407→)
+   408→story.append(t5)
+   409→story.append(cap('表 5: ML 加權預測 — 不同持有期物業資本價值變動 (HKD)'))
+   410→
+   411→story.append(h2('4.4 多情景資本價值對照'))
+   412→story.append(p('為更清晰地展示房價與匯率各自的影響，以下列舉八個情景進行對照分析。每個情景均以入場價 HKD 320 萬為基準，顯示出場時的房價變動和匯率變動各自的港元金額。'))
+   413→
+   414→scenario_rows = []
+   415→for label, sc in all_scenarios:
+   416→    scenario_rows.append([
+   417→        label,
+   418→        fmt(sc['prop_wan']),
+   419→        fmt(sc['fx_wan']),
+   420→        fmt(sc['prop_wan'] + sc['fx_wan']),
+   421→    ])
+   422→
+   423→t6 = make_table(
+   424→    ['情景', '房價變動', '匯率變動', '資本價值總和'],
+   425→    scenario_rows,
+   426→    col_widths=[CW*0.30, CW*0.20, CW*0.20, CW*0.30]
+   427→)
+   428→story.append(t6)
+   429→story.append(cap('表 6: 各情景物業資本價值分解 (HKD，10 年持有)'))
+   430→
+   431→story.append(h2('4.5 關鍵發現'))
+   432→story.append(p('<b>發現一：匯率是更大變數。</b>在 ML 加權預測中，物業價格上升帶來的房價增值為 HKD +16.0 萬，但日圓貶值導致的匯率損失為 HKD -23.2 萬，最終資本價值微跌。對於港元投資者而言，匯率走向對物業資本價值的影響幅度大於日本本土樓價的升跌幅度，這是海外物業投資的核心特徵。'))
+   433→
+   434→story.append(p('<b>發現二：最好情景收益可觀。</b>在日圓大幅升值至 13 JPY/HKD、同時樓價每年上升 3% 的最好情景下，房價變動貢獻 HKD +110.1 萬，匯率變動貢獻 HKD +160.0 萬，兩者合力產生約 HKD +270 萬的資本增值，相當於首期資金的 1.4 倍。'))
+   435→
+   436→story.append(p('<b>發現三：最差情景虧損嚴重。</b>在日圓大幅貶值至 28 JPY/HKD、同時樓價每年下跌 3% 的最差情景下，房價與匯率雙重打擊，資本價值總和虧損約 HKD -164 萬，物業價值較入場時縮水超過一半，凸顯外幣物業投資的雙邊風險。'))
+   437→
+   438→img_hm = os.path.join(CHART_DIR, 'v2_probability_heatmap.png')
+   439→if os.path.exists(img_hm):
+   440→    story.append(Spacer(1, 8))
+   441→    story.append(Image(img_hm, width=CW, height=CW * 0.6))
+   442→    story.append(cap('圖 4: 84 情景機率加權熱力圖（氣泡大小 = 機率，顏色 = 回報）'))
+   443→
+   444→
+   445→# ═══════════════════════════════════════════════════
+   446→# CHAPTER 5: 綜合回報分析（五項分解）
+   447→# ═══════════════════════════════════════════════════
+   448→story.append(h1('五、綜合回報分析'))
+   449→
+   450→story.append(h2('5.1 回報分解方法'))
+   451→story.append(p('第四章僅分析物業資本價值的變化。本章將所有收入和支出項目完整納入計算，按照以下公式逐項分解，以港元金額呈現 Andy 的完整投資回報：'))
+   452→
+   453→story.append(formula_title('投資淨回報 = 房價變動 + 匯率變動 + 租金收入 - 稅費 - 銀行供款費用'))
+   454→
+   455→story.append(p('五個項目的具體定義如下：第一，<b>房價變動</b>是物業日圓價格的升跌，以入場匯率折算為港元差額（純粹反映日本樓市的表現）。第二，<b>匯率變動</b>是假設物業日圓價格不變，純粹因 JPY/HKD 匯率改變而產生的港元價值變化（反映日圓匯率的影響）。第三，<b>租金收入</b>是扣除管理費後的淨租金總額，按出場匯率折算為港元。第四，<b>稅費</b>是持有期內的物業稅及管理費合計，按出場匯率折算為港元。第五，<b>銀行供款費用</b>是 10 年按揭的總利息支出，按入場匯率折算為港元。五項相加即為投資淨回報，正值代表賺錢，負值代表虧損。'))
+   456→
+   457→story.append(h2('5.2 ML 加權預測 — 10 年五項分解'))
+   458→story.append(p(f'在 ML 加權預測情景下（出場匯率 {ml_10["exit_fx"]:.2f} JPY/HKD，物業升幅 +5.0%），各項回報分解如下：'))
+   459→
+   460→# Summary breakdown table for ML weighted
+   461→ml_rows = [
+   462→    ['房價變動', fmt(ml_10['prop_wan']), '物業 JPY +5.0%，以入場匯率折算'],
+   463→    ['匯率變動', fmt(ml_10['fx_wan']), '日圓貶值 +7.8%，港元計價損失'],
+   464→    ['租金收入', fmt(ml_10['rent_wan']), '10 年淨租金按出場匯率折算'],
+   465→    ['稅費', fmt(-ml_10['tax_wan']), '物業稅及管理費（已從租金中扣除）'],
+   466→    ['銀行供款費用', fmt(-ml_10['interest_wan']), '10 年按揭總利息'],
+   467→    ['投資淨回報', fmt(ml_10['net_wan']), '以上五項之和'],
+   468→]
+   469→
+   470→td_neg = ParagraphStyle('TDN', fontName='NotoSerifSC', fontSize=10, leading=15,
+   471→    textColor=TEXT_PRIMARY, alignment=TA_CENTER, wordWrap='CJK')
+   472→td_neg_l = ParagraphStyle('TDNL', fontName='NotoSerifSC', fontSize=10, leading=15,
+   473→    textColor=TEXT_PRIMARY, alignment=TA_LEFT, wordWrap='CJK')
+   474→th_s = ParagraphStyle('THS', fontName='NotoSerifSC', fontSize=10, leading=15,
+   475→    textColor=TABLE_HEADER_TEXT, alignment=TA_CENTER, wordWrap='CJK')
+   476→td_bold = ParagraphStyle('TDB', fontName='NotoSerifSCBold', fontSize=10.5, leading=15,
+   477→    textColor=ACCENT, alignment=TA_CENTER, wordWrap='CJK')
+   478→td_bold_l = ParagraphStyle('TDBL', fontName='NotoSerifSCBold', fontSize=10.5, leading=15,
+   479→    textColor=ACCENT, alignment=TA_LEFT, wordWrap='CJK')
+   480→
+   481→summary_data = [[Paragraph(h, th_s) for h in ['項目', '金額 (HKD)', '說明']]]
+   482→for i, row in enumerate(ml_rows):
+   483→    if i == len(ml_rows) - 1:
+   484→        summary_data.append([Paragraph(row[0], td_bold_l), Paragraph(row[1], td_bold), Paragraph(row[2], td_neg)])
+   485→    else:
+   486→        summary_data.append([Paragraph(row[0], td_neg_l), Paragraph(row[1], td_neg), Paragraph(row[2], td_neg)])
+   487→
+   488→t_summary = Table(summary_data, colWidths=[CW*0.22, CW*0.22, CW*0.56], hAlign='CENTER')
+   489→t_summary.setStyle(TableStyle([
+   490→    ('BACKGROUND', (0, 0), (-1, 0), TABLE_HEADER_COLOR),
+   491→    ('TEXTCOLOR', (0, 0), (-1, 0), TABLE_HEADER_TEXT),
+   492→    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+   493→    ('ROWBACKGROUNDS', (0, 1), (-1, -2), [TABLE_ROW_EVEN, TABLE_ROW_ODD]),
+   494→    ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d4e9f0')),
+   495→    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+   496→    ('TOPPADDING', (0, 0), (-1, -1), 8),
+   497→    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+   498→    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+   499→    ('LINEABOVE', (0, -1), (-1, -1), 1.5, ACCENT),
+   500→]))
+   501→story.append(t_summary)
+   502→story.append(cap('表 7: ML 加權預測 10 年投資回報五項分解 (HKD)'))
+   503→
+   504→story.append(p(f'上表的結果顯示一個清晰的模式：<b>租金收入（HKD +{ml_10["rent_wan"]:.1f} 萬）是此投資的最大利潤來源</b>，遠超過房價變動和匯率變動的影響。雖然日圓貶值導致匯率變動為負值（HKD {ml_10["fx_wan"]:.1f} 萬），但租金收入的規模足以完全覆蓋匯率損失、稅費和銀行利息支出，最終仍產生正的投資淨回報。換言之，此投資的盈利核心是租金現金流，而非資本增值。'))
+   505→
+   506→story.append(h2('5.3 最好與最差情景五項分解'))
+   507→story.append(p('以下為三個關鍵情景的五項回報分解對照，清楚展示不同市況下各項目對最終回報的貢獻差異。'))
+   508→
+   509→comp_rows = [
+   510→    ['房價變動', fmt(ml_10['prop_wan']), fmt(best_10['prop_wan']), fmt(worst_10['prop_wan'])],
+   511→    ['匯率變動', fmt(ml_10['fx_wan']), fmt(best_10['fx_wan']), fmt(worst_10['fx_wan'])],
+   512→    ['租金收入', fmt(ml_10['rent_wan']), fmt(best_10['rent_wan']), fmt(worst_10['rent_wan'])],
+   513→    ['稅費', fmt(-ml_10['tax_wan']), fmt(-best_10['tax_wan']), fmt(-worst_10['tax_wan'])],
+   514→    ['銀行供款費用', fmt(-ml_10['interest_wan']), fmt(-best_10['interest_wan']), fmt(-worst_10['interest_wan'])],
+   515→    ['投資淨回報', fmt(ml_10['net_wan']), fmt(best_10['net_wan']), fmt(worst_10['net_wan'])],
+   516→]
+   517→
+   518→comp_data = [[Paragraph(h, th_s) for h in ['項目', 'ML 加權', '最好情景', '最差情景']]]
+   519→for i, row in enumerate(comp_rows):
+   520→    if i == len(comp_rows) - 1:
+   521→        comp_data.append([Paragraph(row[0], td_bold_l)] + [Paragraph(c, td_bold) for c in row[1:]])
+   522→    else:
+   523→        comp_data.append([Paragraph(row[0], td_neg_l)] + [Paragraph(c, td_neg) for c in row[1:]])
+   524→
+   525→t_comp = Table(comp_data, colWidths=[CW*0.24, CW*0.25, CW*0.25, CW*0.26], hAlign='CENTER')
+   526→t_comp.setStyle(TableStyle([
+   527→    ('BACKGROUND', (0, 0), (-1, 0), TABLE_HEADER_COLOR),
+   528→    ('TEXTCOLOR', (0, 0), (-1, 0), TABLE_HEADER_TEXT),
+   529→    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+   530→    ('ROWBACKGROUNDS', (0, 1), (-1, -2), [TABLE_ROW_EVEN, TABLE_ROW_ODD]),
+   531→    ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d4e9f0')),
+   532→    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+   533→    ('TOPPADDING', (0, 0), (-1, -1), 8),
+   534→    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+   535→    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+   536→    ('LINEABOVE', (0, -1), (-1, -1), 1.5, ACCENT),
+   537→]))
+   538→story.append(t_comp)
+   539→story.append(cap('表 8: 三個關鍵情景之投資回報五項分解比較 (HKD，10 年持有)'))
+   540→
+   541→story.append(p(f'在最好情景下，房價和匯率雙雙利好，兩者合計貢獻約 HKD {best_10["prop_wan"] + best_10["fx_wan"]:.1f} 萬的資本增值，加上租金收入 HKD +{best_10["rent_wan"]:.1f} 萬，扣除成本後投資淨回報達 {fmt(best_10["net_wan"])}。Andy 投入的 HKD 192 萬首期，10 年後最終可回收約 HKD {EQUITY_HKD_WAN + best_10["net_wan"]:.1f} 萬。'))
+   542→
+   543→story.append(p(f'在最差情景下，房價和匯率雙雙利空，資本價值大幅縮水，但租金收入（即使在貶值匯率下仍折合 HKD +{worst_10["rent_wan"]:.1f} 萬）部分抵消了虧損，最終投資淨回報為 {fmt(worst_10["net_wan"])}。最終可回收約 HKD {EQUITY_HKD_WAN + worst_10["net_wan"]:.1f} 萬。'))
+   544→
+   545→
+   546→# ═══════════════════════════════════════════════════
+   547→# CHAPTER 6: 總結
+   548→# ═══════════════════════════════════════════════════
+   549→story.append(h1('六、總結'))
+   550→
+   551→story.append(h2('6.1 ML 預測情景：回報分解總覽'))
+   552→story.append(p(f'基於 ML V2 模型的 84 情景機率加權分析，Andy 以 HKD 192 萬首期投資日本物業（總價 HKD 320 萬，銀行按揭 HKD 128 萬，利率 3%），在 ML 預測的最可能情景下，10 年後的投資回報按五項分解如下：'))
+   553→
+   554→# Final summary box
+   555→final_rows = [
+   556→    ['房價變動', fmt(ml_10['prop_wan'])],
+   557→    ['匯率變動', fmt(ml_10['fx_wan'])],
+   558→    ['租金收入', fmt(ml_10['rent_wan'])],
+   559→    ['稅費', fmt(-ml_10['tax_wan'])],
+   560→    ['銀行供款費用', fmt(-ml_10['interest_wan'])],
+   561→    ['投資淨回報', fmt(ml_10['net_wan'])],
+   562→]
+   563→
+   564→final_data = [[Paragraph(h, th_s) for h in ['回報項目', '金額 (HKD)']]]
+   565→for i, row in enumerate(final_rows):
+   566→    if i == len(final_rows) - 1:
+   567→        final_data.append([Paragraph(row[0], td_bold_l), Paragraph(row[1], td_bold)])
+   568→    else:
+   569→        final_data.append([Paragraph(row[0], td_neg_l), Paragraph(row[1], td_neg)])
+   570→
+   571→t_final = Table(final_data, colWidths=[CW*0.40, CW*0.35], hAlign='CENTER')
+   572→t_final.setStyle(TableStyle([
+   573→    ('BACKGROUND', (0, 0), (-1, 0), TABLE_HEADER_COLOR),
+   574→    ('TEXTCOLOR', (0, 0), (-1, 0), TABLE_HEADER_TEXT),
+   575→    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+   576→    ('ROWBACKGROUNDS', (0, 1), (-1, -2), [TABLE_ROW_EVEN, TABLE_ROW_ODD]),
+   577→    ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d4e9f0')),
+   578→    ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+   579→    ('TOPPADDING', (0, 0), (-1, -1), 10),
+   580→    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+   581→    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+   582→    ('LINEABOVE', (0, -1), (-1, -1), 2, ACCENT),
+   583→]))
+   584→story.append(t_final)
+   585→story.append(cap('表 9: ML 加權預測 10 年投資回報總覽 (HKD)'))
+   586→
+   587→story.append(callout(f'Andy 首期 HKD 192 萬，10 年後最終回收約 HKD {EQUITY_HKD_WAN + ml_10["net_wan"]:.1f} 萬'))
+   588→
+   589→story.append(p(f'上表清楚顯示，此投資的盈利結構為：<b>租金收入（HKD +{ml_10["rent_wan"]:.1f} 萬）是最大的利潤來源</b>，而物業資本價值因日圓貶值而微跌約 HKD {abs(ml_10["prop_wan"] + ml_10["fx_wan"]):.1f} 萬（房價升幅被匯率貶值抵消）。扣除稅費和銀行利息後，投資淨回報為 {fmt(ml_10["net_wan"])}。這意味著 Andy 的 192 萬首期在 10 年後增值至約 HKD {EQUITY_HKD_WAN + ml_10["net_wan"]:.1f} 萬，主要靠租金現金流驅動，而非物業升值。'))
+   590→
+   591→story.append(h2('6.2 風險提示'))
+   592→
+   593→story.append(p('<b>匯率風險為首要風險。</b>ML 模型預測日圓將貶值約 7.8%，此預測若成真，匯率將侵蝕大部分物業升值帶來的收益。若日圓貶值幅度超過預期（如 MC 模擬第 95 百分位的 +47.1%），匯率損失將極為嚴重，可能完全吞噬租金收入。相反，若日圓意外升值（如跌至 13 JPY/HKD），則匯率將成為最大的盈利驅動因素。匯率的不確定性是此投資的最大變數，任何投資決策都應將匯率情景分析放在首位。'))
+   594→
+   595→story.append(p('<b>樓價下跌風險。</b>雖然 ML 預測樓價温和上升 5%，但歷史上日本樓價曾出現長期大幅下跌（1990 年代泡沫破裂後跌幅超過 50%）。MC 模擬第 5 百分位顯示樓價有 5% 機率在 10 年內下跌 24.7%，此風險不可忽視。若樓價與匯率同時不利，投資虧損將顯著放大。'))
+   596→
+   597→story.append(p('<b>流動性風險。</b>日本物業的買賣手續繁複，交易周期較長，且在需要急售時可能面臨折價。此外，海外物業的出租管理也需要委託專業機構，產生額外費用。'))
+   598→
+   599→story.append(h2('6.3 投資決策參考'))
+   600→story.append(p(f'本報告的分析結果顯示，在 ML 加權預測情景下，Andy 的投資整體可獲得正回報（{fmt(ml_10["net_wan"])}），但利潤的主要來源是租金而非資本增值。投資者應根據自身對日圓匯率走勢的判斷、對日本樓市前景的評估、以及對流動性的需求，綜合權衡後作出投資決定。若投資者認為日圓有較大機率升值，則此投資的潛在回報將顯著提升；若預期日圓持續貶值，則應審慎評估租金收入是否足以覆蓋匯率損失。'))
+   601→
+   602→# V1 vs V2 comparison chart
+   603→img_v1 = os.path.join(CHART_DIR, 'v2_v1_comparison.png')
+   604→if os.path.exists(img_v1):
+   605→    story.append(Spacer(1, 8))
+   606→    story.append(Image(img_v1, width=CW, height=CW * 0.6))
+   607→    story.append(cap('圖 5: V1 (年度估計數據) vs V2 (FRED 真實季度數據) 模型比較'))
+   608→
+   609→# Feature importance chart
+   610→img_fi = os.path.join(CHART_DIR, 'v2_feature_importance.png')
+   611→if os.path.exists(img_fi):
+   612→    story.append(Spacer(1, 8))
+   613→    story.append(Image(img_fi, width=CW, height=CW * 5 / 14))
+   614→    story.append(cap('圖 6: ML 模型特徵重要性'))
+   615→
+   616→
+   617→# ═══════════════════════════════════════════════════
+   618→# BUILD PDF
+   619→# ═══════════════════════════════════════════════════
+   620→doc.build(story)
+   621→print(f'Body PDF generated: {OUT}')
+   622→print(f'ML 10yr net: {ml_10["net_wan"]:.1f} wan HKD')
+   623→print(f'Best 10yr net: {best_10["net_wan"]:.1f} wan HKD')
+   624→print(f'Worst 10yr net: {worst_10["net_wan"]:.1f} wan HKD')

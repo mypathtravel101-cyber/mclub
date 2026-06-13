@@ -182,3 +182,28 @@ Stage Summary:
 - Best scenario (FX=13, +3%/yr): HKD +508.9萬
 - Worst scenario (FX=28, -3%/yr): HKD -93.1萬
 - Key: Rent income (HKD +169.2萬) is the primary profit driver, not capital appreciation
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Rebuild Andy Japan Property ML V2 Report V5 (Novice-Friendly)
+
+Work Log:
+- Analyzed V4 report from Andy's perspective as investment novice
+- Identified 7 key problems: too technical, no concept explanation, academic tone, missing "so what"
+- Completely restructured 6 chapters with conclusion-first approach
+- Chapter 1: Bottom line first (net +132.8万, 192万→324.8万)
+- Chapter 2: Plain-language "how your investment works" with exchange rate analogy
+- Chapter 3: Each of 5 formula items explained with simple examples
+- Chapter 4: ML explained as "4 experts averaging opinions" + Monte Carlo as "10,000 simulations"
+- Chapter 5: Best/worst scenarios with 5-item decomposition each
+- Chapter 6: "What should you do?" - personalized questions + 3 core risks
+- Used conversational Cantonese-flavored Chinese, bold key numbers, analogies
+- Generated 8-page body + 1-page cover = 9-page final PDF
+- All QA checks passed
+
+Stage Summary:
+- Final PDF: /home/z/my-project/download/Andy_JP_Property_ML_Report.pdf (9 pages, 1.2MB)
+- Key improvement: Novice-friendly, conclusion-first, plain language
+- Formula maintained: 房價變動 + 匯率變動 + 租金收入 - 稅費 - 銀行供款費用
+- All amounts in HKD, no ROI percentages
