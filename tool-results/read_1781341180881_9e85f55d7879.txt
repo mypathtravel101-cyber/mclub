@@ -1,0 +1,698 @@
+     1→#!/usr/bin/env python3
+     2→"""
+     3→日本物業投資 ML 預測模型 V2 — 真實 FRED 數據版
+     4→===================================================
+     5→用 FRED 真實月度/季度數據（非估計）：
+     6→  - EXJPUS: JPY/USD 月度匯率 (1971-2026, 665 點)
+     7→  - QJPN628BIS: 日本住宅價格指數 季度 (1955-2025, 284 點)
+     8→  - FEDFUNDS: 美國聯邦基金利率 月度 (1954-2026, 863 點)
+     9→  - IRSTCI01JPM156N: 日本政策利率 月度 (1985-2026, 490 點)
+    10→
+    11→用季度匯率做對齊，預測 10 年變化率
+    12→訓練樣本：從 16 個 → 80+ 個
+    13→"""
+    14→
+    15→import json
+    16→import io
+    17→import numpy as np
+    18→import pandas as pd
+    19→import matplotlib
+    20→matplotlib.use('Agg')
+    21→import matplotlib.pyplot as plt
+    22→import matplotlib.font_manager as fm
+    23→from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+    24→from sklearn.model_selection import TimeSeriesSplit, cross_val_score
+    25→from sklearn.preprocessing import StandardScaler
+    26→from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+    27→import xgboost as xgb
+    28→import lightgbm as lgb
+    29→from statsmodels.tsa.arima.model import ARIMA
+    30→from scipy import stats
+    31→import requests
+    32→import warnings
+    33→warnings.filterwarnings('ignore')
+    34→
+    35→# ── Chinese font setup ──
+    36→fm.fontManager.addfont('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc')
+    37→fm.fontManager.addfont('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')
+    38→plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'DejaVu Sans']
+    39→plt.rcParams['axes.unicode_minus'] = False
+    40→
+    41→OUT = '/home/z/my-project/download/ml_charts/'
+    42→
+    43→# ═══════════════════════════════════════════════════════════════════════
+    44→# 1. DOWNLOAD REAL DATA FROM FRED
+    45→# ═══════════════════════════════════════════════════════════════════════
+    46→print("="*60)
+    47→print("  DOWNLOADING REAL DATA FROM FRED")
+    48→print("="*60)
+    49→
+    50→FRED_SERIES = {
+    51→    'EXJPUS': 'JPY per USD (monthly)',
+    52→    'QJPN628BIS': 'Japan Residential Property Price (quarterly)',
+    53→    'FEDFUNDS': 'US Federal Funds Rate (monthly)',
+    54→    'IRSTCI01JPM156N': 'Japan Policy Rate (monthly)',
+    55→}
+    56→
+    57→dataframes = {}
+    58→for code, name in FRED_SERIES.items():
+    59→    url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={code}"
+    60→    try:
+    61→        resp = requests.get(url, timeout=60)
+    62→        if resp.status_code == 200:
+    63→            df = pd.read_csv(io.StringIO(resp.text), parse_dates=['observation_date'])
+    64→            df = df.rename(columns={code: 'value'})
+    65→            df = df.dropna()
+    66→            df = df.set_index('observation_date').sort_index()
+    67→            dataframes[code] = df
+    68→            print(f"  OK {code:25s} ({name}): {len(df):4d} points, "
+    69→                  f"{df.index[0].strftime('%Y-%m')} to {df.index[-1].strftime('%Y-%m')}")
+    70→        else:
+    71→            print(f"  FAIL {code}: HTTP {resp.status_code}")
+    72→    except Exception as e:
+    73→        print(f"  FAIL {code}: {e}")
+    74→
+    75→# ═══════════════════════════════════════════════════════════════════════
+    76→# 2. PREPARE ANALYSIS DATASET (Quarterly frequency, 1990-2025)
+    77→# ═══════════════════════════════════════════════════════════════════════
+    78→print("\n" + "="*60)
+    79→print("  PREPARING QUARTERLY DATASET")
+    80→print("="*60)
+    81→
+    82→# Resample everything to quarterly
+    83→import io
+    84→
+    85→def to_quarterly(df):
+    86→    """Resample to quarterly end-of-period"""
+    87→    return df.resample('QS').last()
+    88→
+    89→fx_q = to_quarterly(dataframes['EXJPUS'])
+    90→prop_q = dataframes['QJPN628BIS']  # already quarterly
+    91→us_rate_q = to_quarterly(dataframes['FEDFUNDS'])
+    92→jp_rate_q = to_quarterly(dataframes['IRSTCI01JPM156N'])
+    93→
+    94→# Merge on date
+    95→df = pd.DataFrame({
+    96→    'usd_jpy': fx_q['value'],
+    97→    'prop_idx': prop_q['value'],
+    98→    'us_rate': us_rate_q['value'],
+    99→    'jp_rate': jp_rate_q['value'],
+   100→})
+   101→
+   102→# Filter to 1990-2025 and drop NaN
+   103→df = df.loc['1990':'2025'].dropna()
+   104→print(f"\nQuarterly dataset: {len(df)} quarters")
+   105→if len(df) > 0:
+   106→    print(f"  Range: {df.index[0].strftime('%Y-%m')} to {df.index[-1].strftime('%Y-%m')}")
+   107→
+   108→# Convert to JPY/HKD (USD/HKD pegged at 7.80)
+   109→df['jpy_hkd'] = df['usd_jpy'] * 7.80
+   110→
+   111→# Derived features
+   112→df['rate_spread'] = df['us_rate'] - df['jp_rate']
+   113→df['fx_change_1q'] = df['jpy_hkd'].pct_change(1) * 100
+   114→df['fx_change_4q'] = df['jpy_hkd'].pct_change(4) * 100
+   115→df['fx_change_8q'] = df['jpy_hkd'].pct_change(8) * 100
+   116→df['fx_ma4'] = df['jpy_hkd'].rolling(4).mean()
+   117→df['fx_ma8'] = df['jpy_hkd'].rolling(8).mean()
+   118→df['fx_vol8'] = df['jpy_hkd'].rolling(8).std() / df['fx_ma8'] * 100
+   119→df['fx_meanrev'] = (df['jpy_hkd'] - df['fx_ma8']) / df['fx_ma8'] * 100
+   120→
+   121→df['prop_change_1q'] = df['prop_idx'].pct_change(1) * 100
+   122→df['prop_change_4q'] = df['prop_idx'].pct_change(4) * 100
+   123→df['prop_change_8q'] = df['prop_idx'].pct_change(8) * 100
+   124→df['prop_ma4'] = df['prop_idx'].rolling(4).mean()
+   125→df['prop_ma8'] = df['prop_idx'].rolling(8).mean()
+   126→df['prop_vol8'] = df['prop_idx'].rolling(8).std() / df['prop_ma8'] * 100
+   127→df['prop_meanrev'] = (df['prop_idx'] - df['prop_ma8']) / df['prop_ma8'] * 100
+   128→
+   129→df['spread_change_4q'] = df['rate_spread'].diff(4)
+   130→df['us_rate_change_4q'] = df['us_rate'].diff(4)
+   131→df['jp_rate_change_4q'] = df['jp_rate'].diff(4)
+   132→
+   133→# Target: 10-year (40 quarter) forward return
+   134→HORIZON = 40  # 10 years in quarters
+   135→df['fx_target_10y'] = df['jpy_hkd'].shift(-HORIZON).pct_change(HORIZON) * 100
+   136→df['prop_target_10y'] = df['prop_idx'].shift(-HORIZON).pct_change(HORIZON) * 100
+   137→
+   138→df = df.dropna()
+   139→print(f"Training samples: {len(df)} (after feature creation + dropna)")
+   140→
+   141→# ═══════════════════════════════════════════════════════════════════════
+   142→# 3. FEATURE SELECTION & SPLIT
+   143→# ═══════════════════════════════════════════════════════════════════════
+   144→print("\n" + "="*60)
+   145→print("  FEATURE ENGINEERING")
+   146→print("="*60)
+   147→
+   148→FX_FEATURES = [
+   149→    'jpy_hkd', 'fx_change_1q', 'fx_change_4q', 'fx_change_8q',
+   150→    'fx_ma4', 'fx_ma8', 'fx_vol8', 'fx_meanrev',
+   151→    'rate_spread', 'spread_change_4q',
+   152→    'us_rate', 'jp_rate', 'us_rate_change_4q', 'jp_rate_change_4q',
+   153→    'prop_change_4q',  # cross-feature: property momentum affects FX
+   154→]
+   155→
+   156→PR_FEATURES = [
+   157→    'prop_idx', 'prop_change_1q', 'prop_change_4q', 'prop_change_8q',
+   158→    'prop_ma4', 'prop_ma8', 'prop_vol8', 'prop_meanrev',
+   159→    'jp_rate', 'jp_rate_change_4q', 'rate_spread',
+   160→    'fx_change_4q',  # cross-feature: FX momentum affects property
+   161→]
+   162→
+   163→X_fx = df[FX_FEATURES].values
+   164→y_fx = df['fx_target_10y'].values
+   165→X_pr = df[PR_FEATURES].values
+   166→y_pr = df['prop_target_10y'].values
+   167→
+   168→print(f"FX features ({len(FX_FEATURES)}): {FX_FEATURES}")
+   169→print(f"Property features ({len(PR_FEATURES)}): {PR_FEATURES}")
+   170→print(f"\nFX:   X={X_fx.shape}, y range=[{y_fx.min():.1f}%, {y_fx.max():.1f}%]")
+   171→print(f"Prop: X={X_pr.shape}, y range=[{y_pr.min():.1f}%, {y_pr.max():.1f}%]")
+   172→
+   173→# ═══════════════════════════════════════════════════════════════════════
+   174→# 4. TRAIN ML MODELS
+   175→# ═══════════════════════════════════════════════════════════════════════
+   176→print("\n" + "="*60)
+   177→print("  MODEL TRAINING (TimeSeries CV)")
+   178→print("="*60)
+   179→
+   180→def train_models(X, y, name, feature_names):
+   181→    tscv = TimeSeriesSplit(n_splits=5)
+   182→    models = {}
+   183→    
+   184→    configs = {
+   185→        'XGBoost': xgb.XGBRegressor(
+   186→            n_estimators=300, max_depth=4, learning_rate=0.03,
+   187→            subsample=0.8, colsample_bytree=0.7, random_state=42,
+   188→            min_child_weight=3, reg_alpha=0.3, reg_lambda=2.0
+   189→        ),
+   190→        'LightGBM': lgb.LGBMRegressor(
+   191→            n_estimators=300, max_depth=4, learning_rate=0.03,
+   192→            subsample=0.8, colsample_bytree=0.7, random_state=42,
+   193→            reg_alpha=0.3, reg_lambda=2.0, verbose=-1,
+   194→            num_leaves=15
+   195→        ),
+   196→        'RandomForest': RandomForestRegressor(
+   197→            n_estimators=500, max_depth=5, min_samples_leaf=3, random_state=42
+   198→        ),
+   199→        'GBR': GradientBoostingRegressor(
+   200→            n_estimators=300, max_depth=4, learning_rate=0.03,
+   201→            subsample=0.8, min_samples_leaf=3, random_state=42
+   202→        ),
+   203→    }
+   204→    
+   205→    print(f"\n--- {name} ({len(X)} samples, {len(feature_names)} features) ---")
+   206→    for mname, model in configs.items():
+   207→        scores = cross_val_score(model, X, y, cv=tscv, scoring='neg_mean_absolute_error')
+   208→        model.fit(X, y)
+   209→        models[mname] = {
+   210→            'model': model,
+   211→            'cv_mae': -scores.mean(),
+   212→            'cv_std': scores.std(),
+   213→        }
+   214→        print(f"  {mname:15s}: CV MAE = {models[mname]['cv_mae']:7.2f}% (std={models[mname]['cv_std']:.2f})")
+   215→    
+   216→    best_name = min(models.keys(), key=lambda k: models[k]['cv_mae'])
+   217→    print(f"  >>> Best: {best_name} (MAE={models[best_name]['cv_mae']:.2f}%)")
+   218→    
+   219→    # Feature importance
+   220→    best_model = models[best_name]['model']
+   221→    if hasattr(best_model, 'feature_importances_'):
+   222→        imp = best_model.feature_importances_
+   223→        print(f"\n  Top Features ({best_name}):")
+   224→        pairs = sorted(zip(feature_names, imp), key=lambda x: -x[1])
+   225→        for fname, fimp in pairs[:8]:
+   226→            bar = '#' * int(fimp * 50)
+   227→            print(f"    {fname:25s} {fimp:.4f} {bar}")
+   228→    
+   229→    return models, best_name
+   230→
+   231→fx_models, fx_best = train_models(X_fx, y_fx, "JPY/HKD FX (10yr)", FX_FEATURES)
+   232→pr_models, pr_best = train_models(X_pr, y_pr, "Property Price (10yr)", PR_FEATURES)
+   233→
+   234→# ═══════════════════════════════════════════════════════════════════════
+   235→# 5. ARIMA BASELINES (on quarterly data)
+   236→# ═══════════════════════════════════════════════════════════════════════
+   237→print("\n" + "="*60)
+   238→print("  ARIMA BASELINES")
+   239→print("="*60)
+   240→
+   241→try:
+   242→    fx_arima = ARIMA(df['jpy_hkd'].values, order=(2,1,2))
+   243→    fx_arima_fit = fx_arima.fit()
+   244→    fx_arima_fc = fx_arima_fit.forecast(steps=HORIZON)
+   245→    fx_arima_pct = (fx_arima_fc[-1] - df['jpy_hkd'].values[-1]) / df['jpy_hkd'].values[-1] * 100
+   246→    print(f"FX ARIMA(2,1,2): {fx_arima_pct:+.1f}% (current {df['jpy_hkd'].values[-1]:.2f} -> {fx_arima_fc[-1]:.2f})")
+   247→except Exception as e:
+   248→    fx_arima_pct = 0
+   249→    print(f"FX ARIMA failed: {e}")
+   250→
+   251→try:
+   252→    pr_arima = ARIMA(df['prop_idx'].values, order=(1,1,1))
+   253→    pr_arima_fit = pr_arima.fit()
+   254→    pr_arima_fc = pr_arima_fit.forecast(steps=HORIZON)
+   255→    pr_arima_pct = (pr_arima_fc[-1] - df['prop_idx'].values[-1]) / df['prop_idx'].values[-1] * 100
+   256→    print(f"Property ARIMA(1,1,1): {pr_arima_pct:+.1f}% (current {df['prop_idx'].values[-1]:.1f} -> {pr_arima_fc[-1]:.1f})")
+   257→except Exception as e:
+   258→    pr_arima_pct = 0
+   259→    print(f"Property ARIMA failed: {e}")
+   260→
+   261→# ═══════════════════════════════════════════════════════════════════════
+   262→# 6. ENSEMBLE PREDICTION + MONTE CARLO
+   263→# ═══════════════════════════════════════════════════════════════════════
+   264→print("\n" + "="*60)
+   265→print("  ENSEMBLE PREDICTION & PROBABILITY DISTRIBUTION")
+   266→print("="*60)
+   267→
+   268→def ensemble_predict(models_dict, X):
+   269→    total_weight = sum(1.0/(m['cv_mae']**2) for m in models_dict.values())
+   270→    pred = 0
+   271→    for mname, mdict in models_dict.items():
+   272→        w = (1.0/(mdict['cv_mae']**2)) / total_weight
+   273→        pred += w * mdict['model'].predict(X)[0]
+   274→    return pred
+   275→
+   276→def monte_carlo_v2(models_dict, X_now, y_train, n_sims=10000, seed=42, ml_weight=0.55):
+   277→    """
+   278→    V2 MC: blend ML prediction with historical distribution
+   279→    Use t-distribution for heavier tails (robust with ~80 samples)
+   280→    """
+   281→    np.random.seed(seed)
+   282→    ml_point = ensemble_predict(models_dict, X_now)
+   283→    hist_mean = np.mean(y_train)
+   284→    hist_std = np.std(y_train, ddof=1)
+   285→    
+   286→    best_name = min(models_dict.keys(), key=lambda k: models_dict[k]['cv_mae'])
+   287→    cv_mae = models_dict[best_name]['cv_mae']
+   288→    n = len(y_train)
+   289→    
+   290→    # Blended mean
+   291→    blended_mean = ml_weight * ml_point + (1 - ml_weight) * hist_mean
+   292→    
+   293→    # Uncertainty: combine CV error with historical vol + prediction penalty
+   294→    pred_std = cv_mae * np.sqrt(1 + 1/n)
+   295→    total_std = np.sqrt(0.5 * hist_std**2 + 0.5 * pred_std**2)
+   296→    
+   297→    # t-distribution (heavier tails, better for financial data)
+   298→    df_t = max(n - len(X_now[0]) - 1, 5)
+   299→    t_samples = stats.t.rvs(df_t, loc=0, scale=1, size=n_sims, random_state=seed)
+   300→    sims = blended_mean + total_std * t_samples
+   301→    
+   302→    return ml_point, blended_mean, sims
+   303→
+   304→# Current features
+   305→fx_now = X_fx[-1:].copy()
+   306→pr_now = X_pr[-1:].copy()
+   307→fx_ml_point, fx_blended, fx_sims = monte_carlo_v2(fx_models, fx_now, y_fx)
+   308→pr_ml_point, pr_blended, pr_sims = monte_carlo_v2(pr_models, pr_now, y_pr)
+   309→
+   310→print(f"\nML Ensemble Predictions (10yr forward):")
+   311→print(f"  JPY/HKD FX:    ML={fx_ml_point:+.1f}%, Blended={fx_blended:+.1f}%")
+   312→print(f"  Property:      ML={pr_ml_point:+.1f}%, Blended={pr_blended:+.1f}%")
+   313→print(f"  ARIMA FX:      {fx_arima_pct:+.1f}%")
+   314→print(f"  ARIMA Property:{pr_arima_pct:+.1f}%")
+   315→
+   316→print(f"\nMonte Carlo ({len(fx_sims)} sims):")
+   317→for label, sims in [("FX", fx_sims), ("Property", pr_sims)]:
+   318→    pcts = [np.percentile(sims, p) for p in [5, 25, 50, 75, 95]]
+   319→    print(f"  {label:10s}: mean={np.mean(sims):+6.1f}%, "
+   320→          f"P5={pcts[0]:+6.1f}%, P25={pcts[1]:+6.1f}%, "
+   321→          f"P50={pcts[2]:+6.1f}%, P75={pcts[3]:+6.1f}%, P95={pcts[4]:+6.1f}%")
+   322→
+   323→# ═══════════════════════════════════════════════════════════════════════
+   324→# 7. 84 SCENARIO PROBABILITY WEIGHTING
+   325→# ═══════════════════════════════════════════════════════════════════════
+   326→print("\n" + "="*60)
+   327→print("  84 SCENARIO PROBABILITY WEIGHTING")
+   328→print("="*60)
+   329→
+   330→ENTRY_FX = 19.5
+   331→FX_LEVELS = [13.0, 16.0, 19.5, 22.0, 24.0, 26.0, 28.0]
+   332→PRICE_RATES = [-0.03, 0.0, 0.015, 0.03]
+   333→HOLD_YEARS = [5, 7, 10]
+   334→
+   335→def calc_scenario_roi(exit_fx, price_rate, hold_years, price_jpy=62400000):
+   336→    eq_jpy = price_jpy * 0.60
+   337→    eq_hkd = eq_jpy / ENTRY_FX
+   338→    loan = price_jpy * 0.40
+   339→    mr = 0.03 / 12
+   340→    nm = hold_years * 12
+   341→    mp = loan * mr * (1+mr)**nm / ((1+mr)**nm - 1)
+   342→    end_value = price_jpy * (1 + price_rate)**hold_years
+   343→    paid = sum([(1+mr)**i for i in range(nm)])
+   344→    remaining = max(loan * (1+mr)**nm - mp * paid, 0)
+   345→    net_eq = end_value - remaining
+   346→    annual_rent = price_jpy * 0.06
+   347→    annual_cost = price_jpy * 0.003
+   348→    annual_cf = annual_rent - annual_cost - mp * 12
+   349→    total_cf = annual_cf * hold_years
+   350→    total_jpy = net_eq + total_cf
+   351→    total_hkd = total_jpy / exit_fx
+   352→    roi = (total_hkd - eq_hkd) / eq_hkd * 100
+   353→    return roi, total_hkd - eq_hkd
+   354→
+   355→def gauss_w(val, mean, std):
+   356→    return np.exp(-0.5 * ((val - mean) / max(std, 1))**2)
+   357→
+   358→fx_mean_mc = np.mean(fx_sims)
+   359→fx_std_mc = np.std(fx_sims)
+   360→pr_mean_mc = np.mean(pr_sims)
+   361→pr_std_mc = np.std(pr_sims)
+   362→
+   363→print(f"  FX dist:   mean={fx_mean_mc:+.1f}%, std={fx_std_mc:.1f}%")
+   364→print(f"  Prop dist: mean={pr_mean_mc:+.1f}%, std={pr_std_mc:.1f}%")
+   365→
+   366→# Scale property prediction to 10yr for scenario matching
+   367→pr_10yr_mean = pr_mean_mc  # already 10yr
+   368→pr_10yr_std = pr_std_mc
+   369→
+   370→fx_level_changes = [(fx - ENTRY_FX) / ENTRY_FX * 100 for fx in FX_LEVELS]
+   371→pr_level_annual = [r for r in PRICE_RATES]
+   372→pr_level_10yr = [r * 100 for r in PRICE_RATES]  # total 10yr change
+   373→
+   374→scenario_probs = {}
+   375→for fi in range(len(FX_LEVELS)):
+   376→    fx_p = gauss_w(fx_level_changes[fi], fx_mean_mc, fx_std_mc)
+   377→    for pi in range(len(PRICE_RATES)):
+   378→        pr_p = gauss_w(pr_level_10yr[pi], pr_10yr_mean, pr_10yr_std)
+   379→        scenario_probs[(fi, pi)] = fx_p * pr_p
+   380→
+   381→total_p = sum(scenario_probs.values())
+   382→for k in scenario_probs:
+   383→    scenario_probs[k] /= total_p
+   384→
+   385→# Calculate weighted returns
+   386→print(f"\n{'Hold':>5s} | {'Weighted ROI':>14s} | {'Simple Avg':>12s} | {'Diff':>8s}")
+   387→print("-" * 50)
+   388→weighted_results = {}
+   389→for hy in HOLD_YEARS:
+   390→    w_roi, s_roi, count = 0, 0, 0
+   391→    scenarios = []
+   392→    for (fi, pi), prob in scenario_probs.items():
+   393→        roi, gain = calc_scenario_roi(FX_LEVELS[fi], PRICE_RATES[pi], hy)
+   394→        w_roi += prob * roi
+   395→        s_roi += roi
+   396→        count += 1
+   397→        scenarios.append({'fx': FX_LEVELS[fi], 'pr': PRICE_RATES[pi],
+   398→                         'hold': hy, 'roi': roi, 'gain': gain, 'prob': prob})
+   399→    s_roi /= count
+   400→    print(f"  {hy:3d}y | {w_roi:+13.1f}% | {s_roi:+11.1f}% | {w_roi-s_roi:+7.1f}%")
+   401→    weighted_results[hy] = {'weighted_roi': w_roi, 'simple_roi': s_roi, 'scenarios': scenarios}
+   402→
+   403→# ═══════════════════════════════════════════════════════════════════════
+   404→# 8. GENERATE CHARTS
+   405→# ═══════════════════════════════════════════════════════════════════════
+   406→print("\n" + "="*60)
+   407→print("  GENERATING CHARTS")
+   408→print("="*60)
+   409→
+   410→C1, C2, C3, C4 = '#1f7692', '#3b8754', '#a5884e', '#904c46'
+   411→CL = '#e8f0f2'
+   412→
+   413→# ── Chart 1: Historical Data Overview ──
+   414→fig, axes = plt.subplots(2, 2, figsize=(14, 9))
+   415→
+   416→# FX history
+   417→ax = axes[0, 0]
+   418→ax.plot(df.index, df['jpy_hkd'], color=C1, linewidth=1.2)
+   419→ax.set_title('JPY/HKD 匯率 (季度, FRED EXJPUS)', fontsize=12, fontweight='bold')
+   420→ax.set_ylabel('JPY/HKD')
+   421→ax.axhline(ENTRY_FX * 7.80, color=C4, linestyle='--', alpha=0.5, label=f'Entry level ({ENTRY_FX*7.80:.1f})')
+   422→ax.legend(loc='best', fontsize=9)
+   423→
+   424→# Property index
+   425→ax = axes[0, 1]
+   426→ax.plot(df.index, df['prop_idx'], color=C2, linewidth=1.2)
+   427→ax.set_title('日本住宅價格指數 (季度, BIS QJPN628BIS)', fontsize=12, fontweight='bold')
+   428→ax.set_ylabel('指數')
+   429→
+   430→# Rate spread
+   431→ax = axes[1, 0]
+   432→ax.fill_between(df.index, df['us_rate'], df['jp_rate'], alpha=0.3, color=C3, label='息差')
+   433→ax.plot(df.index, df['us_rate'], color=C3, linewidth=1, label='美國利率')
+   434→ax.plot(df.index, df['jp_rate'], color=C1, linewidth=1, label='日本利率')
+   435→ax.set_title('日美利率 (FRED FEDFUNDS / IRSTCI01JPM156N)', fontsize=12, fontweight='bold')
+   436→ax.set_ylabel('利率 (%)')
+   437→ax.legend(loc='best', fontsize=9)
+   438→
+   439→# 10yr rolling returns
+   440→ax = axes[1, 1]
+   441→fx_10yr = df['jpy_hkd'].pct_change(HORIZON) * 100
+   442→pr_10yr = df['prop_idx'].pct_change(HORIZON) * 100
+   443→ax.bar(fx_10yr.dropna().index, fx_10yr.dropna().values, width=80, color=C1, alpha=0.6, label='FX 10yr 變化%')
+   444→ax.bar(pr_10yr.dropna().index, pr_10yr.dropna().values, width=80, color=C2, alpha=0.6, label='樓價 10yr 變化%')
+   445→ax.axhline(0, color='gray', linewidth=0.5)
+   446→ax.set_title('歷史 10 年滾動變化率', fontsize=12, fontweight='bold')
+   447→ax.set_ylabel('變化率 (%)')
+   448→ax.legend(loc='best', fontsize=9)
+   449→
+   450→plt.tight_layout()
+   451→plt.savefig(f'{OUT}v2_data_overview.png', dpi=150, bbox_inches='tight', facecolor='white')
+   452→plt.close()
+   453→print("  Saved: v2_data_overview.png")
+   454→
+   455→# ── Chart 2: Model Comparison ──
+   456→fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+   457→
+   458→for ax, models_dict, best, title, color in [
+   459→    (axes[0], fx_models, fx_best, 'FX 模型比較 (V2: 80+ samples)', C1),
+   460→    (axes[1], pr_models, pr_best, '物業價格模型比較 (V2: 80+ samples)', C2),
+   461→]:
+   462→    names = list(models_dict.keys())
+   463→    maes = [models_dict[k]['cv_mae'] for k in names]
+   464→    stds = [models_dict[k]['cv_std'] for k in names]
+   465→    colors = [color if k == best else CL for k in names]
+   466→    bars = ax.barh(names, maes, xerr=stds, color=colors, edgecolor='#333', linewidth=0.5, capsize=3)
+   467→    ax.set_xlabel('CV MAE (%)', fontsize=11)
+   468→    ax.set_title(title, fontsize=12, fontweight='bold')
+   469→    for bar, val in zip(bars, maes):
+   470→        ax.text(bar.get_width() + 0.5, bar.get_y() + bar.get_height()/2,
+   471→                f'{val:.1f}%', va='center', fontsize=10)
+   472→    ax.set_xlim(0, max(maes) * 1.6)
+   473→
+   474→plt.tight_layout()
+   475→plt.savefig(f'{OUT}v2_model_comparison.png', dpi=150, bbox_inches='tight', facecolor='white')
+   476→plt.close()
+   477→print("  Saved: v2_model_comparison.png")
+   478→
+   479→# ── Chart 3: Probability Distributions ──
+   480→fig, axes = plt.subplots(1, 2, figsize=(14, 5.5))
+   481→
+   482→ax = axes[0]
+   483→ax.hist(fx_sims, bins=60, color=C1, alpha=0.7, edgecolor='white', density=True, label='Monte Carlo')
+   484→xmin, xmax = ax.get_xlim()
+   485→x_grid = np.linspace(xmin, xmax, 200)
+   486→ax.plot(x_grid, stats.t.pdf(x_grid, df=20, loc=fx_blended, scale=fx_std_mc),
+   487→        color=C4, linewidth=2, label=f'ML 預測: {fx_blended:+.1f}%')
+   488→ax.axvline(fx_arima_pct, color=C3, linewidth=2, linestyle='--', label=f'ARIMA: {fx_arima_pct:+.1f}%')
+   489→for fl, chg in zip(FX_LEVELS, fx_level_changes):
+   490→    ax.axvline(chg, color='gray', linewidth=0.5, linestyle=':')
+   491→    ax.text(chg, ax.get_ylim()[1]*0.95, f'{fl}', ha='center', fontsize=7, color='gray')
+   492→ax.set_xlabel('JPY/HKD 10 年變化率 (%)', fontsize=11)
+   493→ax.set_ylabel('機率密度', fontsize=11)
+   494→ax.set_title('匯率預測分佈 (V2)', fontsize=13, fontweight='bold')
+   495→ax.legend(loc='best', fontsize=9)
+   496→
+   497→ax = axes[1]
+   498→ax.hist(pr_sims, bins=60, color=C2, alpha=0.7, edgecolor='white', density=True, label='Monte Carlo')
+   499→xmin, xmax = ax.get_xlim()
+   500→x_grid = np.linspace(xmin, xmax, 200)
+   501→ax.plot(x_grid, stats.t.pdf(x_grid, df=20, loc=pr_blended, scale=pr_std_mc),
+   502→        color=C4, linewidth=2, label=f'ML 預測: {pr_blended:+.1f}%')
+   503→ax.axvline(pr_arima_pct, color=C3, linewidth=2, linestyle='--', label=f'ARIMA: {pr_arima_pct:+.1f}%')
+   504→for pr, chg in zip(PRICE_RATES, pr_level_10yr):
+   505→    ax.axvline(chg, color='gray', linewidth=0.5, linestyle=':')
+   506→    ax.text(chg, ax.get_ylim()[1]*0.95, f'{pr*100:+.0f}%', ha='center', fontsize=7, color='gray')
+   507→ax.set_xlabel('物業價格 10 年變化率 (%)', fontsize=11)
+   508→ax.set_ylabel('機率密度', fontsize=11)
+   509→ax.set_title('物業價格預測分佈 (V2)', fontsize=13, fontweight='bold')
+   510→ax.legend(loc='best', fontsize=9)
+   511→
+   512→plt.tight_layout()
+   513→plt.savefig(f'{OUT}v2_probability_distribution.png', dpi=150, bbox_inches='tight', facecolor='white')
+   514→plt.close()
+   515→print("  Saved: v2_probability_distribution.png")
+   516→
+   517→# ── Chart 4: Probability-Weighted Heatmap ──
+   518→fig, ax = plt.subplots(figsize=(10, 6))
+   519→
+   520→prob_matrix = np.zeros((len(PRICE_RATES), len(FX_LEVELS)))
+   521→roi_matrix = np.zeros((len(PRICE_RATES), len(FX_LEVELS)))
+   522→for (fi, pi), prob in scenario_probs.items():
+   523→    roi, _ = calc_scenario_roi(FX_LEVELS[fi], PRICE_RATES[pi], 10)
+   524→    prob_matrix[pi][fi] = prob
+   525→    roi_matrix[pi][fi] = roi
+   526→
+   527→sizes = prob_matrix / prob_matrix.max() * 2500
+   528→sc = ax.scatter(
+   529→    [fx_level_changes[f] for f in range(len(FX_LEVELS)) for p in range(len(PRICE_RATES))],
+   530→    [pr_level_10yr[p] for f in range(len(FX_LEVELS)) for p in range(len(PRICE_RATES))],
+   531→    s=sizes.flatten(), c=roi_matrix.flatten(), cmap='RdYlGn',
+   532→    vmin=-50, vmax=250, edgecolors='#333', linewidth=0.5, alpha=0.8
+   533→)
+   534→cbar = plt.colorbar(sc, ax=ax)
+   535→cbar.set_label('ROI (%)', fontsize=11)
+   536→ax.set_xlabel('JPY/HKD 10 年匯率變化 (%)', fontsize=11)
+   537→ax.set_ylabel('物業價格 10 年變化 (%)', fontsize=11)
+   538→ax.set_title('ML 機率加權 84 情景 (氣泡=機率, 顏色=回報)\n持有 10 年 [V2 真實數據版]',
+   539→             fontsize=13, fontweight='bold')
+   540→ax.axvline(fx_mean_mc, color=C1, linewidth=1.5, linestyle='--', alpha=0.7,
+   541→           label=f'ML FX: {fx_mean_mc:+.1f}%')
+   542→ax.axhline(pr_mean_mc, color=C2, linewidth=1.5, linestyle='--', alpha=0.7,
+   543→           label=f'ML Prop: {pr_mean_mc:+.1f}%')
+   544→ax.legend(loc='upper left', fontsize=9)
+   545→plt.tight_layout()
+   546→plt.savefig(f'{OUT}v2_probability_heatmap.png', dpi=150, bbox_inches='tight', facecolor='white')
+   547→plt.close()
+   548→print("  Saved: v2_probability_heatmap.png")
+   549→
+   550→# ── Chart 5: Weighted vs Simple + V1 vs V2 ──
+   551→fig, ax = plt.subplots(figsize=(10, 6))
+   552→
+   553→x = np.arange(len(HOLD_YEARS))
+   554→w = 0.25
+   555→simple = [weighted_results[hy]['simple_roi'] for hy in HOLD_YEARS]
+   556→weighted = [weighted_results[hy]['weighted_roi'] for hy in HOLD_YEARS]
+   557→# V1 results for comparison
+   558→v1_simple = [43.4, 62.1, 90.7]
+   559→v1_weighted = [46.6, 65.8, 95.2]
+   560→
+   561→bars1 = ax.bar(x - 1.5*w, v1_simple, w, label='V1 簡單平均 (31年年度)', color='#ccc', edgecolor='#333', linewidth=0.5)
+   562→bars2 = ax.bar(x - 0.5*w, v1_weighted, w, label='V1 ML加權', color='#aaa', edgecolor='#333', linewidth=0.5)
+   563→bars3 = ax.bar(x + 0.5*w, simple, w, label='V2 簡單平均 (FRED季度)', color=CL, edgecolor='#333', linewidth=0.5)
+   564→bars4 = ax.bar(x + 1.5*w, weighted, w, label='V2 ML加權', color=C1, edgecolor='#333', linewidth=0.5)
+   565→
+   566→for bars in [bars1, bars2, bars3, bars4]:
+   567→    for bar in bars:
+   568→        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
+   569→                f'{bar.get_height():+.0f}%', ha='center', fontsize=8)
+   570→
+   571→ax.set_xlabel('持有年期', fontsize=11)
+   572→ax.set_ylabel('回報率 (%)', fontsize=11)
+   573→ax.set_title('V1 (年度估計數據) vs V2 (FRED 真實季度數據)', fontsize=13, fontweight='bold')
+   574→ax.set_xticks(x)
+   575→ax.set_xticklabels([f'{y} 年' for y in HOLD_YEARS])
+   576→ax.legend(loc='best', fontsize=9)
+   577→ax.axhline(0, color='gray', linewidth=0.5)
+   578→plt.tight_layout()
+   579→plt.savefig(f'{OUT}v2_v1_comparison.png', dpi=150, bbox_inches='tight', facecolor='white')
+   580→plt.close()
+   581→print("  Saved: v2_v1_comparison.png")
+   582→
+   583→# ── Chart 6: Feature Importance ──
+   584→fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+   585→
+   586→for ax, models_dict, best, features, title, color in [
+   587→    (axes[0], fx_models, fx_best, FX_FEATURES, f'FX 特徵重要性 ({fx_best})', C1),
+   588→    (axes[1], pr_models, pr_best, PR_FEATURES, f'物業特徵重要性 ({pr_best})', C2),
+   589→]:
+   590→    model = models_dict[best]['model']
+   591→    imp = model.feature_importances_
+   592→    idx = np.argsort(imp)
+   593→    ax.barh(range(len(features)), imp[idx], color=color, alpha=0.85)
+   594→    ax.set_yticks(range(len(features)))
+   595→    ax.set_yticklabels([features[i] for i in idx], fontsize=8)
+   596→    ax.set_title(title, fontsize=12, fontweight='bold')
+   597→    ax.set_xlabel('重要性', fontsize=10)
+   598→
+   599→plt.tight_layout()
+   600→plt.savefig(f'{OUT}v2_feature_importance.png', dpi=150, bbox_inches='tight', facecolor='white')
+   601→plt.close()
+   602→print("  Saved: v2_feature_importance.png")
+   603→
+   604→# ═══════════════════════════════════════════════════════════════════════
+   605→# 9. SUMMARY
+   606→# ═══════════════════════════════════════════════════════════════════════
+   607→print("\n" + "="*60)
+   608→print("  FINAL SUMMARY (V2)")
+   609→print("="*60)
+   610→
+   611→summary = f"""
+   612→ML V2 真實數據版 — 日本物業投資風險分析
+   613→========================================
+   614→
+   615→數據來源 (全部 FRED/BIS 真實數據):
+   616→  EXJPUS:        JPY/USD 月度匯率     665 點 (1971-2026)
+   617→  QJPN628BIS:    日本住宅價格指數     284 點 (1955-2025, 季度)
+   618→  FEDFUNDS:      美國聯邦基金利率     863 點 (1954-2026, 月度)
+   619→  IRSTCI01JPM156N: 日本政策利率       490 點 (1985-2026, 月度)
+   620→
+   621→訓練數據: {len(df)} 個季度樣本 (1990-2025)
+   622→  V1 版本: 16 個年度樣本
+   623→  V2 版本: {len(df)} 個季度樣本 (增加 {len(df)-16} 個, +{((len(df)-16)/16*100):.0f}%)
+   624→
+   625→ML 模型表現 (5-fold TimeSeries CV):
+   626→  FX 最佳: {fx_best} (MAE={fx_models[fx_best]['cv_mae']:.1f}%) [V1: 23.4%]
+   627→  物業最佳: {pr_best} (MAE={pr_models[pr_best]['cv_mae']:.1f}%) [V1: 20.2%]
+   628→
+   629→預測 (10 年):
+   630→  匯率:  ML={fx_ml_point:+.1f}%, Blended={fx_blended:+.1f}%, ARIMA={fx_arima_pct:+.1f}%
+   631→  物業:  ML={pr_ml_point:+.1f}%, Blended={pr_blended:+.1f}%, ARIMA={pr_arima_pct:+.1f}%
+   632→"""
+   633→
+   634→for hy in HOLD_YEARS:
+   635→    wr = weighted_results[hy]
+   636→    top5 = sorted(wr['scenarios'], key=lambda s: -s['prob'])[:5]
+   637→    summary += f"\n持有 {hy} 年:\n"
+   638→    summary += f"  簡單平均 ROI: {wr['simple_roi']:+.1f}%\n"
+   639→    summary += f"  ML 加權 ROI:  {wr['weighted_roi']:+.1f}%\n"
+   640→    summary += f"  最高機率情景:\n"
+   641→    for s in top5:
+   642→        summary += f"    FX={s['fx']}, 年變幅={s['pr']*100:+.1f}%, ROI={s['roi']:+.1f}%, P={s['prob']*100:.1f}%\n"
+   643→
+   644→print(summary)
+   645→
+   646→# Save results
+   647→output = {
+   648→    'version': 'V2',
+   649→    'data_sources': {
+   650→        'EXJPUS': f"JPY/USD, {len(dataframes['EXJPUS'])} monthly points (FRED)",
+   651→        'QJPN628BIS': f"Japan Property, {len(dataframes['QJPN628BIS'])} quarterly points (BIS/FRED)",
+   652→        'FEDFUNDS': f"US Rate, {len(dataframes['FEDFUNDS'])} monthly points (FRED)",
+   653→        'IRSTCI01JPM156N': f"Japan Rate, {len(dataframes['IRSTCI01JPM156N'])} monthly points (FRED)",
+   654→    },
+   655→    'training_samples': int(len(df)),
+   656→    'v1_samples': 16,
+   657→    'ml_predictions': {
+   658→        'fx_10yr': {
+   659→            'ml_point': round(float(fx_ml_point), 1),
+   660→            'blended': round(float(fx_blended), 1),
+   661→            'arima': round(float(fx_arima_pct), 1),
+   662→            'mc_mean': round(float(np.mean(fx_sims)), 1),
+   663→            'mc_p5': round(float(np.percentile(fx_sims, 5)), 1),
+   664→            'mc_p50': round(float(np.percentile(fx_sims, 50)), 1),
+   665→            'mc_p95': round(float(np.percentile(fx_sims, 95)), 1),
+   666→        },
+   667→        'property_10yr': {
+   668→            'ml_point': round(float(pr_ml_point), 1),
+   669→            'blended': round(float(pr_blended), 1),
+   670→            'arima': round(float(pr_arima_pct), 1),
+   671→            'mc_mean': round(float(np.mean(pr_sims)), 1),
+   672→            'mc_p5': round(float(np.percentile(pr_sims, 5)), 1),
+   673→            'mc_p50': round(float(np.percentile(pr_sims, 50)), 1),
+   674→            'mc_p95': round(float(np.percentile(pr_sims, 95)), 1),
+   675→        },
+   676→    },
+   677→    'model_performance': {
+   678→        'fx': {k: {'cv_mae': round(v['cv_mae'], 2)} for k, v in fx_models.items()},
+   679→        'property': {k: {'cv_mae': round(v['cv_mae'], 2)} for k, v in pr_models.items()},
+   680→    },
+   681→    'weighted_returns': {
+   682→        str(hy): {
+   683→            'weighted_roi': round(wr['weighted_roi'], 1),
+   684→            'simple_roi': round(wr['simple_roi'], 1),
+   685→        } for hy, wr in weighted_results.items()
+   686→    },
+   687→    'v1_comparison': {
+   688→        'v1_fx_mae': 23.36,
+   689→        'v2_fx_mae': round(fx_models[fx_best]['cv_mae'], 2),
+   690→        'v1_prop_mae': 20.17,
+   691→        'v2_prop_mae': round(pr_models[pr_best]['cv_mae'], 2),
+   692→    }
+   693→}
+   694→
+   695→with open(f'{OUT}v2_ml_results.json', 'w', encoding='utf-8') as f:
+   696→    json.dump(output, f, ensure_ascii=False, indent=2)
+   697→print("Saved: v2_ml_results.json")
+   698→print("\nDone!")
