@@ -43,3 +43,22 @@ Stage Summary:
 - Output: /home/z/my-project/download/Andy_JP_Property_ML_Report_V6.pdf (18 pages)
 - Part 4: 7 pages with 6 embedded charts and 4 data tables
 - All content in professional Chinese, HKD/JPY convention maintained
+---
+Task ID: 5
+Agent: main
+Task: 生成Andy日本物業ML V2投資報告第五章PDF
+
+Work Log:
+- 讀取weixin-image.jpg架構圖，確認第五章為「機率加權回報計算」
+- 讀取v2_ml_results.json獲取ML預測數據和加權回報數據
+- 讀取gen_report_v6_part4.py了解第四章的風格和結構
+- 讀取ml_japan_property_v2.py理解情景計算邏輯和機率映射方法
+- 編寫gen_report_v6_part5.py，完整計算84情景的HKD淨收益
+- 生成2張專業中文圖表：加權vs簡單對比圖、淨收益分佈圖
+- 生成andy_report_v6_part5.pdf（4頁）
+
+Stage Summary:
+- 第五章PDF已生成：/home/z/my-project/download/andy_report_v6_part5.pdf
+- 包含5.1計算方法、5.2三種持有年期結果、5.3 10年重點情景分析、5.4經濟學解讀、5.5投資決策參考
+- 新圖表：v2_weighted_vs_simple_v6.png、v2_net_gain_distribution_v6.png
+- 關鍵數據：10年ML加權ROI +84.0%，最差情景仍為正回報
