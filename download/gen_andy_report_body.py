@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Andy - Japan Property ML V2 Report Body PDF Generator (Rebuild)
-嚴格按照框架圖 6 章結構，按揭費用清楚列示及扣減。
+Andy - Japan Property ML V2 Report (Rebuild v3)
+All returns shown as HKD amounts only. No ROI%.
 """
 
-import os
+import os, json
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm, cm
+from reportlab.lib.units import mm
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT, TA_JUSTIFY
+from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_JUSTIFY
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    Image, KeepTogether, PageBreak, HRFlowable
+    Image, PageBreak, HRFlowable
 )
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -53,7 +53,6 @@ SEM_INFO      = colors.HexColor('#4d769e')
 BASE_DIR = '/home/z/my-project/download'
 CHART_DIR = os.path.join(BASE_DIR, 'ml_charts')
 OUTPUT_PATH = os.path.join(BASE_DIR, 'andy_report_body.pdf')
-
 IMG_ARCH     = os.path.join(BASE_DIR, 'model_architecture.png')
 IMG_DATA     = os.path.join(CHART_DIR, 'v2_data_overview.png')
 IMG_MODEL    = os.path.join(CHART_DIR, 'v2_model_comparison.png')
@@ -69,8 +68,6 @@ USABLE_W = PAGE_W - 2 * MARGIN
 # ============================================================
 # STYLES
 # ============================================================
-styles = getSampleStyleSheet()
-
 def S(name, **kw):
     d = dict(fontName=FONT, fontSize=10, leading=16,
              textColor=TEXT_PRIMARY, alignment=TA_LEFT,
@@ -78,31 +75,16 @@ def S(name, **kw):
     d.update(kw)
     return ParagraphStyle(name, **d)
 
-sTitle = S('sTitle', fontName=FONT_BOLD, fontSize=20, leading=28,
-           textColor=HEADER_FILL, spaceAfter=4)
-sH1 = S('sH1', fontName=FONT_BOLD, fontSize=15, leading=21,
-        textColor=HEADER_FILL, spaceBefore=14, spaceAfter=6)
-sH2 = S('sH2', fontName=FONT_BOLD, fontSize=12, leading=18,
-        textColor=ICON, spaceBefore=10, spaceAfter=5)
-sH3 = S('sH3', fontName=FONT_BOLD, fontSize=10.5, leading=15,
-        textColor=colors.HexColor('#506e7c'), spaceBefore=8, spaceAfter=4)
+sTitle = S('sTitle', fontName=FONT_BOLD, fontSize=20, leading=28, textColor=HEADER_FILL, spaceAfter=4)
+sH2 = S('sH2', fontName=FONT_BOLD, fontSize=12, leading=18, textColor=ICON, spaceBefore=10, spaceAfter=5)
 sBody = S('sBody', fontSize=9.5, leading=16, alignment=TA_JUSTIFY)
-sBodySm = S('sBodySm', fontSize=8.5, leading=14, alignment=TA_JUSTIFY)
-sCaption = S('sCaption', fontSize=8, leading=12, textColor=TEXT_MUTED,
-             alignment=TA_CENTER, spaceBefore=4, spaceAfter=10)
-sFormula = S('sFormula', fontSize=9, leading=15, textColor=SEM_INFO,
-             backColor=SECTION_BG, alignment=TA_CENTER,
-             spaceBefore=6, spaceAfter=6, borderPadding=6)
-sTableHead = S('sTH', fontName=FONT_BOLD, fontSize=8.5, leading=12,
-               textColor=colors.white, alignment=TA_CENTER)
+sCaption = S('sCaption', fontSize=8, leading=12, textColor=TEXT_MUTED, alignment=TA_CENTER, spaceBefore=4, spaceAfter=10)
+sFormula = S('sFormula', fontSize=9, leading=15, textColor=SEM_INFO, backColor=SECTION_BG, alignment=TA_CENTER, spaceBefore=6, spaceAfter=6, borderPadding=6)
+sTH = S('sTH', fontName=FONT_BOLD, fontSize=8.5, leading=12, textColor=colors.white, alignment=TA_CENTER)
 sTC = S('sTC', fontSize=8.5, leading=12, alignment=TA_CENTER, wordWrap='CJK')
-sTCL = S('sTCL', fontSize=8.5, leading=12, alignment=TA_LEFT, wordWrap='CJK')
-sBullet = S('sBullet', fontSize=9, leading=15, leftIndent=14,
-            bulletIndent=4, spaceBefore=2, spaceAfter=2)
-sNote = S('sNote', fontSize=8, leading=13, textColor=TEXT_MUTED,
-          leftIndent=8, spaceBefore=2, spaceAfter=2)
-sFooter = S('sFooter', fontSize=7, leading=10, textColor=TEXT_MUTED,
-            alignment=TA_CENTER)
+sBullet = S('sBullet', fontSize=9, leading=15, leftIndent=14, bulletIndent=4, spaceBefore=2, spaceAfter=2)
+sNote = S('sNote', fontSize=8, leading=13, textColor=TEXT_MUTED, leftIndent=8)
+sFooter = S('sFooter', fontSize=7, leading=10, textColor=TEXT_MUTED, alignment=TA_CENTER)
 
 # ============================================================
 # CUSTOM FLOWABLES
@@ -144,21 +126,19 @@ class MetricRow(Flowable):
             c.setFillColor(CARD_BG)
             c.roundRect(x, 0, card_w, self.height, 3, fill=1, stroke=0)
             c.setFillColor(color)
-            c.setFont(FONT_BOLD, 15)
+            c.setFont(FONT_BOLD, 14)
             c.drawCentredString(x + card_w/2, self.height - 22, value)
             c.setFillColor(TEXT_MUTED)
             c.setFont(FONT, 7)
             c.drawCentredString(x + card_w/2, 8, label)
             x += card_w + 8
 
-
 # ============================================================
 # HELPERS
 # ============================================================
-MAX_IMG_H = 400
+MAX_IMG_H = 390
 
 def img(path, w=None):
-    from reportlab.lib.utils import ImageReader
     if not os.path.exists(path):
         return Paragraph(f'[Image not found: {os.path.basename(path)}]', sNote)
     if w is None:
@@ -171,7 +151,6 @@ def img(path, w=None):
         h = MAX_IMG_H
         w = h / ratio
     return Image(path, width=w, height=h)
-
 
 def box(text, bg=SECTION_BG, text_color=TEXT_PRIMARY, style=None):
     if style is None:
@@ -188,9 +167,8 @@ def box(text, bg=SECTION_BG, text_color=TEXT_PRIMARY, style=None):
     ]))
     return tbl
 
-
 def make_table(headers, rows, cw=None):
-    hdr = [Paragraph(h, sTableHead) for h in headers]
+    hdr = [Paragraph(h, sTH) for h in headers]
     data = [hdr]
     for r in rows:
         data.append([Paragraph(str(c), sTC) for c in r])
@@ -217,7 +195,6 @@ def make_table(headers, rows, cw=None):
     tbl.setStyle(TableStyle(cmds))
     return tbl
 
-
 # ============================================================
 # PAGE DECORATION
 # ============================================================
@@ -237,14 +214,13 @@ def add_page_decor(canvas, doc):
 def first_page(canvas, doc):
     add_page_decor(canvas, doc)
 
-
 # ============================================================
-# BUILD BODY
+# BUILD
 # ============================================================
 def build_body():
     elements = []
 
-    # ---- TITLE PAGE ----
+    # ---- TITLE ----
     elements.append(Spacer(1, 25*mm))
     elements.append(Paragraph('日本物業投資評估報告', sTitle))
     elements.append(Paragraph('ML V2 機率加權分析 — 專屬客戶 Andy', S('sub1', fontSize=13,
@@ -254,8 +230,8 @@ def build_body():
         '本報告採用 84 情景壓力測試結合機器學習機率預測模型，對客戶 Andy 以港幣 320 萬'
         '（物業總價）透過銀行按揭（40% LTV）投資日本大阪物業之回報進行全面評估。'
         '分析涵蓋匯率風險、物業價格變動、持有期長短三大維度，透過 Monte Carlo 模擬為每個'
-        '壓力情景賦予機率權重，從而得出更貼近現實的預期回報分佈。'
-        '所有回報計算均已扣減按揭利息及供款，反映 Andy 之真實淨回報。',
+        '壓力情景賦予機率權重，從而得出更貼近現實之預期回報分佈。'
+        '所有回報金額均已扣減按揭利息及供款，反映 Andy 之真實淨回報。',
         sBody
     ))
     elements.append(Spacer(1, 12*mm))
@@ -269,7 +245,7 @@ def build_body():
     elements.append(PageBreak())
 
     # ================================================================
-    # CHAPTER 1: 客戶入場決策
+    # CH1
     # ================================================================
     elements.append(SectionBanner(1, '客戶入場決策 — 投資參數設定'))
     elements.append(Spacer(1, 5*mm))
@@ -283,23 +259,21 @@ def build_body():
         '自付 60% 首期（約 HKD 192 萬 / JPY 3,744 萬）。按揭年利率為 3%，'
         '屬日本房地產市場之正常水平。客戶之核心問題為：「10 年後，我會賺定虧？」'
         '為回答此問題，本報告依次拆解回報驅動因素、進行 84 情景壓力測試、'
-        '建構機器學習預測模型，最終以機率加權方式呈現最可能之回報情景。',
+        '建構機器學習預測模型，最終以機率加權方式呈現最可能之回報金額。',
         sBody
     ))
     elements.append(Spacer(1, 3*mm))
 
-    # --- 1.2 融資結構 ---
     elements.append(Paragraph('1.2 融資結構與貸款條件', sH2))
     elements.append(Paragraph(
-        '是次投資之融資結構為 Andy 帶來兩方面嘅影響。一方面，槓桿放大咗回報率——'
+        '是次投資之融資結構為 Andy 帶來兩方面嘅影響。一方面，槓桿放大咗回報——'
         '因為 Andy 只需投入 192 萬首期即可控制價值 320 萬之物業，若物業升值，'
-        '回報率會高於無槓桿情況。另一方面，按揭貸款產生利息支出，構成固定之融資成本，'
+        '利潤會高於無槓桿情況。另一方面，按揭貸款產生利息支出，構成固定之融資成本，'
         '需要由租金收入及最終物業出售價值來覆蓋。以下為詳細之貸款條件及 10 年供款計劃。',
         sBody
     ))
     elements.append(Spacer(1, 2*mm))
 
-    # Core params table
     params_h = ['參數項目', '數值', '說明']
     params_r = [
         ['物業總價', 'HKD 3,200,000（320 萬）', '日本大阪物業購買價格'],
@@ -315,7 +289,7 @@ def build_body():
     elements.append(make_table(params_h, params_r, params_cw))
     elements.append(Spacer(1, 4*mm))
 
-    # --- 1.3 按揭供款明細（NEW - critical section） ---
+    # --- 1.3 按揭供款明細 ---
     elements.append(Paragraph('1.3 按揭供款明細與利息成本', sH2))
     elements.append(Paragraph(
         '以下為 Andy 之 10 年按揭供款詳細計算。基於等額本息還款方式，'
@@ -326,8 +300,8 @@ def build_body():
     ))
     elements.append(Spacer(1, 2*mm))
 
-    mortgage_h = ['項目', '金額（JPY）', '金額（HKD）', '備註']
-    mortgage_r = [
+    mtg_h = ['項目', '金額（JPY）', '金額（HKD）', '備註']
+    mtg_r = [
         ['貸款本金', '24,960,000', '1,280,000', '物業價值之 40%'],
         ['每月供款', '241,016', '12,362', '等額本息'],
         ['每年供款（12 個月）', '2,892,187', '148,318', '租金需優先覆蓋此金額'],
@@ -336,22 +310,21 @@ def build_body():
         ['其中：利息支出', '3,961,874', '203,173', '10 年累計利息成本'],
         ['10 年後剩餘貸款', '0', '0', '10 年期貸款已全數還清'],
     ]
-    mortgage_cw = [USABLE_W*0.24, USABLE_W*0.24, USABLE_W*0.22, USABLE_W*0.30]
-    elements.append(make_table(mortgage_h, mortgage_r, mortgage_cw))
+    mtg_cw = [USABLE_W*0.24, USABLE_W*0.24, USABLE_W*0.22, USABLE_W*0.30]
+    elements.append(make_table(mtg_h, mtg_r, mtg_cw))
     elements.append(Spacer(1, 3*mm))
     elements.append(box(
         '重點提示：Andy 在 10 年內需要向銀行支付總計約 JPY 2,892 萬之供款，'
         '其中 JPY 249.6 萬為償還貸款本金，JPY 396 萬為利息支出。'
         '即 10 年按揭利息總額約 HKD 20.3 萬。'
-        '此筆利息支出已在所有回報計算中扣除，最終 ROI 數字為扣減按揭費用後之淨回報。',
+        '此筆利息支出已在所有回報計算中扣除，本報告所有金額均為扣減按揭費用後之淨回報。',
         bg=colors.HexColor('#fff3e0'), text_color=colors.HexColor('#e65100')
     ))
     elements.append(Spacer(1, 4*mm))
 
-    # --- 1.4 年度現金流結構 ---
+    # --- 1.4 年度現金流 ---
     elements.append(Paragraph('1.4 年度現金流結構', sH2))
     elements.append(Paragraph(
-        '瞭解投資每年之現金流入與流出，對評估投資之可行性至關重要。'
         '以下展示 Andy 在持有物業期間每年之現金流結構，清楚顯示租金收入、持有成本及按揭供款之關係。'
         '若每年現金流為正，表示租金收入足以覆蓋所有支出；若為負，則 Andy 需要自掏腰包補貼差額。',
         sBody
@@ -371,27 +344,26 @@ def build_body():
     elements.append(Paragraph(
         '如上表所示，即使扣減持有成本及按揭供款後，Andy 每年仍可獲得約 JPY 66.5 萬'
         '（約 HKD 3.4 萬）之正現金流。這意味着物業之租金收入足以覆蓋所有經營成本及按揭供款，'
-        'Andy 無需額外注入資金維持物業。此穩定之正向現金流為投資提供了堅實的安全基礎，'
+        'Andy 無需額外注入資金維持物業。此穩定之正向現金流為投資提供了堅實之安全基礎，'
         '即使物業價格暫時下跌，只要租金收入持續，投資者亦不會面臨資金壓力。'
-        '10 年累計之淨現金流為 JPY 664.6 萬 x 10 年 = JPY 6,646 萬（約 HKD 340.8 萬）。',
+        '10 年累計之淨現金流為約 HKD 340.8 萬。',
         sBody
     ))
     elements.append(Spacer(1, 3*mm))
 
-    # --- 1.5 分析目標 ---
     elements.append(Paragraph('1.5 分析目標', sH2))
     elements.append(Paragraph(
-        '本報告之核心目標是量化評估 Andy 在不同市場環境下之投資回報，'
-        '且所有回報數字均為扣減按揭利息及供款後之淨回報。'
+        '本報告之核心目標是量化評估 Andy 在不同市場環境下之投資回報金額，'
+        '且所有金額均為扣減按揭利息及供款後之淨回報。'
         '我們通過 84 個壓力測試情景，覆蓋匯率波動（從 13.0 到 28.0 JPY/HKD）、'
         '物業價格變動（年跌幅 3% 至年漲幅 3%）、以及不同持有期（5 年、7 年、10 年）之交叉組合。'
-        '每一個情景均經由機器學習模型賦予機率權重，從而得出更精確之預期回報分佈。',
+        '每一個情景均經由機器學習模型賦予機率權重，從而得出更精確之預期回報金額分佈。',
         sBody
     ))
     elements.append(PageBreak())
 
     # ================================================================
-    # CHAPTER 2: 回報驅動因素拆解
+    # CH2
     # ================================================================
     elements.append(SectionBanner(2, '回報驅動因素拆解'))
     elements.append(Spacer(1, 5*mm))
@@ -408,7 +380,6 @@ def build_body():
     ))
     elements.append(Spacer(1, 3*mm))
 
-    # --- 2.2 核心公式 ---
     elements.append(Paragraph('2.2 核心回報公式', sH2))
     elements.append(Paragraph(
         '投資日本物業之最終 HKD 盈虧，可由以下核心公式計算。此公式將所有現金流（租金收入、'
@@ -417,66 +388,55 @@ def build_body():
         sBody
     ))
     elements.append(Spacer(1, 2*mm))
-
     elements.append(Paragraph(
         '<b>最終 HKD 盈虧</b> =（10 年後物業 JPY 價值 - 未還貸款 + 10 年租金淨收入）'
         '&divide; 10 年後匯率 - 入場 HKD 首期本金',
         sFormula
     ))
     elements.append(Spacer(1, 2*mm))
-
     elements.append(Paragraph(
         '其中「10 年租金淨收入」已扣減每年持有成本及按揭供款，'
         '即：每年淨現金流 = 租金收入 - 持有成本 - 按揭供款。'
-        '「未還貸款」為 10 年後尚餘之銀行貸款餘額（在此案例中為零，因 10 年期貸款已全數還清）。'
-        '公式之邏輯清晰：Andy 最終收回之港幣金額，等於物業售出之日圓總值'
-        '（扣減尚未償還之貸款餘額）加上 10 年累計之淨現金流，再按當時匯率換算為港幣，'
-        '最後扣減入場時投入之首期本金，即為盈虧。',
+        '「未還貸款」為 10 年後尚餘之銀行貸款餘額（在此案例中為零，因 10 年期貸款已全數還清）。',
         sBody
     ))
     elements.append(Spacer(1, 3*mm))
 
-    # Formula breakdown table
-    formula_h = ['公式組成部分', '說明', '數值（基準情景）']
-    formula_r = [
-        ['10 年後物業 JPY 價值', '物業總價 x (1 + 年變幅)^10', 'JPY 62,400,000（不變）'],
+    # Formula breakdown
+    f_h = ['公式組成部分', '說明', '基準情景金額']
+    f_r = [
+        ['10 年後物業 JPY 價值', '物業總價 x (1 + 年變幅)^10', 'JPY 62,400,000'],
         ['未還貸款', '10 年末之貸款餘額', 'JPY 0（已還清）'],
         ['10 年租金淨收入', '(租金 - 成本 - 供款) x 10', 'JPY 6,646,126'],
         ['合計 JPY 回收', '物業淨值 + 累計現金流', 'JPY 69,046,126'],
-        ['換算 HKD', '合計 JPY &divide; 出場匯率', 'HKD 3,540,827（按 19.5 計）'],
+        ['換算 HKD', '合計 JPY &divide; 出場匯率', 'HKD 3,540,827'],
         ['扣減首期本金', '入場時自付金額', '- HKD 1,920,000'],
         ['最終利潤', '回收 HKD - 首期 HKD', 'HKD 1,620,827'],
-        ['ROI', '利潤 &divide; 首期本金', '+84.4%'],
     ]
-    formula_cw = [USABLE_W*0.26, USABLE_W*0.40, USABLE_W*0.34]
-    elements.append(make_table(formula_h, formula_r, formula_cw))
+    f_cw = [USABLE_W*0.26, USABLE_W*0.40, USABLE_W*0.34]
+    elements.append(make_table(f_h, f_r, f_cw))
     elements.append(Spacer(1, 3*mm))
-
     elements.append(Paragraph(
         '上表展示基準情景（匯率不變 19.5、物業價格不變）下之回報計算過程。'
-        '可以注意到，即使物業價格完全沒有升值，單靠租金收入在扣減所有成本及按揭供款後，'
-        'Andy 仍可獲得 +84.4% 之回報。這說明在此融資結構下，租金收入是回報之核心驅動力，'
-        '而匯率與物業價格則決定回報之上下波動幅度。當然，此為最簡單之基準情景，'
-        '實際情況將因匯率和物業價格之變化而有顯著差異，這正是後續壓力測試及 ML 預測所要解決之問題。',
+        '即使物業價格完全沒有升值，單靠租金收入在扣減所有成本及按揭供款後，'
+        'Andy 仍可獲得約 HKD 162 萬之利潤（已扣減按揭利息 HKD 20.3 萬）。'
+        '這說明在此融資結構下，租金收入是回報之核心驅動力，'
+        '而匯率與物業價格則決定利潤之上下波動幅度。',
         sBody
     ))
     elements.append(Spacer(1, 3*mm))
 
-    # --- 2.3 匯率分析 ---
     elements.append(Paragraph('2.3 匯率變動之影響', sH2))
     elements.append(Paragraph(
         '匯率是影響回報之最大單一變數。入場時 1 HKD = 19.5 JPY，'
         '若 10 年後日圓升值（數字變小，如 13.0），Andy 換回之港幣會更多；'
         '若日圓貶值（數字變大，如 28.0），換回之港幣則會減少。'
         '在壓力測試中，我們設定了 7 個匯率水平，從 13.0（日圓大幅升值）到 28.0（日圓大幅貶值），'
-        '均勻覆蓋各種可能情景。若 10 年後日圓升值至 13.0 JPY/HKD，'
-        '即使物業價格不變，匯率變動本身即可帶來可觀之額外收益；'
-        '反之，若日圓貶至 28.0 JPY/HKD，匯率因素將大幅侵蝕回報。',
+        '均勻覆蓋各種可能情景。',
         sBody
     ))
     elements.append(Spacer(1, 3*mm))
 
-    # --- 2.4 物業價格 ---
     elements.append(Paragraph('2.4 物業價格變動之影響', sH2))
     elements.append(Paragraph(
         '日本物業價格之長期走勢受經濟增長率、人口結構、都市化進程、政策法規等多因素影響。'
@@ -484,14 +444,14 @@ def build_body():
         '零增長（保守情景）、年漲幅 1.5%（基準情景）、年漲幅 3%（樂觀情景）。'
         '此四個情景之選取基於日本過去數十年之物業價格歷史數據。'
         '需要特別指出的是，日本在 1990 年代經歷了嚴重的物業泡沫破裂，'
-        '但近年在主要都市（特別是大阪、東京）之物業價格已呈現穩定復甦趨勢，'
+        '但近年在大阪、東京等主要都市之物業價格已呈現穩定復甦趨勢，'
         '因此年跌幅 3% 之情景已經是非常保守之假設。',
         sBody
     ))
     elements.append(PageBreak())
 
     # ================================================================
-    # CHAPTER 3: 84 情景壓力測試
+    # CH3
     # ================================================================
     elements.append(SectionBanner(3, '84 情景壓力測試'))
     elements.append(Spacer(1, 5*mm))
@@ -500,7 +460,7 @@ def build_body():
     elements.append(Paragraph(
         '將匯率（7 個水平）、物業價格年變幅（4 個等級）、持有年期（3 個期限）'
         '進行三維交叉組合，共產生 7 x 4 x 3 = 84 個獨立情景。'
-        '每個情景均使用第 2 章之核心公式計算確定性 ROI 及港幣盈虧金額。'
+        '每個情景均使用第 2 章之核心公式計算確定性利潤及港幣回 收金額。'
         '在 V1 版本中，每個情景之機率被假設為均等（約 1/28），'
         '這顯然不符合現實——極端情景之發生機率應遠低於中間情景。'
         'V2 版本透過 ML 模型為每個情景賦予基於歷史數據之實際機率，這將在第 4、5 章詳述。',
@@ -508,7 +468,6 @@ def build_body():
     ))
     elements.append(Spacer(1, 2*mm))
 
-    # Scenario matrix table
     sc_h = ['維度', '設定值', '數量', '覆蓋範圍']
     sc_r = [
         ['匯率（JPY/HKD）', '13.0 / 16.0 / 19.5 / 22.0\n/ 24.0 / 26.0 / 28.0', '7', '大幅升值 → 大幅貶值'],
@@ -520,37 +479,34 @@ def build_body():
     elements.append(make_table(sc_h, sc_r, sc_cw))
     elements.append(Spacer(1, 4*mm))
 
-    # --- 3.2 壓力測試結果概覽 ---
     elements.append(Paragraph('3.2 壓力測試結果概覽', sH2))
     elements.append(Paragraph(
-        '以下為 84 個情景之壓力測試關鍵數據。所有 ROI 均為扣減按揭供款及利息後之淨回報率，'
+        '以下為 84 個情景之壓力測試關鍵數據。所有金額均為扣減按揭供款及利息後之淨利潤，'
         '計算基礎為 Andy 之首期本金 HKD 192 萬。在最極端之不利情景下'
         '（日圓貶至 28.0 JPY/HKD 且物業價格年跌 3%），'
-        '若僅持有 5 年，最差回報為 -8.2%，虧損約 HKD 16 萬。'
+        '若僅持有 5 年，最大虧損約 HKD 33 萬。'
         '然而在同一匯率及樓價條件下，若延長至 10 年持有期，'
-        '累積之租金淨收入足以抵消匯率及物業貶值之影響，回報轉正為 +18.5%。'
+        '累積之租金淨收入足以抵消匯率及物業貶值之影響，轉為小幅虧損約 HKD 4 萬。'
         '這顯示長期持有之強大防禦能力。而在最樂觀情景下'
         '（日圓升值至 13.0 JPY/HKD 且物業年漲 3%），'
-        '10 年回報可高達數倍，充分展示槓桿投資之潛在收益。',
+        '10 年利潤可高達約 HKD 504 萬，充分展示槓桿投資之潛在收益。',
         sBody
     ))
     elements.append(Spacer(1, 3*mm))
 
-    # Key metrics
     elements.append(MetricRow([
-        ('-8.2%', '最差 5 年 ROI', SEM_ERROR),
-        ('+84.0%', 'ML 加權 10 年 ROI', SEM_SUCCESS),
-        ('+95%+', '最樂觀 10 年 ROI', SEM_SUCCESS),
-        ('+18.5%', '最差 10 年 ROI', SEM_INFO),
+        ('HKD -33萬', '最差 5 年虧損', SEM_ERROR),
+        ('HKD +161萬', 'ML 加權 10 年利潤', SEM_SUCCESS),
+        ('HKD +504萬', '最樂觀 10 年利潤', SEM_SUCCESS),
+        ('HKD -4萬', '最差 10 年虧損', SEM_INFO),
     ]))
     elements.append(Spacer(1, 6*mm))
-
     elements.append(Paragraph(
-        '壓力測試揭示幾個重要規律。第一，持有期越長，最差情景之回報越好，'
+        '壓力測試揭示幾個重要規律。第一，持有期越長，最差情景之利潤越好，'
         '這是因為租金累積效應在長期持有中能夠抵消資產價格下跌之影響。'
         '第二，匯率是影響回報之最大變數——在固定物業價格情景下，'
-        '匯率從 19.5 升至 13.0 可使回報增加超過一倍，而貶至 28.0 則大幅壓縮回報。'
-        '第三，即使在最不利之 84 個情景組合中，10 年持有期之最差回報仍為正數（+18.5%），'
+        '匯率從 19.5 升至 13.0 可使利潤增加超過一倍，而貶至 28.0 則大幅壓縮利潤。'
+        '第三，84 個 10 年情景中，絕大部分情景均錄得正利潤，'
         '這為 Andy 之投資提供了強有力之底部支撐。不過，壓力測試之局限在於'
         '每個情景之機率被視為均等，這不符合現實情況——極端情景之發生機率應遠低於接近現狀之情景。'
         '這正是下一章 ML 機率預測模型要解決之問題。',
@@ -559,7 +515,7 @@ def build_body():
     elements.append(PageBreak())
 
     # ================================================================
-    # CHAPTER 4: V2 ML 機率預測模型
+    # CH4
     # ================================================================
     elements.append(SectionBanner(4, 'V2 ML 機率預測模型'))
     elements.append(Spacer(1, 5*mm))
@@ -591,14 +547,13 @@ def build_body():
     elements.append(img(IMG_DATA))
     elements.append(Paragraph('圖 1：V2 數據總覽 — 匯率與物業價格歷史走勢', sCaption))
 
-    # --- 4.2 模型訓練與比較 ---
     elements.append(Paragraph('4.2 模型訓練與比較', sH2))
     elements.append(Paragraph(
         '我們訓練了四個主流梯度提升模型（XGBoost、LightGBM、Random Forest、GBR），'
         '採用 5-fold 時序交叉驗證確保評估之可靠性。時序交叉驗證之特點是訓練集始終在測試集之前，'
-        '避免未來數據洩露至訓練過程中，這對時間序列預測尤為重要。'
+        '避免未來數據洩露至訓練過程中。'
         '評估指標採用 MAE（平均絕對誤差）——即預測值與實際值之平均偏差幅度。'
-        'MAE 越低代表預測越精確。經過嚴格比較，GBR（Gradient Boosting Regressor）'
+        '經過嚴格比較，GBR（Gradient Boosting Regressor）'
         '在匯率和物業價格兩個預測任務上均取得最佳表現：匯率 MAE 19.7%，物業價格 MAE 15.6%。'
         '考慮到匯率與物業價格本身之高波動性，此精度在宏觀經濟預測領域屬於優秀水平。',
         sBody
@@ -611,7 +566,6 @@ def build_body():
     elements.append(img(IMG_FEATURE))
     elements.append(Paragraph('圖 3：特徵重要性排名 — 影響匯率與物業價格預測之關鍵因子', sCaption))
 
-    # --- 4.3 Monte Carlo 模擬 ---
     elements.append(Paragraph('4.3 Monte Carlo 模擬與機率分佈', sH2))
     elements.append(Paragraph(
         '基於 GBR 模型之預測結果，我們進行了 10,000 次 Monte Carlo 模擬，'
@@ -633,18 +587,9 @@ def build_body():
     elements.append(make_table(mc_h, mc_r, mc_cw))
     elements.append(Spacer(1, 3*mm))
 
-    elements.append(Paragraph(
-        '模擬結果顯示，匯率 10 年變化之中心值為 +7.8%（即日圓相對港幣升值 7.8%，'
-        'JPY/HKD 從 19.5 降至約 18.0），但 90% 信賴區間極寬：從 -31% 到 +47%。'
-        '這反映匯率之高不确定性。物業價格 10 年變化之中心值為 +5.0%，'
-        '90% 信賴區間為 -25% 到 +35%，波動幅度同樣顯著但略低於匯率。',
-        sBody
-    ))
-
     elements.append(img(IMG_PROB))
     elements.append(Paragraph('圖 4：Monte Carlo 模擬 — 匯率與物業價格 10 年變動之機率密度分佈', sCaption))
 
-    # --- 4.4 機率映射 ---
     elements.append(Paragraph('4.4 機率映射：從 ML 分佈到 84 情景', sH2))
     elements.append(Paragraph(
         'Monte Carlo 模擬產生的是連續之機率分佈，而壓力測試是離散之 84 個固定情景。'
@@ -659,11 +604,11 @@ def build_body():
     ))
 
     elements.append(img(IMG_HEATMAP))
-    elements.append(Paragraph('圖 5：84 情景機率熱力圖 — 機率加權後之回報分佈', sCaption))
+    elements.append(Paragraph('圖 5：84 情景機率熱力圖 — 機率加權後之利潤分佈', sCaption))
     elements.append(PageBreak())
 
     # ================================================================
-    # CHAPTER 5: 機率加權回報計算
+    # CH5
     # ================================================================
     elements.append(SectionBanner(5, '機率加權回報計算'))
     elements.append(Spacer(1, 5*mm))
@@ -671,87 +616,83 @@ def build_body():
     elements.append(Paragraph('5.1 ML 加權 vs 簡單平均', sH2))
     elements.append(Paragraph(
         '將第 4 章得到之 ML 機率權重取代 V1 之均等機率，對 84 個情景做加權平均，'
-        '即可得到 ML 機率加權回報。以下表格清楚展示兩種計算方法之差異。'
-        'ML 加權回報一致低於簡單平均回報，這是因為 ML 模型壓低了極端情景（特別是極端樂觀情景）之機率，'
-        '使其不再佔據過大比重。這實際上是一個更保守、更貼近現實之估計。',
+        '即可得到 ML 機率加權之預期利潤。以下表格清楚展示兩種計算方法之差異。'
+        'ML 加權利潤一致低於簡單平均利潤，這是因為 ML 模型壓低了極端情景（特別是極端樂觀情景）之機率，'
+        '使其不再佔據過大比重。這實際上是一個更保守、更貼近現實之估計。'
+        '所有金額均為扣減按揭利息（10 年共約 HKD 20.3 萬）後之淨利潤。',
         sBody
     ))
     elements.append(Spacer(1, 2*mm))
 
-    wr_h = ['持有年期', '簡單平均 ROI', 'ML 加權 ROI', '差異', '解讀']
+    wr_h = ['持有年期', '簡單平均利潤', 'ML 加權利潤', '差異']
     wr_r = [
-        ['5 年', '+43.4%', '+38.1%', '-5.4pp', 'ML 機率壓低極端情景'],
-        ['7 年', '+62.1%', '+56.2%', '-5.9pp', '同上，差距略增'],
-        ['10 年', '+90.7%', '+84.0%', '-6.8pp', '長期差距最大'],
+        ['5 年', 'HKD 833,280（約 83 萬）', 'HKD 731,520（約 73 萬）', 'HKD -101,760'],
+        ['7 年', 'HKD 1,192,320（約 119 萬）', 'HKD 1,079,040（約 108 萬）', 'HKD -113,280'],
+        ['10 年', 'HKD 1,741,440（約 174 萬）', 'HKD 1,612,800（約 161 萬）', 'HKD -128,640'],
     ]
-    wr_cw = [USABLE_W*0.14, USABLE_W*0.20, USABLE_W*0.20, USABLE_W*0.14, USABLE_W*0.32]
+    wr_cw = [USABLE_W*0.14, USABLE_W*0.30, USABLE_W*0.30, USABLE_W*0.26]
     elements.append(make_table(wr_h, wr_r, wr_cw))
     elements.append(Spacer(1, 4*mm))
 
     elements.append(Paragraph('5.2 回報分析', sH2))
     elements.append(Paragraph(
-        '從上表可以觀察到三個重要趨勢。第一，持有期越長，預期回報越高。'
-        '10 年持有期之回報（+84.0%）顯著高於 5 年（+38.1%），差距達 45.9 個百分點，'
-        '這印證了長期持有在租金累積效應下之優勢。'
-        '第二，ML 機率加權回報一致低於簡單平均回報，且差距隨持有期增加而擴大。'
-        '這是因為較長持有期之回報分佈更偏斜，簡單平均被極端樂觀情景拉高之程度更大。'
-        '第三，即使經 ML 調整後，10 年持有期之預期回報仍高達 +84.0%，'
-        '代表 Andy 之 HKD 192 萬首期本金預期可增值至約 HKD 353 萬'
-        '（192 萬 x 1.84 = 353 萬），名義利潤約 HKD 161 萬。'
+        '從上表可以觀察到三個重要趨勢。第一，持有期越長，預期利潤越高。'
+        '10 年持有期之 ML 加權利潤（約 HKD 161 萬）顯著高於 5 年（約 HKD 73 萬），'
+        '差距達 HKD 88 萬，這印證了長期持有在租金累積效應下之優勢。'
+        '第二，ML 機率加權利潤一致低於簡單平均利潤，且差距隨持有期增加而擴大。'
+        '這是因為較長持有期之利潤分佈更偏斜，簡單平均被極端樂觀情景拉高之程度更大。'
+        '第三，10 年 ML 加權預期利潤約 HKD 161 萬，'
+        '即 Andy 之 HKD 192 萬首期本金預期可回收約 HKD 353 萬。'
         '此數字已扣減全部按揭利息（10 年共約 HKD 20.3 萬）及按揭本金償還。'
-        '當然，此為預期平均值，實際回報將受市場環境影響而有所波動。',
+        '當然，此為預期平均值，實際利潤將受市場環境影響而有所波動。',
         sBody
     ))
     elements.append(Spacer(1, 3*mm))
 
-    # --- 5.3 不確定性量化 ---
     elements.append(Paragraph('5.3 不確定性量化', sH2))
     elements.append(Paragraph(
-        '除了預期平均回報外，了解回報之不確定性範圍同樣重要。'
-        '基於 Monte Carlo 模擬之結果，我們可以估計回報之信賴區間。'
-        '在 90% 信賴水平下（即 P5 至 P95 區間），10 年持有期之回報率'
-        '大約落在 +54% 至 +114% 之間。換言之，有 5% 機會回報低於 +54%（最差情况），'
-        '同時有 5% 機會回報高於 +114%（最佳情景）。'
-        '中位數回報約為 +82%，與平均值 +84% 接近，顯示回報分佈接近對稱。'
-        'Andy 有極高機率（超過 95%）在 10 年後獲得正回報。',
+        '除了預期平均利潤外，了解利潤之不確定性範圍同樣重要。'
+        '基於 Monte Carlo 模擬之結果，我們可以估計 10 年利潤之信賴區間。'
+        '在 90% 信賴水平下（即 P5 至 P95 區間），10 年持有期之利潤'
+        '大約落在 HKD 104 萬至 HKD 219 萬之間。換言之，有 5% 機會利潤低於 HKD 104 萬，'
+        '同時有 5% 機會利潤高於 HKD 219 萬。'
+        '中位數利潤約為 HKD 157 萬，與平均值 HKD 161 萬接近，顯示利潤分佈接近對稱。'
+        'Andy 有極高機會（超過 95%）在 10 年後獲得正利潤。',
         sBody
     ))
     elements.append(Spacer(1, 2*mm))
 
     unc_h = ['統計指標', '5 年', '7 年', '10 年']
     unc_r = [
-        ['平均值（ML 加權）', '+38.1%', '+56.2%', '+84.0%'],
-        ['中位數', '+37.5%', '+55.0%', '+82.0%'],
-        ['P5（5% 機會更低）', '+12%', '+28%', '+54%'],
-        ['P95（5% 機會更高）', '+70%', '+92%', '+114%'],
-        ['90% 信賴區間寬度', '+58pp', '+64pp', '+60pp'],
+        ['ML 加權平均利潤', 'HKD 73 萬', 'HKD 108 萬', 'HKD 161 萬'],
+        ['中位數利潤', 'HKD 72 萬', 'HKD 106 萬', 'HKD 157 萬'],
+        ['P5（5% 機會更低）', 'HKD 23 萬', 'HKD 54 萬', 'HKD 104 萬'],
+        ['P95（5% 機會更高）', 'HKD 134 萬', 'HKD 177 萬', 'HKD 219 萬'],
     ]
     unc_cw = [USABLE_W*0.30, USABLE_W*0.22, USABLE_W*0.22, USABLE_W*0.26]
     elements.append(make_table(unc_h, unc_r, unc_cw))
-
-    # Dollar amount table for 10yr
     elements.append(Spacer(1, 4*mm))
-    elements.append(Paragraph('5.4 10 年持有期回報金額明細', sH2))
+
+    elements.append(Paragraph('5.4 10 年持有期利潤明細', sH2))
     elements.append(Paragraph(
-        '以下將 10 年持有期之回報轉換為具體之港幣金額，所有數字均以 Andy 之首期本金'
-        'HKD 192 萬為計算基礎，且已扣減所有按揭利息及供款。',
+        '以下將 10 年持有期之利潤轉換為具體之港幣金額，所有數字均以 Andy 之首期本金'
+        'HKD 192 萬為計算基礎，且已扣減所有按揭利息（HKD 20.3 萬）及供款。',
         sBody
     ))
     elements.append(Spacer(1, 2*mm))
 
-    amt_h = ['情景', 'ROI', '首期本金（HKD）', '預期回收（HKD）', '淨利潤（HKD）']
+    amt_h = ['情景', '首期本金', '預期回收', '淨利潤']
     amt_r = [
-        ['ML 加權平均值', '+84.0%', '1,920,000', '3,532,800', '1,612,800'],
-        ['保守估計（P5）', '+54.0%', '1,920,000', '2,956,800', '1,036,800'],
-        ['中位數（P50）', '+82.0%', '1,920,000', '3,494,400', '1,574,400'],
-        ['樂觀估計（P95）', '+114.0%', '1,920,000', '4,108,800', '2,188,800'],
+        ['ML 加權平均', 'HKD 1,920,000', 'HKD 3,532,800（約 353 萬）', 'HKD 1,612,800（約 161 萬）'],
+        ['保守估計（P5）', 'HKD 1,920,000', 'HKD 2,956,800（約 296 萬）', 'HKD 1,036,800（約 104 萬）'],
+        ['中位數（P50）', 'HKD 1,920,000', 'HKD 3,494,400（約 349 萬）', 'HKD 1,574,400（約 157 萬）'],
+        ['樂觀估計（P95）', 'HKD 1,920,000', 'HKD 4,108,800（約 411 萬）', 'HKD 2,188,800（約 219 萬）'],
     ]
-    amt_cw = [USABLE_W*0.22, USABLE_W*0.12, USABLE_W*0.22, USABLE_W*0.22, USABLE_W*0.22]
+    amt_cw = [USABLE_W*0.20, USABLE_W*0.22, USABLE_W*0.30, USABLE_W*0.28]
     elements.append(make_table(amt_h, amt_r, amt_cw))
     elements.append(Spacer(1, 3*mm))
-
     elements.append(Paragraph(
-        '上述金額均為扣減按揭費用後之淨數字。具體而言，在計算過程中已扣除：'
+        '上述金額均為扣減按揭費用後之淨數字。在計算過程中已扣除：'
         '（一）10 年按揭利息共約 HKD 20.3 萬；（二）10 年按揭本金償還 HKD 128 萬'
         '（此為償還銀行貸款，非額外成本）；（三）每年持有成本共約 HKD 9.6 萬/年 x 10 年 = HKD 96 萬。'
         'Andy 之最終回收金額包含兩部分：物業出售後之淨值（售價減去剩餘貸款）'
@@ -764,7 +705,7 @@ def build_body():
     elements.append(PageBreak())
 
     # ================================================================
-    # CHAPTER 6: 三層分析 — 客戶報告
+    # CH6
     # ================================================================
     elements.append(SectionBanner(6, '三層分析 — 最終客戶報告'))
     elements.append(Spacer(1, 5*mm))
@@ -774,10 +715,10 @@ def build_body():
         '本報告之分析架構由三個層次組成，每層提供不同深度之見解。'
         '第一層為「歷史數據分析」，基於 104 個季度歷史數據及 65 個重疊 10 年觀察窗口，'
         '提供歷史經驗之定量基礎——回答「過去發生過嗎？」。'
-        '第二層為「84 情景壓力測試」，通過系統化之三維交叉組合展示所有可能情景下之投資回報，'
-        '結果顯示即使最差情景在長期持有下仍為正回報——回答「最壞情況會點？」。'
+        '第二層為「84 情景壓力測試」，通過系統化之三維交叉組合展示所有可能情景下之投資利潤，'
+        '結果顯示即使最差情景在長期持有下之虧損非常有限——回答「最壞情況會點？」。'
         '第三層為「ML 機率加權預測」，利用機器學習模型為每個情景賦予現實機率權重，'
-        '得出更精確之預期回報及其不確定性範圍——回答「邊個情景最可能？」。'
+        '得出更精確之預期利潤及其不確定性範圍——回答「邊個情景最可能？」。'
         '三層分析相互印證、層層遞進，共同構成對 Andy 投資決策之全面支持。',
         sBody
     ))
@@ -785,15 +726,14 @@ def build_body():
 
     layer_h = ['分析層次', '數據基礎', '核心發現', '信賴水平']
     layer_r = [
-        ['第一層：歷史數據', '104 季度樣本\n65 個 10 年窗口', '歷史上大部分 10 年持有期\n均錄得正回報', '基準參考'],
-        ['第二層：壓力測試', '84 情景全面組合', '最差情景仍為正回報\n(+18.5% @ 10yr)', '確定性邊界'],
-        ['第三層：ML 預測', '10,000 次 MC 模擬\nGBR 最佳模型', '最可能 10yr ROI +84%\n90% CI: +54% ~ +114%', '最高信賴'],
+        ['第一層：歷史數據', '104 季度樣本\n65 個 10 年窗口', '歷史上大部分 10 年持有期\n均錄得正利潤', '基準參考'],
+        ['第二層：壓力測試', '84 情景全面組合', '最差 10 年僅虧 HKD 4 萬\n絕大部分情景為正利潤', '確定性邊界'],
+        ['第三層：ML 預測', '10,000 次 MC 模擬\nGBR 最佳模型', '最可能 10 年利潤 HKD 161 萬\n90% CI: HKD 104 萬 ~ 219 萬', '最高信賴'],
     ]
     layer_cw = [USABLE_W*0.18, USABLE_W*0.24, USABLE_W*0.34, USABLE_W*0.24]
     elements.append(make_table(layer_h, layer_r, layer_cw))
     elements.append(Spacer(1, 5*mm))
 
-    # --- 6.2 投資建議總結 ---
     elements.append(Paragraph('6.2 客戶 Andy 之投資建議總結', sH2))
     elements.append(Paragraph(
         '綜合以上六階段之全面分析，我們為客戶 Andy 提供以下核心結論與建議：',
@@ -802,33 +742,32 @@ def build_body():
     elements.append(Spacer(1, 2*mm))
 
     findings = [
-        '<b>回報前景樂觀：</b>Andy 透過銀行按揭購買日本大阪物業（總價 HKD 320 萬，'
+        '<b>利潤前景樂觀：</b>Andy 透過銀行按揭購買日本大阪物業（總價 HKD 320 萬，'
         '40% LTV，年利率 3%），自付 HKD 192 萬首期本金。'
-        'ML 機率加權模型預測 10 年持有期之預期淨回報為 +84.0%'
+        'ML 機率加權模型預測 10 年持有期之預期淨利潤約 HKD 161 萬'
         '（已扣減 10 年按揭利息約 HKD 20.3 萬），'
-        '即首期 HKD 192 萬本金預期增值至約 HKD 353 萬，名義利潤約 HKD 161 萬。'
-        '即使按最保守估計（P5），淨回報仍達 +54%，本金增值至約 HKD 296 萬。',
+        '即首期 HKD 192 萬預期回收約 HKD 353 萬。'
+        '即使按最保守估計（P5），淨利潤仍約 HKD 104 萬，回收約 HKD 296 萬。',
 
         '<b>下行風險可控：</b>84 情景壓力測試顯示，所有情景中即使是極端不利條件下'
-        '（日圓貶至 28.0 JPY/HKD、物業年跌 3%、僅持有 5 年），最差回報為 -8.2%，'
-        '虧損金額約 HKD 16 萬（-8.2% x 192 萬）。而在 10 年持有期下，'
-        '最差情景仍錄得 +18.5% 正回報。',
+        '（日圓貶至 28.0 JPY/HKD、物業年跌 3%、僅持有 5 年），最大虧損約 HKD 33 萬。'
+        '而在 10 年持有期下，最差情景僅虧損約 HKD 4 萬。',
 
         '<b>現金流自我持續：</b>扣除按揭供款、利息及持有成本後，'
         'Andy 每年仍可獲得約 HKD 3.4 萬之正現金流（JPY 66.5 萬）。'
         '這意味着物業租金足以覆蓋所有支出，Andy 無需額外注資維持物業。'
         '10 年累計淨現金流約 HKD 340.8 萬。',
 
-        '<b>長期持有優勢明顯：</b>5 年、7 年、10 年三個持有期之 ML 加權淨回報分別為'
-        '+38.1%、+56.2%、+84.0%，呈現穩定之遞增趨勢。'
+        '<b>長期持有優勢明顯：</b>5 年、7 年、10 年三個持有期之 ML 加權淨利潤分別為'
+        '約 HKD 73 萬、HKD 108 萬、HKD 161 萬，呈現穩定之遞增趨勢。'
         '租金之持續累積效應在長期持有中發揮了關鍵作用。',
 
-        '<b>匯率為最大變數：</b>日圓匯率之變動是影響回報之最大單一因素。'
-        'ML 模型預測 10 年後匯率中心值為較入場時升值 7.8%（即 JPY/HKD 從 19.5 升至約 18.0），'
+        '<b>匯率為最大變數：</b>日圓匯率之變動是影響利潤之最大單一因素。'
+        'ML 模型預測 10 年後匯率中心值為較入場時變動約 +7.8%，'
         '但 90% 信賴區間為 -31% 至 +47%，波動幅度極大。建議 Andy 關注匯率對沖工具之可行性。',
 
         '<b>模型局限說明：</b>ML 預測模型基於歷史數據訓練，對於未經歷之極端事件之預測能力有限。'
-        '報告中之一切數值均為基於歷史數據之統計估計，不構成投資保證。'
+        '報告中之一切金額均為基於歷史數據之統計估計，不構成投資保證。'
         '實際投資決策應綜合考慮個人財務狀況、風險承受能力及其他市場因素。',
     ]
     for f in findings:
@@ -836,32 +775,31 @@ def build_body():
         elements.append(Spacer(1, 1*mm))
     elements.append(Spacer(1, 4*mm))
 
-    # --- 6.3 最終評估 ---
     elements.append(Paragraph('6.3 最終評估', sH2))
     elements.append(Paragraph(
         '基於三層分析架構之綜合評估，Andy 透過銀行按揭購入日本大阪物業'
         '（總價 HKD 320 萬，自付 60% 首期即 HKD 192 萬，向銀行借入 40% 按揭貸款即 HKD 128 萬，'
         '年利率 3%）之方案，在歷史數據支持、壓力測試驗證及 ML 機率預測三個維度上均呈現正面結果。'
-        '最可能之 10 年投資淨回報為 +84%（已扣減按揭利息約 HKD 20.3 萬），'
-        '且下行風險有限（90% 信賴下限為 +54%）。租金收入之穩定現金流為投資提供了良好之安全墊，'
+        '最可能之 10 年投資淨利潤約 HKD 161 萬（已扣減按揭利息約 HKD 20.3 萬），'
+        '且下行風險有限（90% 信賴下限為 HKD 104 萬淨利潤）。租金收入之穩定現金流為投資提供了良好之安全墊，'
         '每年租金在扣減所有成本及按揭供款後仍為正數。'
-        '而槓桿融資結構（40% LTV）在放大回報之同時，3% 之低利率環境確保了融資成本之可控性。'
+        '而槓桿融資結構（40% LTV）在放大利潤之同時，3% 之低利率環境確保了融資成本之可控性。'
         '綜上所述，在當前市場環境下，此按揭投資方案具備合理之風險回報比，值得認真考慮。',
         sBody
     ))
     elements.append(Spacer(1, 5*mm))
 
-    # --- Final highlighted conclusion ---
+    # --- Final conclusion ---
     elements.append(box(
         '<b>答覆核心問題：「10 年後，我會賺定虧？」</b><br/><br/>'
         'Andy 透過銀行按揭購入大阪物業（總價 HKD 320 萬，自付首期 HKD 192 萬，40% LTV，利率 3%），'
-        '在 10 年持有期下（所有回報均已扣減按揭利息及供款）：<br/>'
-        '- <b>最可能情景</b>：淨回報約 +84%（首期本金 192 萬增值至約 353 萬）<br/>'
-        '- <b>保守估計（P5）</b>：淨回報至少 +54%（首期本金增值至約 296 萬）<br/>'
-        '- <b>機率結論</b>：超過 95% 機率獲得正回報<br/>'
-        '- <b>10 年按揭利息總支出</b>：約 HKD 20.3 萬（已於回報中扣除）<br/><br/>'
+        '在 10 年持有期下（所有金額均已扣減按揭利息 HKD 20.3 萬及供款）：<br/>'
+        '- <b>最可能情景</b>：淨利潤約 HKD 161 萬（首期 192 萬 → 回收約 353 萬）<br/>'
+        '- <b>保守估計（P5）</b>：淨利潤至少 HKD 104 萬（首期 192 萬 → 回收約 296 萬）<br/>'
+        '- <b>樂觀估計（P95）</b>：淨利潤可達 HKD 219 萬（首期 192 萬 → 回收約 411 萬）<br/>'
+        '- <b>機率結論</b>：超過 95% 機率獲得正利潤<br/><br/>'
         '<b>結論：Andy 以銀行按揭方式投資，在 ML 模型涵蓋之所有情景中，'
-        '10 年持有期之投資淨回報極大概率為正。</b>',
+        '10 年持有期之投資淨利潤極大概率為正。</b>',
         bg=colors.HexColor('#e3f2fd'), text_color=SEM_INFO
     ))
     elements.append(Spacer(1, 6*mm))
@@ -879,9 +817,6 @@ def build_body():
     return elements
 
 
-# ============================================================
-# MAIN
-# ============================================================
 def main():
     doc = SimpleDocTemplate(
         OUTPUT_PATH,
