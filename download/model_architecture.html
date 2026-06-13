@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --text: #1F2937;
+    --text-sub: #6B7280;
+    --text-muted: #9CA3AF;
+    --bg: #FFFFFF;
+    --surface: #F9FAFB;
+    --border: #E5E7EB;
+    --connector: #94A3B8;
+    --accent: #4C6EF5;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans SC', 'SimHei', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  #root {
+    width: fit-content;
+    min-width: 880px;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 44px 40px;
+  }
+
+  /* ── Title ── */
+  .arch-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    text-align: center;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+  .arch-subtitle {
+    font-size: 13px;
+    color: var(--text-sub);
+    text-align: center;
+    margin-bottom: 36px;
+  }
+
+  /* ── Phase Groups ── */
+  .phase-group {
+    background: #F8FAFC;
+    border-radius: 12px;
+    padding: 20px 24px 18px;
+    position: relative;
+  }
+  .phase-title {
+    font-size: 15px;
+    font-weight: 700;
+    padding: 9px 16px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .phase-title .phase-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .phase-title .phase-label { flex: 1; }
+  .phase-title .phase-tag {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 10px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.7);
+    color: var(--text-sub);
+  }
+
+  /* Same-hue blue-gray progression (Scheme B for 6 phases) */
+  .phase-1 .phase-title { background: #F0F4F8; color: #334155; border-left: 4px solid #64748B; }
+  .phase-1 .phase-num { background: #E2E8F0; color: #475569; }
+  .phase-2 .phase-title { background: #EAEFF4; color: #2D4156; border-left: 4px solid #5B7A99; }
+  .phase-2 .phase-num { background: #DBEAFE; color: #2D4156; }
+  .phase-3 .phase-title { background: #E4EAF0; color: #243A52; border-left: 4px solid #4A6B8A; }
+  .phase-3 .phase-num { background: #D0D9E4; color: #243A52; }
+  .phase-4 .phase-title { background: #DEE5EC; color: #1E3350; border-left: 4px solid #3A5C7A; }
+  .phase-4 .phase-num { background: #C7D2E0; color: #1E3350; }
+  .phase-5 .phase-title { background: #D8E0E8; color: #192C46; border-left: 4px solid #2B4F6E; }
+  .phase-5 .phase-num { background: #BFC9D8; color: #192C46; }
+  .phase-6 .phase-title { background: #D2DAE4; color: #14253D; border-left: 4px solid #1E4263; }
+  .phase-6 .phase-num { background: #B3BFD0; color: #14253D; }
+
+  /* ── Steps inside phases ── */
+  .phase-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-left: 10px;
+  }
+  .phase-step {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text);
+    padding: 7px 14px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    line-height: 1.6;
+  }
+  .phase-step .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  /* Step num colors match phase */
+  .phase-1 .step-num { background: #F1F5F9; color: #475569; }
+  .phase-2 .step-num { background: #EFF6FF; color: #2D4156; }
+  .phase-3 .step-num { background: #E8EDF3; color: #243A52; }
+  .phase-4 .step-num { background: #E2E8F0; color: #1E3350; }
+  .phase-5 .step-num { background: #DBEAFE; color: #192C46; }
+  .phase-6 .step-num { background: #D0D9E4; color: #14253D; }
+
+  /* ── Highlight boxes (for formulas / key results) ── */
+  .highlight-box {
+    background: #FEF9F0;
+    border: 1px solid #F0DEB4;
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: #7C5E1A;
+    line-height: 1.7;
+    font-family: 'Menlo', 'Consolas', monospace;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Data table inside phase ── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 12.5px;
+  }
+  .data-table th {
+    background: #F1F5F9;
+    color: #475569;
+    font-weight: 600;
+    padding: 6px 12px;
+    text-align: left;
+    border-bottom: 1.5px solid #E2E8F0;
+    font-size: 11.5px;
+  }
+  .data-table td {
+    padding: 5px 12px;
+    border-bottom: 1px solid #F1F5F9;
+    color: var(--text);
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+
+  /* ── Result table ── */
+  .result-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 12.5px;
+  }
+  .result-table th {
+    background: #EFF6FF;
+    color: #1E40AF;
+    font-weight: 600;
+    padding: 6px 12px;
+    text-align: center;
+    border-bottom: 2px solid #BFDBFE;
+    font-size: 11.5px;
+  }
+  .result-table td {
+    padding: 5px 12px;
+    text-align: center;
+    border-bottom: 1px solid #F1F5F9;
+    color: var(--text);
+  }
+  .result-table td:first-child { text-align: left; }
+  .result-table .diff-negative { color: #DC2626; font-weight: 600; }
+  .result-table .diff-positive { color: #059669; font-weight: 600; }
+
+  /* ── Phase-to-phase arrow ── */
+  .phase-arrow {
+    text-align: center;
+    color: var(--connector);
+    font-size: 22px;
+    margin: 10px 0;
+    line-height: 1;
+  }
+
+  /* ── Three-layer summary bar at bottom ── */
+  .summary-bar {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+  }
+  .summary-card {
+    flex: 1;
+    background: #F8FAFC;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .summary-card .sum-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-sub);
+    margin-bottom: 6px;
+  }
+  .summary-card .sum-value {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    font-weight: 500;
+  }
+  .summary-card .sum-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+    display: block;
+    opacity: 0.6;
+  }
+
+  /* ── Formula highlight ── */
+  .formula-inline {
+    display: inline-block;
+    background: #FEF9F0;
+    border: 1px solid #F0DEB4;
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-family: 'Menlo', 'Consolas', monospace;
+    color: #7C5E1A;
+    margin: 2px 0;
+  }
+
+  /* ── Sub-header row (parallel inputs) ── */
+  .input-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .input-card {
+    flex: 1;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .input-card .ic-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-sub);
+    margin-bottom: 3px;
+  }
+
+  /* ── Merge indicator ── */
+  .merge-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 6px 0;
+    font-size: 13px;
+    color: var(--text-sub);
+    font-weight: 500;
+  }
+  .merge-box .merge-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .merge-box .merge-badge {
+    background: #EFF6FF;
+    color: #1E40AF;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid #BFDBFE;
+  }
+</style>
+</head>
+<body>
+<div id="root">
+
+  <div class="arch-title">日本物業投資評估模型 — 完整架構</div>
+  <div class="arch-subtitle">84 情景壓力測試 + ML V2 機率加權 | 港幣 320 萬 → 日圓 6,240 萬 | 入場匯率 19.5 JPY/HKD</div>
+
+  <!-- ====== Phase 1 ====== -->
+  <div class="phase-group phase-1">
+    <div class="phase-title">
+      <span class="phase-num">1</span>
+      <span class="phase-label">客戶入場決策</span>
+      <span class="phase-tag">確定參數</span>
+    </div>
+    <div class="phase-steps">
+      <div class="phase-step">
+        <span class="step-num">1</span>
+        客戶投入 <strong>港幣 320 萬</strong>，按入場匯率 19.5 換算為 <strong>日圓 6,240 萬</strong>
+      </div>
+      <div class="input-row">
+        <div class="input-card">
+          <div class="ic-label">貸款條件</div>
+          4 成按揭 (LTV=40%)<br>
+          利率 3% / 年租金回報 6%
+        </div>
+        <div class="input-card">
+          <div class="ic-label">交易成本</div>
+          買入成本 0.3%<br>
+          每年持有成本含管理費等
+        </div>
+        <div class="input-card">
+          <div class="ic-label">核心問題</div>
+          「10 年後，我會賺定虧？」<br>
+          → 無法給出確切答案
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-arrow">↓</div>
+
+  <!-- ====== Phase 2 ====== -->
+  <div class="phase-group phase-2">
+    <div class="phase-title">
+      <span class="phase-num">2</span>
+      <span class="phase-label">回報驅動因素拆解</span>
+      <span class="phase-tag">確定性模型</span>
+    </div>
+    <div class="phase-steps">
+      <div class="phase-step">
+        <span class="step-num">1</span>
+        <strong>確定因素</strong>：租金收入（每年 6%）、貸款供款（40% LTV, 3% 利率）
+      </div>
+      <div class="phase-step">
+        <span class="step-num">2</span>
+        <strong>不確定因素</strong>：匯率變化（JPY/HKD）× 物業價格變幅
+      </div>
+      <div class="phase-step">
+        <span class="step-num">3</span>
+        <strong>核心公式</strong>：
+      </div>
+    </div>
+    <div class="highlight-box">
+      最終 HKD 盈虧 =（10 年後物業 JPY 價值 − 未還貸款 + 10 年租金淨收入）÷ 10 年後匯率 − 入場 HKD 本金
+    </div>
+  </div>
+
+  <div class="phase-arrow">↓</div>
+
+  <!-- ====== Phase 3 ====== -->
+  <div class="phase-group phase-3">
+    <div class="phase-title">
+      <span class="phase-num">3</span>
+      <span class="phase-label">84 情景壓力測試</span>
+      <span class="phase-tag">確定性計算</span>
+    </div>
+    <div class="phase-steps">
+      <div class="phase-step">
+        <span class="step-num">1</span>
+        設定匯率 7 級 × 樓價年變幅 4 級 × 持有年期 3 級 = <strong>84 個情景</strong>
+      </div>
+      <div class="input-row">
+        <div class="input-card">
+          <div class="ic-label">匯率 (JPY/HKD)</div>
+          13.0 / 16.0 / 19.5<br>
+          22.0 / 24.0 / 26.0 / 28.0
+        </div>
+        <div class="input-card">
+          <div class="ic-label">樓價年變幅</div>
+          −3% / 0% / +1.5% / +3%
+        </div>
+        <div class="input-card">
+          <div class="ic-label">持有年期</div>
+          5 年 / 7 年 / 10 年
+        </div>
+      </div>
+      <div class="phase-step">
+        <span class="step-num">2</span>
+        每個情景用核心公式計算精確 ROI 及港幣盈虧（V1：每個情景機率均等 1/28 ≈ 3.6%）
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-arrow">↓</div>
+
+  <!-- ====== Phase 4 ====== -->
+  <div class="phase-group phase-4">
+    <div class="phase-title">
+      <span class="phase-num">4</span>
+      <span class="phase-label">V2 ML 機率預測模型</span>
+      <span class="phase-tag">機率判斷</span>
+    </div>
+    <div class="phase-steps">
+      <div class="phase-step">
+        <span class="step-num">1</span>
+        <strong>拉取真實數據</strong>（FRED + BIS 官方來源）：
+      </div>
+    </div>
+    <table class="data-table">
+      <tr><th>數據</th><th>來源</th><th>頻率</th><th>數量</th></tr>
+      <tr><td>JPY/USD 匯率</td><td>FRED EXJPUS</td><td>月度</td><td>665 點 (1971-2026)</td></tr>
+      <tr><td>日本住宅價格指數</td><td>BIS QJPN628BIS</td><td>季度</td><td>284 點 (1955-2025)</td></tr>
+      <tr><td>美國聯邦基金利率</td><td>FRED FEDFUNDS</td><td>月度</td><td>863 點 (1954-2026)</td></tr>
+      <tr><td>日本政策利率</td><td>FRED IRSTCI01JPM156N</td><td>月度</td><td>490 點 (1985-2026)</td></tr>
+    </table>
+    <div class="phase-steps" style="margin-top:10px;">
+      <div class="phase-step">
+        <span class="step-num">2</span>
+        全部轉為季度對齊 → <strong>104 個訓練樣本</strong>，每點計算 15 個 FX 特徵 + 12 個物業特徵（動量、移動平均、波動率、均值回歸、息差等）
+      </div>
+      <div class="phase-step">
+        <span class="step-num">3</span>
+        訓練 4 個模型（XGBoost / LightGBM / RF / GBR），5-fold 時序交叉驗證<br>
+        FX 最佳：GBR（MAE 19.7%）| 樓價最佳：GBR（MAE 15.6%）
+      </div>
+      <div class="phase-step">
+        <span class="step-num">4</span>
+        <strong>Monte Carlo 模擬</strong>：以 ML 預測為中心，t-分佈（厚尾）跑 10,000 次<br>
+        匯率 10 年變化：中心 +7.8%，P5=−31% ~ P95=+47%<br>
+        樓價 10 年變化：中心 +5.0%，P5=−25% ~ P95=+35%
+      </div>
+      <div class="phase-step">
+        <span class="step-num">5</span>
+        <strong>機率映射</strong>：高斯函數將 84 情景匹配 ML 分佈 → 每個情景得一個聯合機率<br>
+        例：FX=22.0 + 樓價+3% → 5.7% | FX=28.0 + 樓價−3% → 0.3%
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-arrow">↓</div>
+
+  <!-- ====== Phase 5 ====== -->
+  <div class="phase-group phase-5">
+    <div class="phase-title">
+      <span class="phase-num">5</span>
+      <span class="phase-label">機率加權回報計算</span>
+      <span class="phase-tag">整合輸出</span>
+    </div>
+    <div class="phase-steps">
+      <div class="phase-step">
+        <span class="step-num">1</span>
+        將 ML 機率取代均等機率，對 84 個情景做加權平均：
+      </div>
+    </div>
+    <table class="result-table">
+      <tr><th>持有年期</th><th>簡單平均 ROI</th><th>ML 加權 ROI</th><th>差異</th></tr>
+      <tr><td>5 年</td><td>+43.4%</td><td><strong>+38.1%</strong></td><td class="diff-negative">−5.4%</td></tr>
+      <tr><td>7 年</td><td>+62.1%</td><td><strong>+56.2%</strong></td><td class="diff-negative">−5.9%</td></tr>
+      <tr><td>10 年</td><td>+90.7%</td><td><strong>+84.0%</strong></td><td class="diff-negative">−6.8%</td></tr>
+    </table>
+    <div class="phase-steps" style="margin-top:10px;">
+      <div class="phase-step">
+        <span class="step-num">2</span>
+        ML 加權回報偏低：因極端情景（如 JPY/HKD=28）機率被壓低，不再佔過多比重
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-arrow">↓</div>
+
+  <!-- ====== Phase 6 ====== -->
+  <div class="phase-group phase-6">
+    <div class="phase-title">
+      <span class="phase-num">6</span>
+      <span class="phase-label">三層分析 → 客戶報告</span>
+      <span class="phase-tag">決策支持</span>
+    </div>
+    <div class="phase-steps">
+      <div class="phase-step">
+        <span class="step-num">1</span>
+        <strong>歷史數據驗證</strong>：過去 30 年 16 個 10 年窗口 — 最差虧 5 萬，平均賺 162 萬
+      </div>
+      <div class="phase-step">
+        <span class="step-num">2</span>
+        <strong>84 情景壓力測試</strong>：即使最極端情況（匯率不變 + 樓價年跌 3%），10 年後仍具回報
+      </div>
+      <div class="phase-step">
+        <span class="step-num">3</span>
+        <strong>ML 機率加權</strong>：根據真實宏觀數據，最可能 10 年回報 +84%，±30% 不確定性區間
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Summary Bar ====== -->
+  <div class="summary-bar">
+    <div class="summary-card">
+      <span class="sum-icon">📊</span>
+      <div class="sum-title">歷史數據</div>
+      <div class="sum-value">「過去發生過咩」<br>16 個 10 年窗口實證</div>
+    </div>
+    <div class="summary-card">
+      <span class="sum-icon">🧪</span>
+      <div class="sum-title">情景壓力測試</div>
+      <div class="sum-value">「最壞情況會點」<br>84 個極端組合計算</div>
+    </div>
+    <div class="summary-card">
+      <span class="sum-icon">🤖</span>
+      <div class="sum-title">ML 機率加權</div>
+      <div class="sum-value">「邊啲情景最可能」<br>104 樣本 + 4 模型集成</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
