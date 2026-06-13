@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  width: 794px;
+  height: 1123px;
+  background: #f6f7f7;
+  font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang TC", sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top accent bar */
+.top-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, #364d59 0%, #506e7c 50%, #3b6a81 100%);
+}
+
+/* Decorative corner elements */
+.corner-tl {
+  position: absolute;
+  top: 40px; left: 40px;
+  width: 60px; height: 60px;
+  border-top: 3px solid #b9c3c8;
+  border-left: 3px solid #b9c3c8;
+}
+.corner-br {
+  position: absolute;
+  bottom: 40px; right: 40px;
+  width: 60px; height: 60px;
+  border-bottom: 3px solid #b9c3c8;
+  border-right: 3px solid #b9c3c8;
+}
+
+/* Main content block */
+.content-block {
+  width: 580px;
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 60px 50px;
+  box-shadow: 0 2px 20px rgba(54, 77, 89, 0.08);
+  text-align: center;
+  position: relative;
+}
+
+/* Header accent */
+.header-accent {
+  width: 50px;
+  height: 3px;
+  background: #c72f49;
+  margin: 0 auto 30px auto;
+}
+
+/* Brand */
+.brand-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #506e7c;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.brand-sub {
+  font-size: 11px;
+  color: #7c8386;
+  letter-spacing: 2px;
+  margin-bottom: 40px;
+}
+
+/* Title */
+.report-title {
+  font-size: 30px;
+  font-weight: 700;
+  color: #364d59;
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+
+/* Subtitle */
+.report-subtitle {
+  font-size: 15px;
+  font-weight: 400;
+  color: #3b6a81;
+  line-height: 1.6;
+  margin-bottom: 30px;
+  padding: 0 10px;
+}
+
+/* Divider */
+.divider {
+  width: 100%;
+  height: 1px;
+  background: #e6e8e9;
+  margin: 25px 0;
+}
+
+/* Summary */
+.summary-line {
+  font-size: 13px;
+  color: #7c8386;
+  line-height: 1.8;
+  margin-bottom: 35px;
+}
+
+/* Key metrics row */
+.metrics-row {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 35px;
+}
+
+.metric-item {
+  text-align: center;
+}
+
+.metric-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #364d59;
+  margin-bottom: 4px;
+}
+
+.metric-label {
+  font-size: 10px;
+  color: #7c8386;
+  letter-spacing: 1px;
+}
+
+/* Bottom info */
+.bottom-info {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+}
+
+.info-item {
+  font-size: 11px;
+  color: #7c8386;
+}
+
+.info-label {
+  display: block;
+  font-size: 9px;
+  color: #b9c3c8;
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+
+/* Confidence badge */
+.badge {
+  display: inline-block;
+  background: #eeeff0;
+  border: 1px solid #b9c3c8;
+  border-radius: 3px;
+  padding: 6px 16px;
+  font-size: 11px;
+  color: #506e7c;
+  letter-spacing: 1px;
+  margin-bottom: 25px;
+}
+
+/* Footer */
+.footer-line {
+  position: absolute;
+  bottom: 55px;
+  font-size: 9px;
+  color: #b9c3c8;
+  letter-spacing: 1px;
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar"></div>
+<div class="corner-tl"></div>
+<div class="corner-br"></div>
+
+<div class="content-block">
+  <div class="header-accent"></div>
+
+  <div class="brand-name">PZC Group</div>
+  <div class="brand-sub">RISK MODELLING & ANALYTICS</div>
+
+  <div class="report-title">日本物業投資評估報告</div>
+
+  <div class="report-subtitle">ML V2 機率加權分析<br>專屬客戶 Andy</div>
+
+  <div class="badge">84 情景壓力測試 + 機器學習機率預測</div>
+
+  <div class="divider"></div>
+
+  <div class="summary-line">
+    港幣 320 萬投資日本物業 — 基於 104 組季度歷史數據訓練，<br>
+    4 種 ML 模型交叉驗證，10,000 次 Monte Carlo 模擬，<br>
+    覆蓋匯率、物業價格及持有期三大維度之全面風險評估
+  </div>
+
+  <div class="metrics-row">
+    <div class="metric-item">
+      <div class="metric-value">84</div>
+      <div class="metric-label">壓力情景</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-value">+84%</div>
+      <div class="metric-label">ML 加權回報</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-value">10,000</div>
+      <div class="metric-label">MC 模擬次數</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="bottom-info">
+    <div class="info-item">
+      <span class="info-label">報告日期</span>
+      2025 年 7 月
+    </div>
+    <div class="info-item">
+      <span class="info-label">分析方法</span>
+      ML V2 Probability-Weighted
+    </div>
+    <div class="info-item">
+      <span class="info-label">機密級別</span>
+      客戶專屬
+    </div>
+  </div>
+</div>
+
+<div class="footer-line">CONFIDENTIAL - FOR CLIENT USE ONLY</div>
+
+</body>
+</html>
