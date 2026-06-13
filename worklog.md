@@ -23,3 +23,23 @@ Stage Summary:
 - Key data: 10yr best=+504.2萬, worst=-3.9萬, avg=+174.2萬, 27/28 profitable
 - FX expressed as HKD/JPY throughout (user requirement)
 - Professional Chinese used (not Cantonese)
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Generate Part 4 (V2 ML 機率預測模型) and merge into final PDF
+
+Work Log:
+- Checked 6 existing V2 chart images (all available, proper dimensions)
+- Wrote gen_report_v6_part4.py with 5 subsections (4.1-4.5)
+- 4.1 數據來源: 4 data sources table + v2_data_overview.png
+- 4.2 數據處理: Feature engineering explanation + v2_feature_importance.png
+- 4.3 模型訓練: 4-model comparison table + v2_model_comparison.png + v2_v1_comparison.png
+- 4.4 Monte Carlo: t-distribution explanation + stats table + v2_probability_distribution.png
+- 4.5 機率映射: Gaussian mapping explanation + probability examples table + v2_probability_heatmap.png
+- Merged cover + part1-3 + part4 into 18-page final PDF
+
+Stage Summary:
+- Output: /home/z/my-project/download/Andy_JP_Property_ML_Report_V6.pdf (18 pages)
+- Part 4: 7 pages with 6 embedded charts and 4 data tables
+- All content in professional Chinese, HKD/JPY convention maintained
