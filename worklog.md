@@ -62,3 +62,20 @@ Stage Summary:
 - 包含5.1計算方法、5.2三種持有年期結果、5.3 10年重點情景分析、5.4經濟學解讀、5.5投資決策參考
 - 新圖表：v2_weighted_vs_simple_v6.png、v2_net_gain_distribution_v6.png
 - 關鍵數據：10年ML加權ROI +84.0%，最差情景仍為正回報
+---
+Task ID: 6
+Agent: main
+Task: 生成Andy日本物業ML V2投資報告第六章PDF（最終結論章）
+
+Work Log:
+- 確認架構圖第六章為「三層分析 → 客戶報告」
+- 編寫gen_report_v6_part6.py，包含完整的三層遞進分析框架
+- 生成2張新圖表：v2_three_layers_summary_v6.png（三層框架總覽）、v2_final_roi_summary_v6.png（四維度回報率對比）
+- 生成andy_report_v6_part6.pdf（5頁）
+- 章節包含：6.1歷史數據驗證、6.2壓力測試、6.3 ML加權、6.4三層總覽、6.5最終投資建議與風險提示
+
+Stage Summary:
+- 第六章PDF已生成：/home/z/my-project/download/andy_report_v6_part6.pdf
+- 三層分析結論一致指向正向回報預期
+- 綜合評估：在假設條件下，投資具備正向預期回報和合理的風險邊界
+- 全六章Part 4/5/6均已完成
