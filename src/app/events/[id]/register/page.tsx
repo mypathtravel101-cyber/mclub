@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { CalendarDays, MapPin, Users, CheckCircle2, AlertCircle, Loader2, ArrowLeft, Ticket } from 'lucide-react';
+import { CalendarDays, MapPin, Users, CheckCircle2, AlertCircle, Loader2, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ---------- Types ----------
@@ -64,7 +64,6 @@ function useHydrated() {
 
 export default function EventRegisterPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
   const hydrated = useHydrated();
 
   const [event, setEvent] = useState<PublicEvent | null>(null);
@@ -273,15 +272,6 @@ export default function EventRegisterPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50/30 to-slate-100">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        {/* Back link */}
-        <button
-          onClick={() => router.push('/')}
-          className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 mb-6 transition-colors"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          MCLUB CRM
-        </button>
-
         {/* Event card */}
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
           {/* Poster image */}
