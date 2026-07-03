@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iBanker CRM</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --amber-50:#fffbeb;--amber-100:#fef3c7;--amber-200:#fde68a;--amber-300:#fcd34d;
+  --amber-400:#fbbf24;--amber-500:#f59e0b;--amber-600:#d97706;--amber-700:#b45309;
+  --amber-800:#92400e;--amber-900:#78350f;
+  --sidebar-w:260px;--header-h:60px;
+  --bg:#f8f9fa;--card-bg:#fff;--text:#1f2937;--text-muted:#6b7280;--border:#e5e7eb;
+  --shadow:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md:0 4px 6px rgba(0,0,0,0.07),0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg:0 10px 15px rgba(0,0,0,0.1),0 4px 6px rgba(0,0,0,0.05);
+  --radius:8px;--radius-lg:12px;
+}
+html{font-size:14px;scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;color:var(--text);background:var(--bg);line-height:1.6;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+button{cursor:pointer;border:none;font-family:inherit;font-size:inherit}
+input,select,textarea{font-family:inherit;font-size:inherit}
+
+/* ===== LOGIN ===== */
+#loginPage{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#78350f 0%,#92400e 30%,#b45309 60%,#d97706 100%);padding:20px}
+.login-card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:100%;max-width:420px;padding:40px 32px;text-align:center}
+.login-logo{font-size:2rem;font-weight:800;color:var(--amber-700);margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:8px}
+.login-logo svg{width:36px;height:36px}
+.login-subtitle{color:var(--text-muted);margin-bottom:28px;font-size:.95rem}
+.login-form .form-group{margin-bottom:16px;text-align:left}
+.login-form label{display:block;font-weight:600;margin-bottom:4px;color:var(--text);font-size:.85rem}
+.login-form input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);font-size:.95rem;transition:border-color .2s}
+.login-form input:focus{outline:none;border-color:var(--amber-500);box-shadow:0 0 0 3px rgba(217,119,6,0.15)}
+.login-btn{width:100%;padding:12px;background:var(--amber-600);color:#fff;border-radius:var(--radius);font-weight:700;font-size:1rem;transition:background .2s;margin-top:8px}
+.login-btn:hover{background:var(--amber-700)}
+.quick-login{margin-top:24px;border-top:1px solid var(--border);padding-top:20px}
+.quick-login p{font-size:.8rem;color:var(--text-muted);margin-bottom:12px}
+.quick-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.quick-btn{padding:8px 16px;border-radius:20px;font-size:.8rem;font-weight:600;border:2px solid var(--border);background:#fff;color:var(--text);transition:all .2s}
+.quick-btn:hover{border-color:var(--amber-500);color:var(--amber-700);background:var(--amber-50)}
+.login-error{color:#dc2626;font-size:.85rem;margin-top:8px;display:none}
+
+/* ===== APP LAYOUT ===== */
+#appLayout{display:none;min-height:100vh}
+#appLayout.active{display:flex}
+
+/* Sidebar */
+.sidebar{width:var(--sidebar-w);background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s ease}
+.sidebar-header{padding:16px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);min-height:var(--header-h)}
+.sidebar-logo{font-size:1.25rem;font-weight:800;color:var(--amber-700);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.sidebar-logo svg{width:28px;height:28px;flex-shrink:0}
+.sidebar-toggle{margin-left:auto;background:none;padding:4px;color:var(--text-muted);border-radius:4px;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.sidebar-toggle:hover{background:var(--amber-50);color:var(--amber-600)}
+.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 20px;color:var(--text-muted);font-weight:500;font-size:.9rem;transition:all .15s;cursor:pointer;border-left:3px solid transparent}
+.nav-item:hover{background:var(--amber-50);color:var(--amber-700)}
+.nav-item.active{background:var(--amber-50);color:var(--amber-700);font-weight:700;border-left-color:var(--amber-600)}
+.nav-item .nav-icon{width:20px;text-align:center;font-size:1rem}
+.nav-item .nav-label{white-space:nowrap}
+.sidebar-footer{padding:12px 20px;border-top:1px solid var(--border)}
+.logout-btn{display:flex;align-items:center;gap:8px;padding:8px 12px;width:100%;background:none;color:var(--text-muted);font-size:.85rem;border-radius:var(--radius);transition:all .2s}
+.logout-btn:hover{background:#fef2f2;color:#dc2626}
+
+/* Sidebar overlay for mobile */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:99}
+
+/* Main area */
+.main-area{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;transition:margin-left .3s}
+.main-area.collapsed{margin-left:0}
+
+/* Header */
+.app-header{height:var(--header-h);background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;position:sticky;top:0;z-index:50}
+.mobile-menu-btn{display:none;background:none;padding:6px;color:var(--text-muted);border-radius:4px}
+.mobile-menu-btn:hover{background:var(--amber-50)}
+.page-title{font-size:1.15rem;font-weight:700;color:var(--text);flex:1}
+.header-actions{display:flex;align-items:center;gap:12px}
+.notif-btn{position:relative;background:none;padding:6px;color:var(--text-muted);border-radius:4px;transition:all .2s}
+.notif-btn:hover{background:var(--amber-50);color:var(--amber-600)}
+.notif-badge{position:absolute;top:2px;right:2px;width:16px;height:16px;background:#dc2626;color:#fff;border-radius:50%;font-size:.65rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.user-info{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:var(--radius);cursor:pointer;transition:background .2s}
+.user-info:hover{background:var(--amber-50)}
+.user-avatar{width:32px;height:32px;background:var(--amber-100);color:var(--amber-700);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem}
+.user-name{font-weight:600;font-size:.85rem;color:var(--text)}
+.user-role{font-size:.7rem;color:var(--text-muted)}
+
+/* Content */
+.page-content{flex:1;padding:24px;max-width:1200px;width:100%}
+
+/* ===== COMMON COMPONENTS ===== */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--card-bg);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);transition:box-shadow .2s,transform .2s}
+.stat-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.stat-label{font-size:.8rem;color:var(--text-muted);font-weight:500;margin-bottom:4px}
+.stat-value{font-size:1.5rem;font-weight:800;color:var(--text)}
+.stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:8px}
+
+.card{background:var(--card-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;transition:box-shadow .2s}
+.card:hover{box-shadow:var(--shadow-md)}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:between}
+.card-header h3{font-size:1rem;font-weight:700;flex:1}
+.card-body{padding:20px}
+
+.badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:.7rem;font-weight:700;white-space:nowrap}
+.badge-yellow{background:#fef3c7;color:#92400e}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-red{background:#fee2e2;color:#991b1b}
+.badge-gray{background:#f3f4f6;color:#4b5563}
+.badge-purple{background:#ede9fe;color:#5b21b6}
+.badge-cyan{background:#cffafe;color:#155e75}
+.badge-rose{background:#ffe4e6;color:#9f1239}
+.badge-amber{background:#fef3c7;color:#92400e}
+.badge-indigo{background:#e0e7ff;color:#3730a3}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-weight:600;font-size:.85rem;transition:all .2s}
+.btn-primary{background:var(--amber-600);color:#fff}
+.btn-primary:hover{background:var(--amber-700)}
+.btn-secondary{background:#fff;color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--amber-50);border-color:var(--amber-400)}
+.btn-sm{padding:4px 10px;font-size:.75rem}
+.btn-xs{padding:2px 8px;font-size:.7rem}
+
+.search-box{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);max-width:360px;width:100%}
+.search-box input{border:none;outline:none;flex:1;font-size:.9rem;background:transparent}
+.search-box .search-icon{color:var(--text-muted);font-size:.9rem}
+
+/* Table */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{text-align:left;padding:10px 16px;font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:2px solid var(--border);white-space:nowrap}
+.data-table td{padding:10px 16px;border-bottom:1px solid var(--border);font-size:.85rem;vertical-align:middle}
+.data-table tbody tr{transition:background .15s}
+.data-table tbody tr:hover{background:var(--amber-50)}
+.data-table .actions{display:flex;gap:4px;flex-wrap:wrap}
+
+/* Product grid */
+.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.product-card{background:var(--card-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:20px;transition:all .2s;border:1px solid var(--border)}
+.product-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);border-color:var(--amber-300)}
+.product-icon{font-size:2rem;margin-bottom:8px}
+.product-name{font-size:1rem;font-weight:700;margin-bottom:2px}
+.product-name-en{font-size:.75rem;color:var(--text-muted);margin-bottom:10px}
+.product-details{display:flex;flex-direction:column;gap:6px}
+.product-detail{display:flex;justify-content:space-between;font-size:.8rem}
+.product-detail .label{color:var(--text-muted)}
+.product-detail .value{font-weight:600}
+
+/* Event cards */
+.event-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.event-card{background:var(--card-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;transition:all .2s}
+.event-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.event-type-bar{height:4px;width:100%}
+.event-body{padding:20px}
+.event-title{font-size:1rem;font-weight:700;margin-bottom:10px}
+.event-info{display:flex;flex-direction:column;gap:6px;font-size:.85rem;color:var(--text-muted)}
+.event-info span{display:flex;align-items:center;gap:6px}
+.event-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-muted)}
+
+/* Revenue bar */
+.revenue-bars{display:flex;flex-direction:column;gap:12px}
+.revenue-bar-item{display:flex;align-items:center;gap:12px}
+.revenue-bar-label{width:100px;font-size:.8rem;font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.revenue-bar-track{flex:1;height:28px;background:var(--amber-50);border-radius:6px;overflow:hidden;position:relative}
+.revenue-bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding:0 10px;font-size:.75rem;font-weight:700;color:#fff;transition:width .6s ease;min-width:fit-content}
+.revenue-bar-amount{font-size:.75rem;font-weight:600;width:80px;text-align:right;white-space:nowrap}
+
+/* Notice list */
+.notice-item{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;transition:background .15s}
+.notice-item:hover{background:var(--amber-50)}
+.notice-item:last-child{border-bottom:none}
+.notice-pin{color:var(--amber-600);font-size:1.1rem;flex-shrink:0;margin-top:2px}
+.notice-content{flex:1}
+.notice-title{font-weight:700;font-size:.95rem;margin-bottom:2px}
+.notice-body{font-size:.85rem;color:var(--text-muted)}
+.notice-meta{display:flex;align-items:center;gap:8px;margin-top:6px}
+.notice-actions{display:flex;gap:4px;flex-shrink:0}
+
+/* Notification item */
+.notif-item{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;transition:background .15s}
+.notif-item:hover{background:var(--amber-50)}
+.notif-item.unread{background:#fffbeb;border-left:3px solid var(--amber-500)}
+.notif-item:last-child{border-bottom:none}
+.notif-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0}
+.notif-dot.unread{background:var(--amber-500)}
+.notif-dot.read{background:var(--border)}
+.notif-content{flex:1}
+.notif-title{font-weight:600;font-size:.9rem}
+.notif-body{font-size:.8rem;color:var(--text-muted);margin-top:2px}
+.notif-time{font-size:.7rem;color:var(--text-muted);margin-top:4px}
+.notif-actions{flex-shrink:0}
+
+/* Modal / Dialog */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.active{display:flex}
+.modal{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-header h3{font-size:1.05rem;font-weight:700}
+.modal-close{background:none;padding:4px;color:var(--text-muted);border-radius:4px;font-size:1.2rem;transition:all .2s}
+.modal-close:hover{background:#fee2e2;color:#dc2626}
+.modal-body{padding:20px}
+.modal-body .form-group{margin-bottom:14px}
+.modal-body label{display:block;font-weight:600;margin-bottom:4px;font-size:.85rem;color:var(--text)}
+.modal-body input,.modal-body select,.modal-body textarea{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:.9rem;transition:border-color .2s}
+.modal-body input:focus,.modal-body select:focus,.modal-body textarea:focus{outline:none;border-color:var(--amber-500);box-shadow:0 0 0 3px rgba(217,119,6,0.15)}
+.modal-footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+
+/* Settings */
+.settings-section{margin-bottom:24px}
+.settings-section h3{font-size:1rem;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--amber-200)}
+.settings-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.9rem}
+.settings-row:last-child{border-bottom:none}
+.settings-label{color:var(--text-muted);font-weight:500}
+.settings-value{font-weight:600}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay.open{display:block}
+  .main-area,.main-area.collapsed{margin-left:0}
+  .mobile-menu-btn{display:flex}
+  .page-content{padding:16px}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .stat-card{padding:14px}
+  .stat-value{font-size:1.2rem}
+  .product-grid{grid-template-columns:1fr}
+  .event-grid{grid-template-columns:1fr}
+  .data-table{font-size:.8rem}
+  .data-table th,.data-table td{padding:8px 10px}
+  .user-name,.user-role{display:none}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:1fr}
+  .login-card{padding:28px 20px}
+}
+
+/* Animations */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.page-content > *{animation:fadeIn .3s ease}
+</style>
+</head>
+<body>
+
+<!-- Login Page -->
+<div id="loginPage">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      iBanker CRM
+    </div>
+    <p class="login-subtitle">專業金融客戶關係管理系統</p>
+    <div class="login-form">
+      <div class="form-group">
+        <label>電郵地址</label>
+        <input type="email" id="loginEmail" placeholder="輸入電郵地址" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>密碼</label>
+        <input type="password" id="loginPassword" placeholder="輸入密碼" autocomplete="current-password">
+      </div>
+      <button class="login-btn" onclick="handleLogin()">登入</button>
+      <div class="login-error" id="loginError">電郵或密碼不正確</div>
+    </div>
+    <div class="quick-login">
+      <p>快速登入</p>
+      <div class="quick-btns">
+        <button class="quick-btn" onclick="quickLogin('admin')">👑 管理員</button>
+        <button class="quick-btn" onclick="quickLogin('agent')">🤝 代理人</button>
+        <button class="quick-btn" onclick="quickLogin('sme')">🏢 中小企</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- App Layout -->
+<div id="appLayout">
+  <!-- Sidebar overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+  
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" width="28" height="28"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        iBanker CRM
+      </div>
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="收起側邊欄">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="handleLogout()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        登出
+      </button>
+    </div>
+  </aside>
+  
+  <!-- Main -->
+  <div class="main-area" id="mainArea">
+    <!-- Header -->
+    <header class="app-header">
+      <button class="mobile-menu-btn" onclick="openSidebar()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+      <h1 class="page-title" id="pageTitle">儀表板</h1>
+      <div class="header-actions">
+        <button class="notif-btn" onclick="navigate('notifications')" title="通知">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-badge" id="notifBadge">2</span>
+        </button>
+        <div class="user-info">
+          <div class="user-avatar" id="userAvatar">A</div>
+          <div>
+            <div class="user-name" id="userName">Admin</div>
+            <div class="user-role" id="userRole">管理員</div>
+          </div>
+        </div>
+      </div>
+    </header>
+    
+    <!-- Content -->
+    <main class="page-content" id="pageContent"></main>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+// ===== STATE =====
+const state = {
+  user: null,
+  currentPage: 'dashboard',
+  sidebarCollapsed: false,
+  sidebarOpen: false, // mobile
+  searchQuery: ''
+};
+
+// ===== MOCK DATA =====
+const loginAccounts = [
+  { email: 'admin@mclub.com', password: 'admin123', role: 'admin', name: 'MCLUB Admin' },
+  { email: 'chan@mypath.hk', password: 'agent123', role: 'agent', name: '陳志明' },
+  { email: 'wong@mypath.hk', password: 'sme123', role: 'sme', name: '王美琪' }
+];
+
+const products = [
+  { id:'p1', icon:'🏘️', name:'日本物業投資', nameEn:'Japan Property Investment', category:'investment', priceMin:500000, priceMax:20000000, currency:'JPY', commission:3 },
+  { id:'p2', icon:'🇸🇹', name:'聖多美公民計劃', nameEn:'São Tomé Citizenship', category:'immigration', priceMin:150000, priceMax:250000, currency:'USD', commission:10 },
+  { id:'p3', icon:'📈', name:'NPC基金', nameEn:'NPC Fund', category:'fund', priceMin:100000, priceMax:10000000, currency:'HKD', commission:5 },
+  { id:'p4', icon:'🏦', name:'家族信託', nameEn:'Family Trust', category:'trust', priceMin:50000, priceMax:500000, currency:'HKD', commission:8 },
+  { id:'p5', icon:'📋', name:'公司秘書服務', nameEn:'Company Secretary', category:'corporate', priceMin:5000, priceMax:80000, currency:'HKD', commission:15 },
+  { id:'p6', icon:'📱', name:'MyPath AI', nameEn:'MyPath AI', category:'technology', priceMin:2000, priceMax:20000, currency:'HKD', commission:20 },
+  { id:'p7', icon:'⚖️', name:'香港法律服務', nameEn:'HK Legal Services', category:'legal', priceMin:10000, priceMax:500000, currency:'HKD', commission:12 },
+  { id:'p8', icon:'🎓', name:'家族辦公室專業認可證書課程', nameEn:'Family Office Certification', category:'education', priceMin:38000, priceMax:128000, currency:'HKD', commission:18 }
+];
+
+const customers = [
+  { id:'c1', name:'Sarah Wong', email:'sarah.wong@gmail.com', company:'Wong Family Office', country:'HK', status:'active', referrer:'陳志明' },
+  { id:'c2', name:'吳建國', email:'wu.jianguo@163.com', company:'吳氏集團', country:'CN', status:'active', referrer:'李美琪' },
+  { id:'c3', name:'林大衛', email:'david.lin@outlook.com', company:'', country:'TW', status:'prospect', referrer:'李美琪' },
+  { id:'c4', name:'張偉豪', email:'cheung@gmail.com', company:'偉豪投資有限公司', country:'HK', status:'active', referrer:'陳志明' },
+  { id:'c5', name:'Emily Chen', email:'emily.chen@yahoo.com', company:'Chen Holdings Ltd', country:'HK', status:'active', referrer:'陳志明' }
+];
+
+const orders = [
+  { id:'o1', customer:'Emily Chen', product:'⚖️ 香港法律服務', agent:'李美琪', amount:150000, currency:'HKD', status:'pending', commission:18000 },
+  { id:'o2', customer:'吳建國', product:'🎓 家族辦公室課程', agent:'陳志明', amount:88000, currency:'HKD', status:'processing', commission:15840 },
+  { id:'o3', customer:'吳建國', product:'📈 NPC基金', agent:'陳志明', amount:5000000, currency:'HKD', status:'completed', commission:250000 },
+  { id:'o4', customer:'Sarah Wong', product:'🇸🇹 聖多美公民計劃', agent:'李美琪', amount:200000, currency:'USD', status:'pending', commission:20000 },
+  { id:'o5', customer:'林大衛', product:'📱 MyPath AI', agent:'李美琪', amount:12000, currency:'HKD', status:'completed', commission:2400 },
+  { id:'o6', customer:'Emily Chen', product:'🏦 家族信託', agent:'陳志明', amount:200000, currency:'HKD', status:'processing', commission:16000 },
+  { id:'o7', customer:'張偉豪', product:'🏘️ 日本物業投資', agent:'陳志明', amount:8500000, currency:'JPY', status:'completed', commission:255000 }
+];
+
+const commissions = [
+  { id:'cm1', agent:'陳志明', product:'🎓 家族辦公室課程', customer:'吳建國', amount:15840, currency:'HKD', status:'pending' },
+  { id:'cm2', agent:'陳志明', product:'📈 NPC基金', customer:'吳建國', amount:250000, currency:'HKD', status:'paid' },
+  { id:'cm3', agent:'李美琪', product:'📱 MyPath AI', customer:'林大衛', amount:2400, currency:'HKD', status:'paid' },
+  { id:'cm4', agent:'陳志明', product:'🏦 家族信託', customer:'Emily Chen', amount:16000, currency:'HKD', status:'pending' },
+  { id:'cm5', agent:'陳志明', product:'🏘️ 日本物業投資', customer:'張偉豪', amount:255000, currency:'JPY', status:'paid' }
+];
+
+const events = [
+  { id:'e1', title:'日本物業投資講座 2025', type:'seminar', date:'2025-07-15T14:00', location:'香港中環皇后大道中68號', capacity:50, participants:2 },
+  { id:'e2', title:'NPC基金季度回顧', type:'webinar', date:'2025-07-20T10:00', location:'線上 Zoom', capacity:100, participants:2 },
+  { id:'e3', title:'家族信託法律研討會', type:'seminar', date:'2025-08-05T15:00', location:'香港金鐘海富中心', capacity:30, participants:2 }
+];
+
+const notices = [
+  { id:'n1', pinned:true, icon:'🔒', title:'系統維護通知', type:'urgent', body:'2025年6月15日系統將進行升級維護', date:'2025-06-10' },
+  { id:'n2', pinned:false, icon:'📢', title:'新產品上線', type:'announcement', body:'MyPath AI 平台正式上線', date:'2025-06-08' }
+];
+
+const notifications = [
+  { id:'nt1', title:'新訂單通知', body:'吳建國下訂了NPC基金', time:'2小時前', read:false },
+  { id:'nt2', title:'佣金已支付', body:'NPC基金佣金HKD 250,000已支付', time:'1天前', read:true },
+  { id:'nt3', title:'活動提醒', body:'日本物業投資講座即將開始', time:'3小時前', read:false }
+];
+
+// ===== CATEGORY CONFIG =====
+const categoryColors = {
+  investment:'blue', immigration:'green', fund:'purple', trust:'amber',
+  corporate:'cyan', technology:'rose', legal:'red', education:'indigo'
+};
+const categoryLabels = {
+  investment:'投資', immigration:'移民', fund:'基金', trust:'信託',
+  corporate:'企業服務', technology:'科技', legal:'法律', education:'教育'
+};
+const orderStatusLabels = { pending:'待處理', processing:'處理中', completed:'已完成', cancelled:'已取消' };
+const orderStatusBadge = { pending:'yellow', processing:'blue', completed:'green', cancelled:'red' };
+const customerStatusLabels = { active:'活躍', inactive:'非活躍', prospect:'潛在客戶' };
+const customerStatusBadge = { active:'green', inactive:'gray', prospect:'blue' };
+const commissionStatusLabels = { pending:'待審批', approved:'已審批', paid:'已支付' };
+const commissionStatusBadge = { pending:'yellow', approved:'blue', paid:'green' };
+
+const pageTitles = {
+  dashboard:'儀表板', products:'產品管理', customers:'客戶管理', orders:'訂單管理',
+  commissions:'佣金管理', events:'活動管理', notices:'公告管理', notifications:'通知中心', settings:'系統設定'
+};
+
+const navItems = [
+  { id:'dashboard', icon:'📊', label:'儀表板' },
+  { id:'products', icon:'📦', label:'產品管理' },
+  { id:'customers', icon:'👥', label:'客戶管理' },
+  { id:'orders', icon:'📋', label:'訂單管理' },
+  { id:'commissions', icon:'💰', label:'佣金管理' },
+  { id:'events', icon:'📅', label:'活動管理' },
+  { id:'notices', icon:'📌', label:'公告管理' },
+  { id:'notifications', icon:'🔔', label:'通知中心' },
+  { id:'settings', icon:'⚙️', label:'系統設定' }
+];
+
+// ===== HELPERS =====
+function fmt(amount, currency) {
+  try {
+    return new Intl.NumberFormat('zh-HK', { style:'currency', currency: currency||'HKD', minimumFractionDigits:0, maximumFractionDigits:0 }).format(amount);
+  } catch(e) {
+    return (currency||'HKD') + ' ' + amount.toLocaleString();
+  }
+}
+function fmtDate(dateStr) {
+  try { return new Date(dateStr).toLocaleDateString('zh-HK', {year:'numeric',month:'short',day:'numeric'}); } catch(e) { return dateStr; }
+}
+function fmtDateTime(dateStr) {
+  try { return new Date(dateStr).toLocaleString('zh-HK', {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e) { return dateStr; }
+}
+function badge(text, color) { return `<span class="badge badge-${color}">${text}</span>`; }
+function getInitial(name) { return (name||'U').charAt(0).toUpperCase(); }
+
+// ===== LOGIN =====
+function handleLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  const account = loginAccounts.find(a => a.email === email && a.password === password);
+  if (account) {
+    state.user = { id:'u1', email:account.email, name:account.name, role:account.role };
+    document.getElementById('loginError').style.display = 'none';
+    showApp();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+function quickLogin(role) {
+  const account = loginAccounts.find(a => a.role === role);
+  if (account) {
+    document.getElementById('loginEmail').value = account.email;
+    document.getElementById('loginPassword').value = account.password;
+    handleLogin();
+  }
+}
+function handleLogout() {
+  state.user = null;
+  state.currentPage = 'dashboard';
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('appLayout').classList.remove('active');
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+}
+function showApp() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('appLayout').classList.add('active');
+  document.getElementById('userName').textContent = state.user.name;
+  document.getElementById('userRole').textContent = {admin:'管理員',agent:'代理人',sme:'中小企'}[state.user.role]||state.user.role;
+  document.getElementById('userAvatar').textContent = getInitial(state.user.name);
+  renderNav();
+  navigate('dashboard');
+}
+
+// Enter key login
+document.getElementById('loginPassword').addEventListener('keydown', e => { if(e.key==='Enter') handleLogin(); });
+document.getElementById('loginEmail').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('loginPassword').focus(); });
+
+// ===== NAVIGATION =====
+function renderNav() {
+  const nav = document.getElementById('sidebarNav');
+  nav.innerHTML = navItems.map(item => `
+    <div class="nav-item ${state.currentPage===item.id?'active':''}" data-page="${item.id}">
+      <span class="nav-icon">${item.icon}</span>
+      <span class="nav-label">${item.label}</span>
+    </div>
+  `).join('');
+  nav.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', () => navigate(el.dataset.page));
+  });
+}
+function navigate(page) {
+  state.currentPage = page;
+  state.searchQuery = '';
+  document.getElementById('pageTitle').textContent = pageTitles[page]||page;
+  renderNav();
+  renderPage();
+  closeSidebar();
+}
+function toggleSidebar() {
+  state.sidebarCollapsed = !state.sidebarCollapsed;
+  document.getElementById('mainArea').classList.toggle('collapsed', state.sidebarCollapsed);
+  document.getElementById('sidebar').classList.toggle('collapsed-sidebar', state.sidebarCollapsed);
+}
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('open');
+  state.sidebarOpen = true;
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+  state.sidebarOpen = false;
+}
+
+// ===== NOTIFICATION BADGE =====
+function updateNotifBadge() {
+  const unread = notifications.filter(n => !n.read).length;
+  const badge = document.getElementById('notifBadge');
+  badge.textContent = unread;
+  badge.style.display = unread > 0 ? 'flex' : 'none';
+}
+
+// ===== RENDER PAGE =====
+function renderPage() {
+  const c = document.getElementById('pageContent');
+  switch(state.currentPage) {
+    case 'dashboard': c.innerHTML = renderDashboard(); break;
+    case 'products': c.innerHTML = renderProducts(); break;
+    case 'customers': c.innerHTML = renderCustomers(); break;
+    case 'orders': c.innerHTML = renderOrders(); break;
+    case 'commissions': c.innerHTML = renderCommissions(); break;
+    case 'events': c.innerHTML = renderEvents(); break;
+    case 'notices': c.innerHTML = renderNotices(); break;
+    case 'notifications': c.innerHTML = renderNotifications(); break;
+    case 'settings': c.innerHTML = renderSettings(); break;
+    default: c.innerHTML = '<p>頁面不存在</p>';
+  }
+  updateNotifBadge();
+  bindPageEvents();
+}
+
+// ===== DASHBOARD =====
+function renderDashboard() {
+  const revByProduct = [
+    { name:'日本物業', amount:8500000, currency:'JPY' },
+    { name:'NPC基金', amount:5000000, currency:'HKD' },
+    { name:'家族信託', amount:200000, currency:'HKD' },
+    { name:'家族辦公室', amount:88000, currency:'HKD' },
+    { name:'MyPath AI', amount:12000, currency:'HKD' }
+  ];
+  const maxRev = Math.max(...revByProduct.map(r=>r.amount));
+  const revBarColors = ['#3b82f6','#8b5cf6','#f59e0b','#6366f1','#f43f5e'];
+  
+  return `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#dbeafe;color:#1e40af">📋</div>
+        <div class="stat-label">總訂單數</div>
+        <div class="stat-value">7</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#d1fae5;color:#065f46">👥</div>
+        <div class="stat-label">總客戶數</div>
+        <div class="stat-value">5</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#fef3c7;color:#92400e">📦</div>
+        <div class="stat-label">活躍產品</div>
+        <div class="stat-value">8</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#ede9fe;color:#5b21b6">📅</div>
+        <div class="stat-label">即將活動</div>
+        <div class="stat-value">3</div>
+      </div>
+    </div>
+    
+    <div class="stats-grid">
+      <div class="stat-card" style="border-left:4px solid var(--amber-500)">
+        <div class="stat-label">總營業額</div>
+        <div class="stat-value" style="color:var(--amber-700)">HKD 13,800,000</div>
+      </div>
+      <div class="stat-card" style="border-left:4px solid #059669">
+        <div class="stat-label">已付佣金</div>
+        <div class="stat-value" style="color:#059669">HKD 507,400</div>
+      </div>
+      <div class="stat-card" style="border-left:4px solid #eab308">
+        <div class="stat-label">待付佣金</div>
+        <div class="stat-value" style="color:#ca8a04">HKD 31,840</div>
+      </div>
+    </div>
+    
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-header"><h3>📊 產品營收分布</h3></div>
+      <div class="card-body">
+        <div class="revenue-bars">
+          ${revByProduct.map((r,i) => `
+            <div class="revenue-bar-item">
+              <div class="revenue-bar-label">${r.name}</div>
+              <div class="revenue-bar-track">
+                <div class="revenue-bar-fill" style="width:${(r.amount/maxRev*100).toFixed(1)}%;background:${revBarColors[i]}">${fmt(r.amount, r.currency)}</div>
+              </div>
+              <div class="revenue-bar-amount">${fmt(r.amount, r.currency)}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-header"><h3>📋 近期訂單</h3></div>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead><tr><th>客戶</th><th>產品</th><th>金額</th><th>狀態</th></tr></thead>
+            <tbody>
+              ${orders.slice(0,5).map(o => `<tr>
+                <td style="font-weight:600">${o.customer}</td>
+                <td>${o.product}</td>
+                <td>${fmt(o.amount, o.currency)}</td>
+                <td>${badge(orderStatusLabels[o.status], orderStatusBadge[o.status])}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>📌 最新公告</h3></div>
+        <div>
+          ${notices.map(n => `
+            <div class="notice-item">
+              ${n.pinned?'<span class="notice-pin">📌</span>':'<span class="notice-pin">'+n.icon+'</span>'}
+              <div class="notice-content">
+                <div class="notice-title">${n.title}</div>
+                <div class="notice-body">${n.body}</div>
+              </div>
+              ${badge(n.type==='urgent'?'緊急':'公告', n.type==='urgent'?'red':'blue')}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ===== PRODUCTS =====
+function renderProducts() {
+  return `
+    <div class="card">
+      <div class="card-header">
+        <h3>📦 產品列表</h3>
+        <span style="color:var(--text-muted);font-size:.85rem">共 ${products.length} 個產品</span>
+      </div>
+      <div class="card-body">
+        <div class="product-grid">
+          ${products.map(p => `
+            <div class="product-card">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <span class="product-icon">${p.icon}</span>
+                ${badge(categoryLabels[p.category], categoryColors[p.category])}
+              </div>
+              <div class="product-name">${p.name}</div>
+              <div class="product-name-en">${p.nameEn}</div>
+              <div class="product-details">
+                <div class="product-detail">
+                  <span class="label">價格範圍</span>
+                  <span class="value">${fmt(p.priceMin, p.currency)} - ${fmt(p.priceMax, p.currency)}</span>
+                </div>
+                <div class="product-detail">
+                  <span class="label">佣金比例</span>
+                  <span class="value" style="color:var(--amber-700)">${p.commission}%</span>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ===== CUSTOMERS =====
+function renderCustomers() {
+  const filtered = state.searchQuery
+    ? customers.filter(c => c.name.toLowerCase().includes(state.searchQuery.toLowerCase()) || c.email.toLowerCase().includes(state.searchQuery.toLowerCase()) || (c.company||'').toLowerCase().includes(state.searchQuery.toLowerCase()))
+    : customers;
+  return `
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <h3>👥 客戶列表</h3>
+        <div class="search-box" style="flex:1;max-width:300px">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="customerSearch" placeholder="搜尋客戶名稱、電郵或公司..." value="${state.searchQuery}">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openAddCustomerDialog()">＋ 新增客戶</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>姓名</th><th>電郵</th><th>公司</th><th>地區</th><th>狀態</th><th>推薦人</th></tr></thead>
+          <tbody>
+            ${filtered.map(c => `<tr>
+              <td style="font-weight:600">${c.name}</td>
+              <td style="color:var(--text-muted)">${c.email}</td>
+              <td>${c.company||'—'}</td>
+              <td>${badge(c.country,c.country==='HK'?'amber':c.country==='CN'?'red':'blue')}</td>
+              <td>${badge(customerStatusLabels[c.status], customerStatusBadge[c.status])}</td>
+              <td>${c.referrer}</td>
+            </tr>`).join('')}
+            ${filtered.length===0?'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">未找到符合條件的客戶</td></tr>':''}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ===== ORDERS =====
+function renderOrders() {
+  return `
+    <div class="card">
+      <div class="card-header"><h3>📋 訂單列表</h3></div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>客戶</th><th>產品</th><th>代理人</th><th>金額</th><th>佣金</th><th>狀態</th><th>操作</th></tr></thead>
+          <tbody>
+            ${orders.map(o => {
+              let actions = '';
+              if(o.status==='pending') actions = `<button class="btn btn-xs btn-primary" onclick="changeOrderStatus('${o.id}','processing')">開始處理</button>`;
+              else if(o.status==='processing') actions = `<button class="btn btn-xs btn-primary" onclick="changeOrderStatus('${o.id}','completed')">完成</button>`;
+              else actions = '<span style="color:var(--text-muted);font-size:.8rem">—</span>';
+              return `<tr>
+                <td style="font-weight:600">${o.customer}</td>
+                <td>${o.product}</td>
+                <td>${o.agent}</td>
+                <td>${fmt(o.amount, o.currency)}</td>
+                <td style="color:var(--amber-700);font-weight:600">${fmt(o.commission, o.currency)}</td>
+                <td>${badge(orderStatusLabels[o.status], orderStatusBadge[o.status])}</td>
+                <td class="actions">${actions}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+function changeOrderStatus(id, newStatus) {
+  const o = orders.find(x=>x.id===id);
+  if(o) { o.status = newStatus; renderPage(); }
+}
+
+// ===== COMMISSIONS =====
+function renderCommissions() {
+  return `
+    <div class="card">
+      <div class="card-header"><h3>💰 佣金管理</h3></div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>代理人</th><th>產品</th><th>客戶</th><th>佣金金額</th><th>狀態</th><th>操作</th></tr></thead>
+          <tbody>
+            ${commissions.map(cm => {
+              let actions = '';
+              if(cm.status==='pending' && state.user.role==='admin') actions = `<button class="btn btn-xs btn-primary" onclick="changeCommissionStatus('${cm.id}','approved')">審批</button>`;
+              else if(cm.status==='approved' && state.user.role==='admin') actions = `<button class="btn btn-xs btn-primary" onclick="changeCommissionStatus('${cm.id}','paid')">支付</button>`;
+              else if(cm.status==='pending' && state.user.role!=='admin') actions = '<span style="color:var(--text-muted);font-size:.75rem">待審批</span>';
+              else actions = '<span style="color:var(--text-muted);font-size:.8rem">—</span>';
+              return `<tr>
+                <td style="font-weight:600">${cm.agent}</td>
+                <td>${cm.product}</td>
+                <td>${cm.customer}</td>
+                <td style="font-weight:600;color:var(--amber-700)">${fmt(cm.amount, cm.currency)}</td>
+                <td>${badge(commissionStatusLabels[cm.status], commissionStatusBadge[cm.status])}</td>
+                <td class="actions">${actions}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+function changeCommissionStatus(id, newStatus) {
+  const cm = commissions.find(x=>x.id===id);
+  if(cm) { cm.status = newStatus; renderPage(); }
+}
+
+// ===== EVENTS =====
+function renderEvents() {
+  const typeColors = { seminar:'#3b82f6', webinar:'#8b5cf6' };
+  const typeLabels = { seminar:'研討會', webinar:'網上研討會' };
+  return `
+    <div class="card">
+      <div class="card-header"><h3>📅 活動列表</h3></div>
+      <div class="card-body">
+        <div class="event-grid">
+          ${events.map(e => `
+            <div class="event-card">
+              <div class="event-type-bar" style="background:${typeColors[e.type]||'#6b7280'}"></div>
+              <div class="event-body">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                  <h3 style="font-size:1rem;font-weight:700;flex:1">${e.title}</h3>
+                  ${badge(typeLabels[e.type]||e.type, e.type==='seminar'?'blue':'purple')}
+                </div>
+                <div class="event-info">
+                  <span>🕐 ${fmtDateTime(e.date)}</span>
+                  <span>📍 ${e.location}</span>
+                  <span>👥 ${e.participants}/${e.capacity} 人</span>
+                </div>
+              </div>
+              <div class="event-footer">
+                <span>報名進度: ${Math.round(e.participants/e.capacity*100)}%</span>
+                <div style="width:80px;height:6px;background:var(--amber-100);border-radius:3px;overflow:hidden">
+                  <div style="height:100%;width:${e.participants/e.capacity*100}%;background:var(--amber-500);border-radius:3px"></div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ===== NOTICES =====
+function renderNotices() {
+  const isAdmin = state.user && state.user.role === 'admin';
+  return `
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center;gap:16px">
+        <h3>📌 公告管理</h3>
+        ${isAdmin?'<button class="btn btn-primary btn-sm" onclick="openAddNoticeDialog()">＋ 新增公告</button>':''}
+      </div>
+      <div>
+        ${notices.map(n => `
+          <div class="notice-item">
+            ${n.pinned?'<span class="notice-pin">📌</span>':'<span class="notice-pin">'+n.icon+'</span>'}
+            <div class="notice-content">
+              <div class="notice-title">${n.title} ${badge(n.type==='urgent'?'緊急':'公告', n.type==='urgent'?'red':'blue')}</div>
+              <div class="notice-body">${n.body}</div>
+              <div class="notice-meta">
+                <span style="font-size:.75rem;color:var(--text-muted)">${fmtDate(n.date)}</span>
+              </div>
+            </div>
+            ${isAdmin?`<div class="notice-actions">
+              <button class="btn btn-xs btn-secondary" onclick="toggleNoticePin('${n.id}')">${n.pinned?'取消置頂':'置頂'}</button>
+              <button class="btn btn-xs btn-secondary" onclick="editNotice('${n.id}')">編輯</button>
+              <button class="btn btn-xs" style="background:#fee2e2;color:#dc2626" onclick="deleteNotice('${n.id}')">刪除</button>
+            </div>`:''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+function toggleNoticePin(id) {
+  const n = notices.find(x=>x.id===id);
+  if(n) { n.pinned = !n.pinned; renderPage(); }
+}
+function editNotice(id) {
+  const n = notices.find(x=>x.id===id);
+  if(!n) return;
+  openModal(`
+    <div class="modal-header"><h3>編輯公告</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>標題</label><input type="text" id="editNoticeTitle" value="${n.title}"></div>
+      <div class="form-group"><label>內容</label><textarea id="editNoticeBody" rows="3">${n.body}</textarea></div>
+      <div class="form-group"><label>類型</label><select id="editNoticeType"><option value="urgent" ${n.type==='urgent'?'selected':''}>緊急</option><option value="announcement" ${n.type==='announcement'?'selected':''}>公告</option></select></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveNotice('${id}')">儲存</button></div>
+  `);
+}
+function saveNotice(id) {
+  const n = notices.find(x=>x.id===id);
+  if(n) {
+    n.title = document.getElementById('editNoticeTitle').value;
+    n.body = document.getElementById('editNoticeBody').value;
+    n.type = document.getElementById('editNoticeType').value;
+  }
+  closeModal(); renderPage();
+}
+function deleteNotice(id) {
+  const idx = notices.findIndex(x=>x.id===id);
+  if(idx > -1) { notices.splice(idx, 1); renderPage(); }
+}
+function openAddNoticeDialog() {
+  openModal(`
+    <div class="modal-header"><h3>新增公告</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>標題</label><input type="text" id="newNoticeTitle" placeholder="輸入公告標題"></div>
+      <div class="form-group"><label>內容</label><textarea id="newNoticeBody" rows="3" placeholder="輸入公告內容"></textarea></div>
+      <div class="form-group"><label>類型</label><select id="newNoticeType"><option value="announcement">公告</option><option value="urgent">緊急</option></select></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="addNotice()">新增</button></div>
+  `);
+}
+function addNotice() {
+  const title = document.getElementById('newNoticeTitle').value.trim();
+  const body = document.getElementById('newNoticeBody').value.trim();
+  const type = document.getElementById('newNoticeType').value;
+  if(!title) return;
+  notices.unshift({ id:'n'+Date.now(), pinned:false, icon:type==='urgent'?'🔒':'📢', title, type, body, date:new Date().toISOString().slice(0,10) });
+  closeModal(); renderPage();
+}
+
+// ===== NOTIFICATIONS =====
+function renderNotifications() {
+  return `
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center;gap:16px">
+        <h3>🔔 通知中心</h3>
+        <button class="btn btn-secondary btn-sm" onclick="markAllRead()">全部標記已讀</button>
+      </div>
+      <div>
+        ${notifications.map(n => `
+          <div class="notif-item ${n.read?'':'unread'}">
+            <div class="notif-dot ${n.read?'read':'unread'}"></div>
+            <div class="notif-content">
+              <div class="notif-title">${n.title}</div>
+              <div class="notif-body">${n.body}</div>
+              <div class="notif-time">${n.time}</div>
+            </div>
+            ${!n.read?`<button class="btn btn-xs btn-secondary" onclick="markRead('${n.id}')">已讀</button>`:''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+function markRead(id) {
+  const n = notifications.find(x=>x.id===id);
+  if(n) { n.read = true; renderPage(); }
+}
+function markAllRead() {
+  notifications.forEach(n => n.read = true);
+  renderPage();
+}
+
+// ===== SETTINGS =====
+function renderSettings() {
+  const u = state.user;
+  const roleLabels = {admin:'管理員 (Admin)',agent:'代理人 (Agent)',sme:'中小企 (SME)'};
+  return `
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-header"><h3>👤 用戶資料</h3></div>
+      <div class="card-body">
+        <div class="settings-section">
+          <div class="settings-row"><span class="settings-label">姓名</span><span class="settings-value">${u.name}</span></div>
+          <div class="settings-row"><span class="settings-label">電郵</span><span class="settings-value">${u.email}</span></div>
+          <div class="settings-row"><span class="settings-label">角色</span><span class="settings-value">${badge(roleLabels[u.role]||u.role, 'amber')}</span></div>
+          <div class="settings-row"><span class="settings-label">登入時間</span><span class="settings-value">${new Date().toLocaleString('zh-HK')}</span></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-header"><h3>🖥️ 系統概覽</h3></div>
+      <div class="card-body">
+        <div class="settings-section">
+          <div class="settings-row"><span class="settings-label">系統名稱</span><span class="settings-value">iBanker CRM</span></div>
+          <div class="settings-row"><span class="settings-label">版本</span><span class="settings-value">1.0.0</span></div>
+          <div class="settings-row"><span class="settings-label">總客戶數</span><span class="settings-value">${customers.length}</span></div>
+          <div class="settings-row"><span class="settings-label">總訂單數</span><span class="settings-value">${orders.length}</span></div>
+          <div class="settings-row"><span class="settings-label">活躍產品</span><span class="settings-value">${products.length}</span></div>
+          <div class="settings-row"><span class="settings-label">用戶角色</span><span class="settings-value">${roleLabels[u.role]||u.role}</span></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header"><h3>📦 產品陣容</h3></div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>產品</th><th>分類</th><th>價格範圍</th><th>佣金</th></tr></thead>
+          <tbody>
+            ${products.map(p => `<tr>
+              <td style="font-weight:600">${p.icon} ${p.name}</td>
+              <td>${badge(categoryLabels[p.category], categoryColors[p.category])}</td>
+              <td>${fmt(p.priceMin, p.currency)} - ${fmt(p.priceMax, p.currency)}</td>
+              <td style="font-weight:600;color:var(--amber-700)">${p.commission}%</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ===== MODAL =====
+function openModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if(e.target === this) closeModal();
+});
+
+// ===== ADD CUSTOMER DIALOG =====
+function openAddCustomerDialog() {
+  openModal(`
+    <div class="modal-header"><h3>新增客戶</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>姓名</label><input type="text" id="newCustName" placeholder="輸入客戶姓名"></div>
+      <div class="form-group"><label>電郵</label><input type="email" id="newCustEmail" placeholder="輸入電郵地址"></div>
+      <div class="form-group"><label>公司</label><input type="text" id="newCustCompany" placeholder="輸入公司名稱"></div>
+      <div class="form-group"><label>地區</label><select id="newCustCountry"><option value="HK">香港 HK</option><option value="CN">中國 CN</option><option value="TW">台灣 TW</option><option value="OTHER">其他</option></select></div>
+      <div class="form-group"><label>推薦人</label><input type="text" id="newCustReferrer" placeholder="輸入推薦人姓名"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="addCustomer()">新增</button></div>
+  `);
+}
+function addCustomer() {
+  const name = document.getElementById('newCustName').value.trim();
+  const email = document.getElementById('newCustEmail').value.trim();
+  if(!name || !email) return;
+  customers.push({
+    id:'c'+Date.now(),
+    name,
+    email,
+    company: document.getElementById('newCustCompany').value.trim(),
+    country: document.getElementById('newCustCountry').value,
+    status: 'prospect',
+    referrer: document.getElementById('newCustReferrer').value.trim() || '—'
+  });
+  closeModal(); renderPage();
+}
+
+// ===== PAGE EVENT BINDING =====
+function bindPageEvents() {
+  // Customer search
+  const searchInput = document.getElementById('customerSearch');
+  if(searchInput) {
+    searchInput.addEventListener('input', function() {
+      state.searchQuery = this.value;
+      // Re-render just the table, not the whole page (simple approach: re-render page)
+      const c = document.getElementById('pageContent');
+      c.innerHTML = renderCustomers();
+      bindPageEvents();
+      // Refocus and set cursor
+      const newInput = document.getElementById('customerSearch');
+      if(newInput) { newInput.focus(); newInput.setSelectionRange(newInput.value.length, newInput.value.length); }
+    });
+  }
+}
+
+// ===== INIT =====
+updateNotifBadge();
+</script>
+</body>
+</html>

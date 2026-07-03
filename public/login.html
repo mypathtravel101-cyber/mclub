@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MCLUB CRM - 登入</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; }
+    .btn-amber { background-color: #d97706; color: white; }
+    .btn-amber:hover { background-color: #b45309; }
+    .btn-amber:disabled { opacity: 0.6; cursor: not-allowed; }
+    .toggle-active { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); color: #1f2937; }
+    .toggle-inactive { color: #9ca3af; }
+    .toggle-inactive:hover { color: #4b5563; }
+    .role-active { border-color: #f59e0b; background-color: #fffbeb; color: #78350f; }
+    .role-inactive { border-color: #e5e7eb; background: white; }
+    .quick-btn:hover { background-color: #f3f4f6; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin 1s linear infinite; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .status-ok { background-color: #22c55e; }
+    .status-err { background-color: #ef4444; }
+    .status-warn { background-color: #f59e0b; }
+  </style>
+</head>
+<body>
+  <div class="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 via-white to-amber-50 p-4">
+    <div class="w-full max-w-md shadow-lg rounded-xl border bg-white">
+      <!-- Header -->
+      <div class="text-center px-6 pt-6 pb-2">
+        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100">
+          <svg class="h-8 w-8 text-amber-700" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-900">MCLUB CRM</h1>
+        <p class="text-sm text-gray-500 mt-1">會員俱樂部客戶關係管理系統</p>
+      </div>
+
+      <div class="px-6 pb-6">
+        <!-- Auto-detected API URL Status -->
+        <div id="apiStatus" class="mb-4 rounded-lg border bg-gray-50 p-3 text-xs">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="status-dot" id="statusDot"></span>
+            <span class="font-medium text-gray-700" id="statusText">正在偵測 API 伺服器...</span>
+          </div>
+          <div class="text-gray-500 mt-1" id="statusUrl"></div>
+        </div>
+
+        <!-- Mode Toggle -->
+        <div class="mb-6 flex rounded-lg border bg-gray-100 p-1">
+          <button type="button" id="loginTab" onclick="switchMode('login')"
+            class="toggle-active flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all">登入</button>
+          <button type="button" id="registerTab" onclick="switchMode('register')"
+            class="toggle-inactive flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all">註冊</button>
+        </div>
+
+        <div id="errorMsg" class="hidden text-sm text-red-500 mb-4 p-2 bg-red-50 rounded-lg"></div>
+        <div id="successMsg" class="hidden text-sm text-green-600 mb-4 p-2 bg-green-50 rounded-lg"></div>
+
+        <!-- Login Form -->
+        <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">電子郵件</label>
+            <input type="email" id="loginEmail" value="admin@mclub.com" required
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
+          </div>
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">密碼</label>
+            <input type="password" id="loginPassword" value="demo123" required
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
+          </div>
+          <button type="submit" id="loginBtn" class="btn-amber w-full rounded-lg px-4 py-2.5 text-sm font-medium">登入</button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">姓名 <span class="text-red-500">*</span></label>
+            <input type="text" id="regName" placeholder="請輸入姓名" required
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
+          </div>
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">電子郵件 <span class="text-red-500">*</span></label>
+            <input type="email" id="regEmail" placeholder="your@email.com" required
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
+          </div>
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">密碼 <span class="text-red-500">*</span></label>
+            <input type="password" id="regPassword" placeholder="至少6個字符" required minlength="6"
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
+          </div>
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">角色</label>
+            <div class="grid grid-cols-2 gap-3">
+              <button type="button" onclick="setRole('agent')" id="roleAgent"
+                class="role-active rounded-lg border-2 p-3 text-center transition-all">
+                <div class="text-lg font-semibold">代理</div><div class="text-xs text-gray-500">Agent</div>
+              </button>
+              <button type="button" onclick="setRole('sme')" id="roleSme"
+                class="role-inactive rounded-lg border-2 p-3 text-center transition-all">
+                <div class="text-lg font-semibold">供應商</div><div class="text-xs text-gray-500">SME</div>
+              </button>
+            </div>
+          </div>
+          <button type="submit" id="regBtn" class="btn-amber w-full rounded-lg px-4 py-2.5 text-sm font-medium">註冊</button>
+        </form>
+
+        <!-- Quick Login -->
+        <div id="quickLogin" class="mt-6 space-y-2 rounded-lg bg-gray-100 p-3 text-xs text-gray-500">
+          <p class="font-medium">快速登入帳號：</p>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" onclick="fillCredentials('admin@mclub.com','demo123')" class="quick-btn rounded border bg-white p-2 text-left">
+              <div class="font-medium text-gray-900">Admin</div><div class="text-gray-400 text-[10px]">admin@mclub.com</div>
+            </button>
+            <button type="button" onclick="fillCredentials('chan@mypath.hk','demo123')" class="quick-btn rounded border bg-white p-2 text-left">
+              <div class="font-medium text-gray-900">Agent</div><div class="text-gray-400 text-[10px]">chan@mypath.hk</div>
+            </button>
+            <button type="button" onclick="fillCredentials('wong@mypath.hk','demo123')" class="quick-btn rounded border bg-white p-2 text-left">
+              <div class="font-medium text-gray-900">SME</div><div class="text-gray-400 text-[10px]">wong@mypath.hk</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Manual Server Config (fallback) -->
+        <div class="mt-4 pt-3 border-t border-gray-200">
+          <details class="text-xs text-gray-400" id="serverConfig">
+            <summary class="cursor-pointer hover:text-gray-600 font-medium">手動設定 API URL（若自動偵測失敗）</summary>
+            <div class="mt-2 space-y-2">
+              <div>
+                <label class="block mb-1">API 基礎 URL</label>
+                <input type="text" id="apiBaseUrl" placeholder="例如: https://your-app.space-z.ai"
+                  class="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:border-amber-500" />
+              </div>
+              <div class="flex gap-2">
+                <button type="button" onclick="saveConfig()" class="btn-amber rounded-md px-3 py-1 text-xs">儲存並測試</button>
+                <button type="button" onclick="clearConfig()" class="rounded-md border border-gray-300 px-3 py-1 text-xs hover:bg-gray-50">清除設定</button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentMode = 'login';
+    let currentRole = 'agent';
+    let detectedApiUrl = '';
+
+    // === Auto-detect API URL ===
+    function getApiBaseUrl() {
+      // Priority 1: Manual config in localStorage
+      const configured = localStorage.getItem('mclub_api_base_url');
+      if (configured) return configured.replace(/\/+$/, '');
+      // Priority 2: Auto-detected URL
+      if (detectedApiUrl) return detectedApiUrl;
+      // Priority 3: Same origin (when served from the app server)
+      if (window.location.protocol !== 'file:') return window.location.origin;
+      return '';
+    }
+
+    // Auto-detect: try multiple candidate URLs
+    async function autoDetectApiUrl() {
+      const dot = document.getElementById('statusDot');
+      const text = document.getElementById('statusText');
+      const urlEl = document.getElementById('statusUrl');
+
+      // If manually configured, test that first
+      const configured = localStorage.getItem('mclub_api_base_url');
+      if (configured) {
+        const clean = configured.replace(/\/+$/, '');
+        urlEl.textContent = '使用手動設定: ' + clean;
+        const ok = await testUrl(clean);
+        if (ok) {
+          dot.className = 'status-dot status-ok';
+          text.textContent = 'API 伺服器連線正常';
+          detectedApiUrl = clean;
+          return;
+        } else {
+          dot.className = 'status-dot status-err';
+          text.textContent = '手動設定的 URL 無法連線，嘗試自動偵測...';
+        }
+      }
+
+      // Build candidate URLs
+      const candidates = [];
+      const origin = window.location.origin;
+
+      // Same origin (most common - when login.html is served by the app)
+      if (window.location.protocol !== 'file:') {
+        candidates.push({ url: origin, label: '當前頁面來源' });
+      }
+
+      // Try to derive from hostname patterns
+      const host = window.location.hostname || '';
+      // If on space-z.ai, the API is on the same domain
+      if (host.includes('space-z.ai')) {
+        candidates.push({ url: window.location.origin, label: 'Space-Z 平台' });
+      }
+
+      // If local file, try common local servers
+      if (window.location.protocol === 'file:') {
+        candidates.push({ url: 'http://localhost:3000', label: '本地開發 (port 3000)' });
+        candidates.push({ url: 'http://localhost:81', label: '本地代理 (port 81)' });
+      }
+
+      // Test each candidate
+      for (const c of candidates) {
+        urlEl.textContent = '正在測試: ' + c.url + ' ...';
+        const ok = await testUrl(c.url);
+        if (ok) {
+          dot.className = 'status-dot status-ok';
+          text.textContent = 'API 伺服器連線正常 (' + c.label + ')';
+          urlEl.textContent = c.url;
+          detectedApiUrl = c.url;
+          return;
+        }
+      }
+
+      // All failed
+      dot.className = 'status-dot status-err';
+      text.textContent = '無法連接 API 伺服器';
+      urlEl.textContent = '請展開下方「手動設定 API URL」輸入正確網址';
+      // Auto-open the config section
+      document.getElementById('serverConfig').open = true;
+    }
+
+    async function testUrl(baseUrl) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(baseUrl + '/api/auth', {
+          method: 'OPTIONS',
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        return true; // Any response means server is reachable
+      } catch {
+        // Try a simpler endpoint
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
+          const res = await fetch(baseUrl + '/', {
+            method: 'HEAD',
+            signal: controller.signal
+          });
+          clearTimeout(timeout);
+          return res.ok || res.status === 200;
+        } catch {
+          return false;
+        }
+      }
+    }
+
+    function saveConfig() {
+      const url = document.getElementById('apiBaseUrl').value.trim();
+      if (url) {
+        localStorage.setItem('mclub_api_base_url', url);
+        showSuccess('設定已儲存！正在測試連線...');
+        setTimeout(() => autoDetectApiUrl(), 500);
+      } else {
+        clearConfig();
+      }
+    }
+
+    function clearConfig() {
+      localStorage.removeItem('mclub_api_base_url');
+      document.getElementById('apiBaseUrl').value = '';
+      showSuccess('已清除手動設定，將使用自動偵測。');
+      setTimeout(() => autoDetectApiUrl(), 500);
+    }
+
+    // Initialize on page load
+    (function() {
+      const saved = localStorage.getItem('mclub_api_base_url');
+      if (saved) document.getElementById('apiBaseUrl').value = saved;
+      autoDetectApiUrl();
+    })();
+
+    // === UI Functions ===
+    function switchMode(mode) {
+      currentMode = mode;
+      document.getElementById('loginTab').className = mode === 'login' ? 'toggle-active flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all' : 'toggle-inactive flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all';
+      document.getElementById('registerTab').className = mode === 'register' ? 'toggle-active flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all' : 'toggle-inactive flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all';
+      document.getElementById('loginForm').classList.toggle('hidden', mode !== 'login');
+      document.getElementById('registerForm').classList.toggle('hidden', mode !== 'register');
+      document.getElementById('quickLogin').classList.toggle('hidden', mode !== 'login');
+      if (mode === 'login') { document.getElementById('loginEmail').value = 'admin@mclub.com'; document.getElementById('loginPassword').value = 'demo123'; }
+      else { document.getElementById('regEmail').value = ''; document.getElementById('regPassword').value = ''; document.getElementById('regName').value = ''; }
+      hideMessages();
+    }
+
+    function setRole(role) {
+      currentRole = role;
+      document.getElementById('roleAgent').className = role === 'agent' ? 'role-active rounded-lg border-2 p-3 text-center transition-all' : 'role-inactive rounded-lg border-2 p-3 text-center transition-all';
+      document.getElementById('roleSme').className = role === 'sme' ? 'role-active rounded-lg border-2 p-3 text-center transition-all' : 'role-inactive rounded-lg border-2 p-3 text-center transition-all';
+    }
+
+    function fillCredentials(email, password) {
+      document.getElementById('loginEmail').value = email;
+      document.getElementById('loginPassword').value = password;
+    }
+
+    function showError(msg) { const el = document.getElementById('errorMsg'); el.textContent = msg; el.classList.remove('hidden'); document.getElementById('successMsg').classList.add('hidden'); }
+    function showSuccess(msg) { const el = document.getElementById('successMsg'); el.textContent = msg; el.classList.remove('hidden'); document.getElementById('errorMsg').classList.add('hidden'); }
+    function hideMessages() { document.getElementById('errorMsg').classList.add('hidden'); document.getElementById('successMsg').classList.add('hidden'); }
+
+    function setLoading(btnId, isLoading) {
+      const btn = document.getElementById(btnId);
+      btn.disabled = isLoading;
+      btn.textContent = isLoading ? (currentMode === 'login' ? '登入中...' : '註冊中...') : (currentMode === 'login' ? '登入' : '註冊');
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault(); hideMessages(); setLoading('loginBtn', true);
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const base = getApiBaseUrl();
+      if (!base) { showError('無法偵測 API URL，請展開下方「手動設定 API URL」輸入正確網址。'); setLoading('loginBtn', false); return; }
+      try {
+        const res = await fetch(base + '/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          localStorage.setItem('mclub_crm_token', data.token);
+          showSuccess('登入成功！正在跳轉...');
+          setTimeout(() => { window.location.href = base + '/'; }, 800);
+        } else { showError(data.error || '登入失敗'); setLoading('loginBtn', false); }
+      } catch (err) {
+        showError('網絡錯誤: ' + err.message + '\n請確認 API URL 正確: ' + base + '/api/auth');
+        setLoading('loginBtn', false);
+        // Re-detect
+        autoDetectApiUrl();
+      }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault(); hideMessages(); setLoading('regBtn', true);
+      const name = document.getElementById('regName').value;
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      const base = getApiBaseUrl();
+      if (!base) { showError('無法偵測 API URL，請設定正確的 API URL。'); setLoading('regBtn', false); return; }
+      try {
+        const res = await fetch(base + '/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, role: currentRole }) });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          localStorage.setItem('mclub_crm_token', data.token);
+          showSuccess('註冊成功！正在跳轉...');
+          setTimeout(() => { window.location.href = base + '/'; }, 800);
+        } else { showError(data.error || '註冊失敗'); setLoading('regBtn', false); }
+      } catch (err) { showError('網絡錯誤: ' + err.message); setLoading('regBtn', false); }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,2216 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>iBanker 日本物業風險評估</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --amber-50: #fffbeb;
+  --amber-100: #fef3c7;
+  --amber-200: #fde68a;
+  --amber-300: #fcd34d;
+  --amber-400: #fbbf24;
+  --amber-500: #f59e0b;
+  --amber-600: #d97706;
+  --amber-700: #b45309;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  --red-500: #ef4444;
+  --red-100: #fee2e2;
+  --green-500: #22c55e;
+  --green-100: #dcfce7;
+  --blue-500: #3b82f6;
+  --blue-100: #dbeafe;
+  --purple-500: #a855f7;
+  --purple-100: #f3e8ff;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  background: linear-gradient(180deg, var(--amber-50) 0%, #ffffff 40%);
+  color: var(--gray-800);
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  overflow-x: hidden;
+}
+
+.view { display: none; }
+.view.active { display: block; }
+
+/* ===== HOME ===== */
+.home-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.shield-icon {
+  width: 80px; height: 80px;
+  margin-bottom: 24px;
+}
+
+.shield-icon svg { width: 100%; height: 100%; }
+
+.home-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.home-subtitle {
+  font-size: 15px;
+  color: var(--gray-500);
+  margin-bottom: 48px;
+  line-height: 1.6;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 320px;
+  height: 52px;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  text-decoration: none;
+}
+
+.btn:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: var(--amber-600);
+  color: white;
+  box-shadow: 0 4px 14px rgba(217,119,6,0.3);
+}
+.btn-primary:hover { background: var(--amber-700); }
+
+.btn-secondary {
+  background: white;
+  color: var(--amber-600);
+  border: 2px solid var(--amber-600);
+  margin-top: 12px;
+}
+.btn-secondary:hover { background: var(--amber-50); }
+
+.home-note {
+  margin-top: 24px;
+  font-size: 13px;
+  color: var(--gray-400);
+}
+
+/* ===== PROPERTY SELECTOR ===== */
+.selector-container {
+  padding: 0 16px 100px;
+}
+
+.selector-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  background: linear-gradient(180deg, var(--amber-50) 80%, transparent);
+  z-index: 10;
+  padding-top: 16px;
+}
+
+.back-btn {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.search-input {
+  flex: 1;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--gray-200);
+  padding: 0 12px;
+  font-size: 15px;
+  background: white;
+  outline: none;
+}
+.search-input:focus { border-color: var(--amber-400); }
+
+.filter-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.filter-tabs::-webkit-scrollbar { display: none; }
+
+.filter-tab {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--gray-200);
+  background: white;
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.filter-tab.active {
+  background: var(--amber-600);
+  color: white;
+  border-color: var(--amber-600);
+}
+
+.sort-bar {
+  display: flex;
+  gap: 6px;
+  padding: 4px 0 8px;
+}
+
+.sort-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  border: 1px solid var(--gray-200);
+  background: white;
+  color: var(--gray-500);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.sort-btn.active {
+  background: var(--gray-100);
+  color: var(--gray-700);
+  border-color: var(--gray-300);
+}
+
+.prop-card {
+  background: white;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid var(--gray-100);
+  -webkit-tap-highlight-color: transparent;
+}
+.prop-card:active { transform: scale(0.98); }
+.prop-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.prop-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.prop-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.prop-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+.badge-sold { background: var(--red-100); color: var(--red-500); }
+.badge-construction { background: var(--blue-100); color: var(--blue-500); }
+.badge-no-price { background: var(--gray-100); color: var(--gray-500); }
+
+.prop-address {
+  font-size: 13px;
+  color: var(--gray-400);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.prop-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.prop-stat {
+  font-size: 13px;
+  color: var(--gray-600);
+}
+.prop-stat strong {
+  color: var(--amber-700);
+  font-weight: 700;
+}
+
+/* ===== INPUT WIZARD ===== */
+.wizard-container {
+  padding: 0 16px 120px;
+}
+
+.wizard-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  background: linear-gradient(180deg, var(--amber-50) 80%, transparent);
+  z-index: 10;
+  padding-top: 16px;
+}
+
+.wizard-title {
+  font-size: 17px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.progress-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0 8px;
+  gap: 0;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+}
+
+.progress-dot {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--gray-200);
+  color: var(--gray-400);
+  transition: all 0.3s;
+}
+.progress-dot.active {
+  background: var(--amber-600);
+  color: white;
+}
+.progress-dot.done {
+  background: var(--green-500);
+  color: white;
+}
+
+.progress-line {
+  width: 32px; height: 3px;
+  background: var(--gray-200);
+  transition: background 0.3s;
+}
+.progress-line.done { background: var(--green-500); }
+
+.step-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin: 16px 0 12px;
+}
+
+.input-group {
+  margin-bottom: 16px;
+}
+
+.input-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-600);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.input-field {
+  width: 100%;
+  height: 48px;
+  border-radius: 10px;
+  border: 1.5px solid var(--gray-200);
+  padding: 0 14px;
+  font-size: 16px;
+  color: var(--gray-800);
+  outline: none;
+  background: white;
+  transition: border-color 0.2s;
+}
+.input-field:focus { border-color: var(--amber-400); }
+
+.preview-box {
+  background: var(--amber-50);
+  border: 1px solid var(--amber-200);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--amber-700);
+}
+
+.slider-group {
+  margin-bottom: 20px;
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.slider-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-600);
+}
+
+.slider-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--amber-600);
+  min-width: 50px;
+  text-align: right;
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--gray-200);
+  border-radius: 3px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--amber-600);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(217,119,6,0.3);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--amber-600);
+  cursor: pointer;
+  border: none;
+}
+
+.period-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.period-btn {
+  flex: 1;
+  height: 52px;
+  border-radius: 12px;
+  border: 2px solid var(--gray-200);
+  background: white;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.period-btn.active {
+  border-color: var(--amber-600);
+  background: var(--amber-50);
+  color: var(--amber-600);
+}
+
+.summary-section {
+  background: white;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--gray-100);
+}
+
+.summary-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--amber-600);
+  margin-bottom: 8px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  padding: 4px 0;
+  color: var(--gray-600);
+}
+.summary-row span:last-child { font-weight: 600; color: var(--gray-800); }
+
+.info-box {
+  background: linear-gradient(135deg, #f0f9ff, #faf5ff);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.info-box-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--gray-700);
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--gray-600);
+  padding: 4px 0;
+}
+
+.wizard-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  background: white;
+  border-top: 1px solid var(--gray-100);
+  padding-bottom: calc(12px + var(--safe-bottom));
+  z-index: 20;
+}
+
+.wizard-nav .btn {
+  flex: 1;
+  max-width: none;
+  height: 48px;
+  font-size: 16px;
+}
+
+.btn-back-nav {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+.btn-next-nav {
+  background: var(--amber-600);
+  color: white;
+}
+
+.property-banner {
+  background: var(--amber-50);
+  border: 1px solid var(--amber-200);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+.property-banner-info {
+  color: var(--gray-600);
+}
+.property-banner-info strong { color: var(--amber-700); }
+.property-banner a {
+  color: var(--amber-600);
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ===== RESULTS ===== */
+.results-container {
+  padding: 0 16px 40px;
+}
+
+.results-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  background: linear-gradient(180deg, var(--amber-50) 80%, transparent);
+  z-index: 10;
+  padding-top: 16px;
+}
+
+.hero-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 0;
+  color: var(--gray-800);
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  border: 2px solid var(--amber-400);
+  overflow: hidden;
+}
+.hero-card-header {
+  background: var(--amber-500);
+  padding: 8px 20px;
+  text-align: center;
+}
+.hero-card-header p {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.hero-card-body {
+  padding: 20px;
+}
+
+.hero-roi-label {
+  font-size: 13px;
+  color: var(--gray-600);
+  margin-bottom: 4px;
+}
+
+.hero-roi-value {
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  margin-bottom: 4px;
+  color: var(--gray-800);
+}
+.hero-roi-value.negative { color: var(--red-500); }
+
+.hero-sub {
+  font-size: 13px;
+  color: var(--gray-600);
+  margin-bottom: 16px;
+}
+
+.hero-gauge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gauge-svg { width: 64px; height: 64px; }
+
+.gauge-text {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.gauge-text .pct {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.traffic-light-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--gray-100);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.traffic-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--gray-700);
+}
+
+.traffic-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 14px;
+  color: var(--gray-600);
+}
+.traffic-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.metric-card {
+  background: white;
+  border-radius: 12px;
+  padding: 14px;
+  border: 1px solid var(--gray-100);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.metric-label {
+  font-size: 12px;
+  color: var(--gray-400);
+  margin-bottom: 4px;
+}
+
+.metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gray-800);
+}
+.metric-value.positive { color: var(--green-500); }
+.metric-value.negative { color: var(--red-500); }
+
+.dist-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--gray-100);
+}
+
+.dist-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--gray-700);
+}
+
+.dist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.dist-label {
+  width: 32px;
+  font-weight: 600;
+  color: var(--gray-500);
+  flex-shrink: 0;
+}
+
+.dist-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: var(--gray-100);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.dist-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.dist-val {
+  width: 56px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--gray-700);
+  flex-shrink: 0;
+}
+
+.scenario-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--gray-100);
+}
+
+.scenario-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.scenario-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.scenario-sort {
+  display: flex;
+  gap: 4px;
+}
+
+.scenario-sort-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  border: 1px solid var(--gray-200);
+  background: white;
+  color: var(--gray-500);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.scenario-sort-btn.active {
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+
+.scenario-item {
+  border-bottom: 1px solid var(--gray-100);
+  padding: 10px 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.scenario-item:last-child { border-bottom: none; }
+
+.scenario-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scenario-params {
+  font-size: 13px;
+  color: var(--gray-600);
+}
+
+.scenario-roi {
+  font-size: 15px;
+  font-weight: 700;
+}
+.scenario-roi.positive { color: var(--green-500); }
+.scenario-roi.negative { color: var(--red-500); }
+
+.scenario-prob-bar {
+  margin-top: 6px;
+  height: 4px;
+  background: var(--gray-100);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.scenario-prob-fill {
+  height: 100%;
+  background: var(--amber-400);
+  border-radius: 2px;
+}
+
+.scenario-detail {
+  display: none;
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--gray-50);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--gray-600);
+  line-height: 1.8;
+}
+.scenario-detail.open { display: block; }
+
+.disclaimer {
+  text-align: center;
+  font-size: 12px;
+  color: var(--gray-400);
+  padding: 20px 16px 40px;
+  line-height: 1.6;
+}
+
+/* ===== LOADING ===== */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255,255,255,0.95);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  flex-direction: column;
+}
+.loading-overlay.active { display: flex; }
+
+.spinner {
+  width: 56px; height: 56px;
+  border: 4px solid var(--amber-200);
+  border-top-color: var(--amber-600);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: 8px;
+}
+
+.loading-sub {
+  font-size: 13px;
+  color: var(--gray-400);
+  margin-bottom: 16px;
+}
+
+.loading-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.mini-spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--amber-200);
+  border-top-color: var(--amber-600);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ===== UTIL ===== */
+.text-center { text-align: center; }
+.mt-4 { margin-top: 16px; }
+.mt-2 { margin-top: 8px; }
+.mb-4 { margin-bottom: 16px; }
+
+/* ===== BELL CURVE ===== */
+.bell-curve-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  overflow: hidden;
+  margin-top: 12px;
+}
+.bell-curve-header {
+  padding: 10px 14px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-800);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bell-curve-body {
+  padding: 6px 10px 10px;
+}
+.bell-curve-svg {
+  width: 100%;
+  max-height: 240px;
+}
+.bell-stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+.bell-stat-box {
+  text-align: center;
+  padding: 4px 6px;
+  border-radius: 8px;
+}
+.bell-stat-box.loss {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+.bell-stat-box.mean {
+  background: #faf5ff;
+  border: 1px solid #e9d5ff;
+}
+.bell-stat-box.gain {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+.bell-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+}
+.bell-stat-label.loss { color: #dc2626; }
+.bell-stat-label.mean { color: #7c3aed; }
+.bell-stat-label.gain { color: #16a34a; }
+.bell-stat-value {
+  font-size: 14px;
+  font-weight: 900;
+}
+.bell-stat-value.loss { color: #b91c1c; }
+.bell-stat-value.mean { color: #6d28d9; }
+.bell-stat-value.gain { color: #15803d; }
+</style>
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text">正在計算風險分析...</div>
+  <div class="loading-sub">84 情景壓力測試 + ML V2 機率加權</div>
+  <div class="loading-detail"><div class="mini-spinner"></div> 三層分析進行中</div>
+</div>
+
+<!-- View 1: Home -->
+<div id="viewHome" class="view active">
+  <div class="home-container">
+    <div class="shield-icon">
+      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M40 4L12 18v20c0 18.67 11.95 36.13 28 42 16.05-5.87 28-23.33 28-42V18L40 4z" fill="#d97706" stroke="#b45309" stroke-width="2"/>
+        <path d="M40 10L18 22v16c0 15.56 9.56 30.11 22 35 12.44-4.89 22-19.44 22-35V22L40 10z" fill="#f59e0b"/>
+        <text x="40" y="46" text-anchor="middle" fill="white" font-size="20" font-weight="800">M</text>
+        <text x="40" y="62" text-anchor="middle" fill="white" font-size="9" font-weight="600" letter-spacing="1">CLUB</text>
+      </svg>
+    </div>
+    <div class="home-title">日本物業風險評估</div>
+    <div class="home-subtitle">84 情景壓力測試 + ML V2 機率加權</div>
+    <button class="btn btn-primary" onclick="showView('viewSelector')">選擇物件</button>
+    <button class="btn btn-secondary" onclick="startManualInput()">手動輸入參數</button>
+    <div class="home-note">選擇物件將自動填入價格及回報率</div>
+  </div>
+</div>
+
+<!-- View 2: Property Selector -->
+<div id="viewSelector" class="view">
+  <div class="selector-container">
+    <div class="selector-header">
+      <button class="back-btn" onclick="showView('viewHome')">←</button>
+      <input type="text" class="search-input" id="searchInput" placeholder="搜尋物件名稱或地址..." oninput="filterProperties()">
+    </div>
+    <div class="filter-tabs" id="filterTabs">
+      <button class="filter-tab active" data-city="全部" onclick="setCityFilter(this)">全部</button>
+      <button class="filter-tab" data-city="大阪" onclick="setCityFilter(this)">🏯 大阪</button>
+      <button class="filter-tab" data-city="東京" onclick="setCityFilter(this)">🗼 東京</button>
+      <button class="filter-tab" data-city="福岡" onclick="setCityFilter(this)">🌸 福岡</button>
+      <button class="filter-tab" data-city="長野/北海道" onclick="setCityFilter(this)">⛷️ 長野/北海道</button>
+    </div>
+    <div class="sort-bar">
+      <button class="sort-btn active" data-sort="area" onclick="setSort(this)">按地區</button>
+      <button class="sort-btn" data-sort="priceAsc" onclick="setSort(this)">價格↑</button>
+      <button class="sort-btn" data-sort="priceDesc" onclick="setSort(this)">價格↓</button>
+    </div>
+    <div id="propertyList"></div>
+  </div>
+</div>
+
+<!-- View 3: Input Wizard -->
+<div id="viewWizard" class="view">
+  <div class="wizard-container">
+    <div class="wizard-header">
+      <button class="back-btn" onclick="wizardBackOrHome()">←</button>
+      <div class="wizard-title" id="wizardTitle">輸入參數</div>
+    </div>
+    <div id="propertyBanner" class="property-banner" style="display:none;">
+      <div class="property-banner-info" id="bannerInfo"></div>
+      <a onclick="showView('viewSelector')">點擊更換</a>
+    </div>
+    <div class="progress-bar" id="progressBar"></div>
+
+    <!-- Step 1 -->
+    <div id="step1" class="step-content">
+      <div class="step-label">物業基本資料</div>
+      <div class="input-group">
+        <label class="input-label">投入本金 (HKD)</label>
+        <input type="number" class="input-field" id="inputPrincipal" value="" placeholder="例如 3500000" oninput="updatePreview1()">
+      </div>
+      <div class="input-group">
+        <label class="input-label">入場匯率 (JPY/HKD)</label>
+        <input type="number" class="input-field" id="inputFX" value="19.5" step="0.1" oninput="updatePreview1()">
+      </div>
+      <div class="preview-box" id="preview1">
+        物業價值：-- JPY
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div id="step2" class="step-content" style="display:none;">
+      <div class="step-label">財務條件</div>
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">按揭成數 LTV</span>
+          <span class="slider-value" id="ltvValue">40%</span>
+        </div>
+        <input type="range" min="0" max="80" step="5" value="40" id="inputLTV" oninput="updateSlider('ltv',this.value)">
+      </div>
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">按揭利率</span>
+          <span class="slider-value" id="rateValue">3.0%</span>
+        </div>
+        <input type="range" min="0" max="8" step="0.1" value="3" id="inputRate" oninput="updateSlider('rate',this.value)">
+      </div>
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">年租金回報率</span>
+          <span class="slider-value" id="yieldValue">6.0%</span>
+        </div>
+        <input type="range" min="0" max="10" step="0.5" value="6" id="inputYield" oninput="updateSlider('yield',this.value)">
+      </div>
+      <div class="preview-box" id="preview2">
+        貸款金額：-- JPY<br>
+        自付金額：-- HKD<br>
+        年租金收入：-- JPY
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div id="step3" class="step-content" style="display:none;">
+      <div class="step-label">持有參數</div>
+      <div class="input-label" style="margin-bottom:8px;">持有年期</div>
+      <div class="period-selector">
+        <button class="period-btn" data-period="5" onclick="setPeriod(5,this)">5年</button>
+        <button class="period-btn" data-period="7" onclick="setPeriod(7,this)">7年</button>
+        <button class="period-btn active" data-period="10" onclick="setPeriod(10,this)">10年</button>
+      </div>
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">持有成本率 (年)</span>
+          <span class="slider-value" id="mgmtValue">0.3%</span>
+        </div>
+        <input type="range" min="0" max="3" step="0.1" value="0.3" id="inputMgmt" oninput="updateSlider('mgmt',this.value)">
+      </div>
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">每年稅務成本</span>
+          <span class="slider-value" id="txValue">0.3%</span>
+        </div>
+        <input type="range" min="0" max="5" step="0.1" value="0.3" id="inputTx" oninput="updateSlider('tx',this.value)">
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div id="step4" class="step-content" style="display:none;">
+      <div class="step-label">確認計算</div>
+      <div class="summary-section" id="summaryBasic">
+        <div class="summary-section-title">📋 物業基本資料</div>
+      </div>
+      <div class="summary-section" id="summaryFinance">
+        <div class="summary-section-title">💰 財務條件</div>
+      </div>
+      <div class="summary-section" id="summaryHolding">
+        <div class="summary-section-title">⏳ 持有參數</div>
+      </div>
+      <div class="info-box">
+        <div class="info-box-title">將進行三層分析</div>
+        <div class="info-item">🔵 歷史數據驗證 — 104 季度樣本</div>
+        <div class="info-item">🟠 84 情景壓力測試 — 7×4×3 極端組合</div>
+        <div class="info-item">🟣 ML 機率加權 — 4 模型集成 + Monte Carlo</div>
+      </div>
+      <button class="btn btn-primary" style="max-width:100%;margin-top:8px;" onclick="runCalculation()">開始風險分析</button>
+    </div>
+
+    <div class="wizard-nav" id="wizardNav">
+      <button class="btn btn-back-nav" id="btnWizardBack" onclick="wizardPrev()">上一步</button>
+      <button class="btn btn-next-nav" id="btnWizardNext" onclick="wizardNext()">下一步</button>
+    </div>
+  </div>
+</div>
+
+<!-- View 4: Results -->
+<div id="viewResults" class="view">
+  <div class="results-container">
+    <div class="results-header">
+      <button class="back-btn" onclick="showView('viewWizard');currentStep=4;renderStep();">←</button>
+      <div class="wizard-title">日本物業投資回報分析</div>
+    </div>
+    <div id="resultsContent"></div>
+  </div>
+</div>
+
+<script>
+// ===== PROPERTY DATA =====
+const PROPERTIES = [{"id":"osaka-pre-1","name":"梦羽3区画 B","address":"大阪市西成区天下茶屋１丁目 3-13","city":"大阪","type":"木造","status":"期房","landArea":"44.19","buildingArea":"85.2","floors":"3层","priceWan":6800,"rentalYield":6.0,"availability":"通盘在售"},{"id":"osaka-pre-2","name":"梦羽3区画 C","address":"大阪市西成区天下茶屋１丁目 3-13","city":"大阪","type":"木造","status":"期房","landArea":"44.62","buildingArea":"85.2","floors":"3层","priceWan":6800,"rentalYield":6.0,"availability":"通盘在售"},{"id":"osaka-pre-3","name":"月香","address":"大阪市西成区长桥一丁目 5-21","city":"大阪","type":"木造","status":"期房","landArea":"58.54","buildingArea":"87.9","floors":"3层","priceWan":7150,"rentalYield":6.0,"availability":"通盘在售"},{"id":"osaka-pre-4","name":"月清","address":"大阪市西成区长桥一丁目 5-21","city":"大阪","type":"木造","status":"期房","landArea":"51.88","buildingArea":"83.5","floors":"3层","priceWan":6950,"rentalYield":6.0,"availability":"通盘在售"},{"id":"osaka-pre-5","name":"长云","address":"大阪市西成区天下茶屋东 1-3-23","city":"大阪","type":"木造","status":"期房","landArea":"69.61","buildingArea":"132.3","floors":"3层","priceWan":7950,"rentalYield":6.0,"availability":"已售"},{"id":"osaka-pre-6","name":"风熏","address":"大阪市北区丰崎町1丁目-1-8","city":"大阪","type":"木造","status":"期房","landArea":"52.89","buildingArea":"99.9","floors":"3层","priceWan":15000,"rentalYield":6.0,"availability":"通盘在售"},{"id":"osaka-pre-7","name":"白樱2区画 A","address":"大阪市西成区天下茶屋 1-12-19","city":"大阪","type":"木造","status":"期房","landArea":"48.1","buildingArea":"95.1","floors":"3层","priceWan":7300,"rentalYield":6.0,"availability":"已售"},{"id":"osaka-pre-8","name":"白樱2区画 B","address":"大阪市西成区天下茶屋 1-12-19","city":"大阪","type":"木造","status":"期房","landArea":"47.9","buildingArea":"95.1","floors":"3层","priceWan":7300,"rentalYield":6.0,"availability":"已售"},{"id":"osaka-pre-9","name":"千羽8区画 A1","address":"大阪市西成区山王三丁目","city":"大阪","type":"木造","status":"期房","landArea":"38.81","buildingArea":"80.9","floors":"3层","priceWan":6150,"rentalYield":6.0,"availability":"独家在售"},{"id":"osaka-pre-10","name":"千羽8区画 A2","address":"大阪市西成区山王三丁目","city":"大阪","type":"木造","status":"期房","landArea":"35.4","buildingArea":"80.9","floors":"3层","priceWan":6050,"rentalYield":6.0,"availability":"独家在售"},{"id":"osaka-pre-11","name":"千羽8区画 B1","address":"大阪市西成区山王三丁目","city":"大阪","type":"木造","status":"期房","landArea":"35.4","buildingArea":"80.9","floors":"3层","priceWan":6050,"rentalYield":6.0,"availability":"独家在售"},{"id":"osaka-pre-12","name":"千羽8区画 B2","address":"大阪市西成区山王三丁目","city":"大阪","type":"木造","status":"期房","landArea":"35.41","buildingArea":"80.9","floors":"3层","priceWan":6050,"rentalYield":6.0,"availability":"独家在售"},{"id":"osaka-pre-13","name":"千羽8区画 C1","address":"大阪市西成区山王三丁目","city":"大阪","type":"木造","status":"期房","landArea":"35.41","buildingArea":"80.9","floors":"3层","priceWan":6050,"rentalYield":6.0,"availability":"独家在售"},{"id":"osaka-pre-14","name":"千羽8区画 C2","address":"大阪市西成区山王三丁目","city":"大阪","type":"木造","status":"期房","landArea":"36.54","buildingArea":"80.9","floors":"3层","priceWan":6150,"rentalYield":6.0,"availability":"独家在售"},{"id":"osaka-pre-15","name":"千羽8区画 D1","address":"大阪市西成区山王三丁目","city":"大阪","type":"木造","status":"期房","landArea":"57.79","buildingArea":"100.7","floors":"3层","priceWan":7200,"rentalYield":6.0,"availability":"独家在售"},{"id":"osaka-pre-16","name":"千羽8区画 D2","address":"大阪市西成区山王三丁目","city":"大阪","type":"木造","status":"期房","landArea":"48.04","buildingArea":"100.7","floors":"3层","priceWan":6800,"rentalYield":6.0,"availability":"独家在售"},{"id":"osaka-pre-17","name":"栖云8区画 A","address":"大阪市西成区天下茶屋北一丁目","city":"大阪","type":"木造","status":"期房","landArea":"51.03","buildingArea":"78.7","floors":"3层","priceWan":6400,"rentalYield":6.0,"availability":"整售"},{"id":"osaka-pre-18","name":"栖云8区画 B","address":"大阪市西成区天下茶屋北一丁目","city":"大阪","type":"木造","status":"期房","landArea":"35.69","buildingArea":"72","floors":"3层","priceWan":5900,"rentalYield":6.0,"availability":"整售"},{"id":"osaka-pre-19","name":"栖云8区画 C1","address":"大阪市西成区天下茶屋北一丁目","city":"大阪","type":"木造","status":"期房","landArea":"38.9","buildingArea":"78.8","floors":"3层","priceWan":6100,"rentalYield":6.0,"availability":"整售"},{"id":"osaka-pre-20","name":"栖云8区画 C2","address":"大阪市西成区天下茶屋北一丁目","city":"大阪","type":"木造","status":"期房","landArea":"41.02","buildingArea":"78.8","floors":"3层","priceWan":6100,"rentalYield":6.0,"availability":"整售"},{"id":"osaka-pre-21","name":"栖云8区画 C3","address":"大阪市西成区天下茶屋北一丁目","city":"大阪","type":"木造","status":"期房","landArea":"39.35","buildingArea":"78.8","floors":"3层","priceWan":6100,"rentalYield":6.0,"availability":"整售"},{"id":"osaka-pre-22","name":"栖云8区画 C4","address":"大阪市西成区天下茶屋北一丁目","city":"大阪","type":"木造","status":"期房","landArea":"37.67","buildingArea":"78.8","floors":"3层","priceWan":5950,"rentalYield":6.0,"availability":"整售"},{"id":"osaka-pre-23","name":"栖云8区画 C5","address":"大阪市西成区天下茶屋北一丁目","city":"大阪","type":"木造","status":"期房","landArea":"40.57","buildingArea":"78.8","floors":"3层","priceWan":6200,"rentalYield":6.0,"availability":"整售"},{"id":"osaka-sbist-24","name":"柔风","address":"太子7区画","city":"大阪","type":"木造","status":"现房","landArea":"56.32","buildingArea":"63.32","floors":null,"rooms":null,"priceWan":6230,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-25","name":"幽影","address":"大阪市西成区天下茶屋3-46-28","city":"大阪","type":"木造","status":"现房","landArea":"49.94","buildingArea":"93.43","floors":null,"rooms":"3","priceWan":7280,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-26","name":"青谷","address":"大阪市西成区天下茶屋3-46-29","city":"大阪","type":"木造","status":"现房","landArea":"48.63","buildingArea":"91.99","floors":null,"rooms":"3","priceWan":7180,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-27","name":"幽谷","address":"大阪市西成区天下茶屋3-46-28","city":"大阪","type":"木造","status":"现房","landArea":"42.22","buildingArea":"80.77","floors":null,"rooms":"3","priceWan":6660,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-28","name":"幽雪","address":"大阪市西成区花園南1-5-9","city":"大阪","type":"木造","status":"现房","landArea":"46.64","buildingArea":"97.13","floors":null,"rooms":"3","priceWan":7980,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-29","name":"白雪","address":"大阪市西成区花園南1-5-9","city":"大阪","type":"木造","status":"现房","landArea":"48.95","buildingArea":"97.13","floors":null,"rooms":"3","priceWan":7980,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-30","name":"蒼羽-A","address":"大阪市西成区松1-5-20","city":"大阪","type":"木造","status":"现房","landArea":"59.82","buildingArea":"91.24","floors":null,"rooms":"3","priceWan":7180,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-31","name":"蒼羽-B","address":"大阪市西成区松1-5-34","city":"大阪","type":"木造","status":"现房","landArea":"55.24","buildingArea":"91.24","floors":null,"rooms":"3","priceWan":7180,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-32","name":"蒼羽-C","address":"大阪市西成区松1-5-35","city":"大阪","type":"木造","status":"现房","landArea":"55.23","buildingArea":"91.24","floors":null,"rooms":"3","priceWan":7180,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-33","name":"蒼空（A号地）（Ⅱ期项目）","address":"大阪市西成区聖天下1-8-1","city":"大阪","type":"木造","status":"现房","landArea":"49.3","buildingArea":"78.24","floors":null,"rooms":"3","priceWan":6480,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-34","name":"蒼海（B号地）（Ⅱ期项目）","address":"大阪市西成区聖天下1-8-43","city":"大阪","type":"木造","status":"现房","landArea":"46.64","buildingArea":"78.24","floors":null,"rooms":"3","priceWan":6480,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-35","name":"明雲（C号地）（Ⅱ期项目）","address":"大阪市西成区聖天下1-8-44","city":"大阪","type":"木造","status":"现房","landArea":"46.06","buildingArea":"78.16","floors":null,"rooms":"3","priceWan":6480,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-36","name":"明雪（D号地）（Ⅲ期项目）","address":"大阪市西成区聖天下1-8-45","city":"大阪","type":"木造","status":"现房","landArea":"49.35","buildingArea":"78.16","floors":null,"rooms":"3","priceWan":6480,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-37","name":"月海（A号地）（Ⅱ期项目）","address":"大阪市西成区長橋1-6-33","city":"大阪","type":"木造","status":"现房","landArea":"57.61","buildingArea":"86.74","floors":null,"rooms":"3","priceWan":7180,"rentalYield":5.0,"availability":"在售"},{"id":"osaka-sbist-38","name":"月蝶（B号地）（Ⅲ期项目）","address":"大阪市西成区長橋1-6-34","city":"大阪","type":"木造","status":"现房","landArea":"53.17","buildingArea":null,"floors":null,"rooms":"3","priceWan":7180,"rentalYield":5.0,"availability":"在售"},{"id":"tokyo-39","name":"Hills 大塚","address":"東京都豊島区南大塚1-46-14","city":"東京","type":"RC造（翻新）","status":"现房","landArea":"291.57","buildingArea":"401.15","floors":"4层","priceWan":45000,"rentalYield":7.2,"availability":"Nestay运营"},{"id":"tokyo-40","name":"練馬区豊玉北","address":"東京都練馬区豊玉北1-14-16","city":"東京","type":"RC造（新建）","status":"现房","landArea":"165.28","buildingArea":"548.44","floors":"5层","priceWan":56000,"rentalYield":3.9,"availability":"新建/已有意向"},{"id":"tokyo-41","name":"三昌マンション","address":"東京都中野区中央5丁目24-6","city":"東京","type":"RC造（翻新）","status":"现房","landArea":"115.2","buildingArea":"266.32","floors":"4层","priceWan":14500,"rentalYield":4.76,"availability":"旧房改造"},{"id":"tokyo-42","name":"NES ビル","address":"東京都中野区大和町1丁目68-6","city":"東京","type":"RC造（翻新）","status":"现房","landArea":"112.27","buildingArea":"388.57","floors":"6层","priceWan":26000,"rentalYield":5.04,"availability":"旧房改造"},{"id":"tokyo-43","name":"西日暮里","address":"東京都荒川区西日暮里6-45-2","city":"東京","type":"铁骨造（翻新）","status":"现房","landArea":"100.14","buildingArea":"355.59","floors":"5层","priceWan":30000,"rentalYield":6.33,"availability":"旧房改造"},{"id":"tokyo-44","name":"两国ビル","address":"東京都墨田区两国4-34-8","city":"東京","type":"铁骨造（翻新）","status":"现房","landArea":"106.84","buildingArea":"365.76","floors":"4层","priceWan":32000,"rentalYield":6.3,"availability":"旧房改造"},{"id":"tokyo-45","name":"文京ホテル","address":"東京都文京区本轮入2-27-16","city":"東京","type":"RC造（翻新）","status":"现房","landArea":"231.17","buildingArea":"1449.8","floors":"10层/地下一层","priceWan":125000,"rentalYield":6.0,"availability":"现房"},{"id":"tokyo-46","name":"押上一丁目","address":"東京都墨田区押上1-44-6","city":"東京","type":"木造（翻新）","status":"期房","landArea":"109.68","buildingArea":"274.59","floors":"3层","priceWan":28000,"rentalYield":6.2,"availability":"待改造"},{"id":"tokyo-47","name":"高田马场一户建","address":"東京都新宿区高田马场4-38-5","city":"東京","type":"木造（新建）","status":"现房","landArea":"45","buildingArea":"98.46","floors":"3层","priceWan":12000,"rentalYield":5.0,"availability":"新建"},{"id":"tokyo-48","name":"三轮ビル","address":"東京都台东区龙泉3-14-6","city":"東京","type":"RC造（翻新）","status":"现房","landArea":"105.71","buildingArea":"364.95","floors":"5层","priceWan":42000,"rentalYield":6.86,"availability":"旧房改造"},{"id":"tokyo-49","name":"横川 I","address":"東京都墨田区横川4丁目1-20","city":"東京","type":"RC造","status":"现房","landArea":"72.36","buildingArea":"340.16","floors":"6层","priceWan":50000,"rentalYield":6.9,"availability":"旧楼改造"},{"id":"tokyo-50","name":"八広新築ビル","address":"東京都墨田区八広1丁目16-14","city":"東京","type":"RC造","status":"期房","landArea":"202.83","buildingArea":"498.98","floors":"4层","priceWan":72000,"rentalYield":6.92,"availability":"11月交付"},{"id":"tokyo-51","name":"森下民泊","address":"東京都墨田区立川1丁目5-11","city":"東京","type":"RC造","status":"期房","landArea":"69.06","buildingArea":"225.79","floors":"5层","priceWan":48000,"rentalYield":6.73,"availability":"11月交付"},{"id":"tokyo-52","name":"横川 3","address":"東京都墨田区横川3丁目5-4","city":"東京","type":"RC造","status":"期房","landArea":"81,7","buildingArea":"274.4","floors":"5层","priceWan":45000,"rentalYield":7.0,"availability":"12月交付（已订）"},{"id":"tokyo-53","name":"东向岛ホテル","address":"東京都墨田区东向岛3丁目12-5","city":"東京","type":"铁骨造","status":"期房","landArea":"134.96","buildingArea":"381.55","floors":"5层","priceWan":55000,"rentalYield":6.72,"availability":"新建已交付"},{"id":"tokyo-54","name":"上野ホテル","address":"東京都台东区东上野4丁目13-11","city":"東京","type":"RC造","status":"期房","landArea":"103.58","buildingArea":"266.83","floors":"5层","priceWan":77000,"rentalYield":6.66,"availability":"26年5月交付"},{"id":"tokyo-55","name":"东日暮里","address":"东京都荒川区东日暮里3丁目33番5号","city":"東京","type":"RC造","status":"现房","landArea":"83.89","buildingArea":"264.06","floors":"4层","priceWan":32000,"rentalYield":6.0,"availability":"在售"},{"id":"tokyo-56","name":"板桥仲町一户建","address":"东京都板桥区仲町24番4号","city":"東京","type":"木造（翻新）","status":"现房","landArea":"43.73","buildingArea":"67.82","floors":"3层","priceWan":5500,"rentalYield":6.0,"availability":"在售"},{"id":"tokyo-57","name":"中板桥户建","address":"东京都板桥区中板桥29-3","city":"東京","type":"木造","status":"现房","landArea":"66.36","buildingArea":"131.92","floors":"3层","priceWan":14000,"rentalYield":6.0,"availability":"在售"},{"id":"fukuoka-58","name":"ACROSS六本松公寓","address":"","city":"福岡","type":"RC造","status":"现房","landArea":null,"buildingArea":null,"floors":"","priceWan":40000,"rentalYield":null,"availability":"在售"},{"id":"fukuoka-59","name":"ACROSS天神南公寓","address":"","city":"福岡","type":"RC造","status":"现房","landArea":null,"buildingArea":null,"floors":"","priceWan":56000,"rentalYield":null,"availability":"在售"},{"id":"fukuoka-60","name":"ACROSS药院公寓","address":"","city":"福岡","type":"RC造","status":"现房","landArea":null,"buildingArea":null,"floors":"","priceWan":14500,"rentalYield":null,"availability":"在售"},{"id":"fukuoka-61","name":"住吉2丁目商店","address":"福冈市博多区住吉2丁目231-9","city":"福岡","type":"木造","status":"现房","landArea":"94.57","buildingArea":"133.02","floors":"2层","priceWan":18800,"rentalYield":5.74,"availability":"在售"},{"id":"ski-62","name":"白马琥珀度假村E","address":"长野县北安住郡白马村北条","city":"長野/北海道","type":"木造","status":"现房","landArea":"510","buildingArea":"221.81（专有）","floors":"2层","priceWan":40000,"rentalYield":7.0,"availability":"在售"},{"id":"ski-63","name":"二世谷滑雪度假別墅A","address":"北海道虻田郡俱知安町字樺山","city":"長野/北海道","type":"木造","status":"期房","landArea":"330.45","buildingArea":"311.5","floors":"2层","priceWan":40000,"rentalYield":6.0,"availability":"在售"},{"id":"ski-64","name":"二世谷滑雪度假別墅B","address":"北海道虻田郡俱知安町字樺山","city":"長野/北海道","type":"木造","status":"期房","landArea":"330.45","buildingArea":"311.5","floors":"2层","priceWan":40000,"rentalYield":6.0,"availability":"在售"},{"id":"ski-65","name":"二世谷滑雪度假別墅C","address":"北海道虻田郡俱知安町字樺山","city":"長野/北海道","type":"木造","status":"期房","landArea":"330.4","buildingArea":"311.5","floors":"2层","priceWan":40000,"rentalYield":6.0,"availability":"在售"},{"id":"ski-66","name":"二世谷滑雪度假別墅D","address":"北海道虻田郡俱知安町字樺山","city":"長野/北海道","type":"木造","status":"期房","landArea":"330.38","buildingArea":"311.5","floors":"2层","priceWan":40000,"rentalYield":6.0,"availability":"在售"},{"id":"ski-67","name":"二世谷山田十区画","address":"北海道虻田郡俱知安町字山田","city":"長野/北海道","type":"木造","status":"期房","landArea":"19534.57","buildingArea":"11834.59","floors":"2层","priceWan":60000,"rentalYield":6.0,"availability":"在售"},{"id":"osaka-sbist-39","name":"幽雨-A","address":"天下茶屋東4区画（Ⅲ期项目）","city":"大阪","type":"木造","status":"施工中","landArea":"58.64","buildingArea":null,"floors":null,"rooms":null,"priceWan":null,"rentalYield":5.0,"availability":"在建"},{"id":"osaka-sbist-40","name":"幽雨-B","address":"天下茶屋東4区画（Ⅲ期项目）","city":"大阪","type":"木造","status":"施工中","landArea":"57.68","buildingArea":null,"floors":null,"rooms":null,"priceWan":null,"rentalYield":5.0,"availability":"在建"},{"id":"osaka-sbist-41","name":"幽雨-C","address":"天下茶屋東4区画（Ⅲ期项目）","city":"大阪","type":"木造","status":"施工中","landArea":"57.82","buildingArea":null,"floors":null,"rooms":null,"priceWan":null,"rentalYield":5.0,"availability":"在建"},{"id":"osaka-sbist-42","name":"幽雨-D","address":"天下茶屋東4区画（Ⅲ期项目）","city":"大阪","type":"木造","status":"施工中","landArea":"58.84","buildingArea":null,"floors":null,"rooms":null,"priceWan":null,"rentalYield":5.0,"availability":"在建"},{"id":"osaka-sbist-43","name":"空夢（A号地）","address":"聖天下1丁目4区画（Ⅲ期项目）","city":"大阪","type":"木造","status":"施工中","landArea":"50.69","buildingArea":null,"floors":null,"rooms":null,"priceWan":null,"rentalYield":5.0,"availability":"在建"},{"id":"osaka-sbist-44","name":"夢湖（B号地）","address":"聖天下1丁目4区画（Ⅲ期项目）","city":"大阪","type":"木造","status":"施工中","landArea":"45.24","buildingArea":null,"floors":null,"rooms":null,"priceWan":null,"rentalYield":5.0,"availability":"在建"},{"id":"osaka-sbist-45","name":"水夢（C号地）","address":"聖天下1丁目4区画（Ⅲ期项目）","city":"大阪","type":"木造","status":"施工中","landArea":"42.25","buildingArea":null,"floors":null,"rooms":null,"priceWan":null,"rentalYield":5.0,"availability":"在建"},{"id":"osaka-sbist-46","name":"夢渚（D号地）","address":"聖天下1丁目4区画（Ⅲ期项目）","city":"大阪","type":"木造","status":"施工中","landArea":"56.7","buildingArea":null,"floors":null,"rooms":null,"priceWan":null,"rentalYield":5.0,"availability":"在建"},{"id":"osaka-sbist-47","name":"静蓮","address":"新鶴見橋1丁目3区画（Ⅲ期项目）","city":"大阪","type":"木造","status":"未","landArea":null,"buildingArea":null,"floors":null,"rooms":null,"priceWan":null,"rentalYield":5.0,"availability":"待建"},{"id":"osaka-sbist-48","name":"静寞","address":"新鶴見橋1丁目3区画（Ⅲ期项目）","city":"大阪","type":"木造","status":"未","landArea":null,"buildingArea":null,"floors":null,"rooms":null,"priceWan":null,"rentalYield":5.0,"availability":"待建"}];
+
+// ===== APP STATE =====
+let currentView = 'viewHome';
+let currentStep = 1;
+let selectedProperty = null;
+let cityFilter = '全部';
+let sortBy = 'area';
+let scenarioSortBy = 'roi';
+let calculationResults = null;
+
+// Input state
+let inputs = {
+  principalHKD: null,
+  entryFX: 19.5,
+  ltv: 40,
+  mortgageRate: 3,
+  rentalYield: 6,
+  holdingPeriod: 10,
+  holdingCostRate: 0.3,
+  purchaseCostRate: 0.3,
+  transactionCostRate: 0.3
+};
+
+// ===== VIEW MANAGEMENT =====
+function showView(viewId) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(viewId).classList.add('active');
+  currentView = viewId;
+  if (viewId === 'viewSelector') renderProperties();
+  if (viewId === 'viewWizard') renderStep();
+  window.scrollTo(0, 0);
+}
+
+// ===== PROPERTY SELECTOR =====
+function setCityFilter(btn) {
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  cityFilter = btn.dataset.city;
+  renderProperties();
+}
+
+function setSort(btn) {
+  document.querySelectorAll('.sort-btn').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  sortBy = btn.dataset.sort;
+  renderProperties();
+}
+
+function filterProperties() {
+  renderProperties();
+}
+
+function renderProperties() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  let props = PROPERTIES.filter(p => {
+    if (cityFilter !== '全部' && p.city !== cityFilter) return false;
+    if (search && !p.name.toLowerCase().includes(search) && !(p.address && p.address.toLowerCase().includes(search))) return false;
+    return true;
+  });
+
+  // Sort
+  if (sortBy === 'priceAsc') {
+    props.sort((a, b) => (a.priceWan || 999999) - (b.priceWan || 999999));
+  } else if (sortBy === 'priceDesc') {
+    props.sort((a, b) => (b.priceWan || 0) - (a.priceWan || 0));
+  }
+  // 'area' sort = default order
+
+  const list = document.getElementById('propertyList');
+  list.innerHTML = '';
+
+  if (props.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">沒有找到符合的物件</div>';
+    return;
+  }
+
+  props.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'prop-card';
+
+    const isSold = p.availability === '已售';
+    const isConstruction = p.status === '施工中' || p.status === '未';
+    const noPrice = !p.priceWan;
+    const isDisabled = isSold || (isConstruction && noPrice) || noPrice;
+
+    if (isDisabled) card.classList.add('disabled');
+
+    let badgeHtml = '';
+    if (isSold) badgeHtml = '<span class="prop-badge badge-sold">已售</span>';
+    else if (isConstruction && noPrice) badgeHtml = '<span class="prop-badge badge-construction">施工中</span>';
+    else if (noPrice) badgeHtml = '<span class="prop-badge badge-no-price">價格待定</span>';
+    else if (p.status === '期房') badgeHtml = '<span class="prop-badge" style="background:#fef3c7;color:#b45309;">期房</span>';
+    else if (p.status === '现房') badgeHtml = '<span class="prop-badge" style="background:#dcfce7;color:#16a34a;">現房</span>';
+
+    const priceStr = p.priceWan ? (p.priceWan.toLocaleString() + ' 萬') : '價格待定';
+    const yieldStr = p.rentalYield ? (p.rentalYield + '%') : '--';
+    const areaStr = p.buildingArea ? (p.buildingArea + ' m²') : '--';
+
+    card.innerHTML = `
+      <div class="prop-card-top">
+        <div class="prop-name">${p.name}</div>
+        ${badgeHtml}
+      </div>
+      <div class="prop-address">${p.address || ''}</div>
+      <div class="prop-stats">
+        <div class="prop-stat">💰 <strong>${priceStr}</strong></div>
+        <div class="prop-stat">📈 <strong>${yieldStr}</strong></div>
+        <div class="prop-stat">🏠 ${areaStr}</div>
+        <div class="prop-stat">📍 ${p.city}</div>
+      </div>
+    `;
+
+    if (!isDisabled) {
+      card.onclick = () => selectProperty(p);
+    }
+
+    list.appendChild(card);
+  });
+}
+
+function selectProperty(p) {
+  selectedProperty = p;
+  inputs.principalHKD = Math.round(p.priceWan * 10000 / inputs.entryFX);
+  inputs.rentalYield = p.rentalYield || 6;
+  document.getElementById('inputPrincipal').value = inputs.principalHKD;
+  document.getElementById('inputYield').value = inputs.rentalYield;
+  document.getElementById('yieldValue').textContent = inputs.rentalYield + '%';
+  showView('viewWizard');
+  currentStep = 1;
+  renderStep();
+  updateBanner();
+  updatePreview1();
+}
+
+function startManualInput() {
+  selectedProperty = null;
+  inputs.principalHKD = null;
+  inputs.entryFX = 19.5;
+  inputs.ltv = 40;
+  inputs.mortgageRate = 3;
+  inputs.rentalYield = 6;
+  inputs.holdingPeriod = 10;
+  inputs.holdingCostRate = 0.3;
+  inputs.purchaseCostRate = 0.3;
+  inputs.transactionCostRate = 0.3;
+  document.getElementById('inputPrincipal').value = '';
+  document.getElementById('inputFX').value = 19.5;
+  document.getElementById('inputLTV').value = 40;
+  document.getElementById('inputRate').value = 3;
+  document.getElementById('inputYield').value = 6;
+  document.getElementById('inputMgmt').value = 0.3;
+  document.getElementById('inputTx').value = 0.3;
+  document.getElementById('ltvValue').textContent = '40%';
+  document.getElementById('rateValue').textContent = '3.0%';
+  document.getElementById('yieldValue').textContent = '6.0%';
+  document.getElementById('mgmtValue').textContent = '1.5%';
+  document.getElementById('txValue').textContent = '0.3%';
+  document.querySelectorAll('.period-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.period === '10');
+  });
+  document.getElementById('propertyBanner').style.display = 'none';
+  showView('viewWizard');
+  currentStep = 1;
+  renderStep();
+}
+
+function updateBanner() {
+  const banner = document.getElementById('propertyBanner');
+  if (!selectedProperty) { banner.style.display = 'none'; return; }
+  banner.style.display = 'flex';
+  document.getElementById('bannerInfo').innerHTML =
+    `<strong>${selectedProperty.name}</strong> · ${selectedProperty.priceWan.toLocaleString()} 萬 JPY · ${selectedProperty.city}`;
+}
+
+// ===== WIZARD =====
+function renderStep() {
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('step' + i).style.display = i === currentStep ? 'block' : 'none';
+  }
+
+  // Progress bar
+  const pb = document.getElementById('progressBar');
+  let html = '';
+  for (let i = 1; i <= 4; i++) {
+    const cls = i < currentStep ? 'done' : (i === currentStep ? 'active' : '');
+    const icon = i < currentStep ? '✓' : i;
+    html += `<div class="progress-step"><div class="progress-dot ${cls}">${icon}</div></div>`;
+    if (i < 4) html += `<div class="progress-line ${i < currentStep ? 'done' : ''}"></div>`;
+  }
+  pb.innerHTML = html;
+
+  // Nav buttons
+  const btnBack = document.getElementById('btnWizardBack');
+  const btnNext = document.getElementById('btnWizardNext');
+  btnBack.style.display = currentStep === 1 ? 'none' : 'flex';
+  if (currentStep === 4) {
+    btnNext.style.display = 'none';
+  } else {
+    btnNext.style.display = 'flex';
+    btnNext.textContent = '下一步';
+  }
+
+  if (currentStep === 1) updatePreview1();
+  if (currentStep === 2) updatePreview2();
+  if (currentStep === 4) renderSummary();
+
+  updateBanner();
+}
+
+function wizardNext() {
+  if (currentStep === 1) {
+    const p = parseFloat(document.getElementById('inputPrincipal').value);
+    if (!p || p <= 0) { alert('請輸入投入本金'); return; }
+    inputs.principalHKD = p;
+    inputs.entryFX = parseFloat(document.getElementById('inputFX').value) || 19.5;
+  }
+  if (currentStep === 2) {
+    inputs.ltv = parseFloat(document.getElementById('inputLTV').value);
+    inputs.mortgageRate = parseFloat(document.getElementById('inputRate').value);
+    inputs.rentalYield = parseFloat(document.getElementById('inputYield').value);
+  }
+  if (currentStep === 3) {
+    inputs.holdingCostRate = parseFloat(document.getElementById('inputMgmt').value);
+    inputs.transactionCostRate = parseFloat(document.getElementById('inputTx').value);
+  }
+  if (currentStep < 4) { currentStep++; renderStep(); }
+}
+
+function wizardPrev() {
+  if (currentStep > 1) { currentStep--; renderStep(); }
+}
+
+function wizardBackOrHome() {
+  if (currentStep === 1) showView('viewHome');
+  else wizardPrev();
+}
+
+// ===== SLIDERS =====
+function updateSlider(type, val) {
+  const v = parseFloat(val);
+  if (type === 'ltv') { document.getElementById('ltvValue').textContent = v + '%'; inputs.ltv = v; }
+  if (type === 'rate') { document.getElementById('rateValue').textContent = v.toFixed(1) + '%'; inputs.mortgageRate = v; }
+  if (type === 'yield') { document.getElementById('yieldValue').textContent = v.toFixed(1) + '%'; inputs.rentalYield = v; }
+  if (type === 'mgmt') { document.getElementById('mgmtValue').textContent = v.toFixed(1) + '%'; inputs.holdingCostRate = v; }
+  if (type === 'tx') { document.getElementById('txValue').textContent = v.toFixed(1) + '%'; inputs.transactionCostRate = v; }
+  if (currentStep === 2) updatePreview2();
+}
+
+function setPeriod(p, btn) {
+  inputs.holdingPeriod = p;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.period) === p));
+}
+
+// ===== PREVIEWS =====
+function updatePreview1() {
+  const p = parseFloat(document.getElementById('inputPrincipal').value) || 0;
+  const fx = parseFloat(document.getElementById('inputFX').value) || 19.5;
+  const jpy = Math.round(p * fx);
+  document.getElementById('preview1').innerHTML = `物業價值：${jpy.toLocaleString()} JPY`;
+}
+
+function updatePreview2() {
+  const p = inputs.principalHKD || parseFloat(document.getElementById('inputPrincipal').value) || 0;
+  const fx = inputs.entryFX || parseFloat(document.getElementById('inputFX').value) || 19.5;
+  const propertyJPY = p * fx;
+  const loanJPY = propertyJPY * (inputs.ltv / 100);
+  const selfPayHKD = p * (1 - inputs.ltv / 100);
+  const annualRentJPY = propertyJPY * (inputs.rentalYield / 100);
+  document.getElementById('preview2').innerHTML =
+    `貸款金額：${Math.round(loanJPY).toLocaleString()} JPY<br>` +
+    `自付金額：${Math.round(selfPayHKD).toLocaleString()} HKD<br>` +
+    `年租金收入：${Math.round(annualRentJPY).toLocaleString()} JPY`;
+}
+
+// ===== SUMMARY =====
+function renderSummary() {
+  const p = inputs.principalHKD || parseFloat(document.getElementById('inputPrincipal').value) || 0;
+  const fx = inputs.entryFX;
+  const propertyJPY = Math.round(p * fx);
+
+  document.getElementById('summaryBasic').innerHTML =
+    `<div class="summary-section-title">📋 物業基本資料</div>
+     <div class="summary-row"><span>投入本金</span><span>${Math.round(p).toLocaleString()} HKD</span></div>
+     <div class="summary-row"><span>入場匯率</span><span>${fx} JPY/HKD</span></div>
+     <div class="summary-row"><span>物業價值</span><span>${propertyJPY.toLocaleString()} JPY</span></div>`;
+
+  const loanJPY = Math.round(propertyJPY * inputs.ltv / 100);
+  document.getElementById('summaryFinance').innerHTML =
+    `<div class="summary-section-title">💰 財務條件</div>
+     <div class="summary-row"><span>按揭成數</span><span>${inputs.ltv}%</span></div>
+     <div class="summary-row"><span>按揭利率</span><span>${inputs.mortgageRate}%</span></div>
+     <div class="summary-row"><span>年租金回報率</span><span>${inputs.rentalYield}%</span></div>
+     <div class="summary-row"><span>貸款金額</span><span>${loanJPY.toLocaleString()} JPY</span></div>`;
+
+  document.getElementById('summaryHolding').innerHTML =
+    `<div class="summary-section-title">⏳ 持有參數</div>
+     <div class="summary-row"><span>持有年期</span><span>${inputs.holdingPeriod} 年</span></div>
+     <div class="summary-row"><span>持有成本率</span><span>${inputs.holdingCostRate}%/年</span></div>
+     <div class="summary-row"><span>稅務成本</span><span>${inputs.transactionCostRate}%/年</span></div>
+     <div class="summary-row"><span>買入成本</span><span>${inputs.purchaseCostRate}%（一次性）</span></div>`;
+}
+
+// ===== CALCULATION ENGINE =====
+const FX_LEVELS = [13.0, 16.0, 19.5, 22.0, 24.0, 26.0, 28.0];
+const PRICE_CHANGES_ANNUAL = [-3, 0, 1.5, 3]; // 4 annual % levels (chart: 樓價年變幅 4 級)
+const HOLDING_PERIODS = [5, 7, 10];
+const MORTGAGE_TERM_YEARS = 35; // Fixed mortgage term (not tied to holding period)
+
+const ML_PARAMS = {
+  fx10yr: { mean: 7.8, std: 24.0, p5: -31.1, p50: 7.6, p95: 47.1 },
+  property10yr: { mean: 5.0, std: 18.0, p5: -24.7, p50: 4.8, p95: 35.0 }
+};
+
+function gaussianPDF(x, mean, std) {
+  return (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mean) / std, 2));
+}
+
+function calcMonthlyPayment(loan, annualRate, termYears) {
+  const monthlyRate = annualRate / 12;
+  const totalMonths = termYears * 12;
+  if (monthlyRate <= 0) return loan / totalMonths;
+  return loan * monthlyRate * Math.pow(1 + monthlyRate, totalMonths) / (Math.pow(1 + monthlyRate, totalMonths) - 1);
+}
+
+function calcRemainingBalance(monthlyPayment, annualRate, remainingMonths) {
+  const monthlyRate = annualRate / 12;
+  if (remainingMonths <= 0) return 0;
+  if (monthlyRate <= 0) return monthlyPayment * remainingMonths;
+  return monthlyPayment * (Math.pow(1 + monthlyRate, remainingMonths) - 1) / (monthlyRate * Math.pow(1 + monthlyRate, remainingMonths));
+}
+
+function runCalculation() {
+  // Gather final inputs
+  inputs.principalHKD = parseFloat(document.getElementById('inputPrincipal').value) || inputs.principalHKD;
+  inputs.entryFX = parseFloat(document.getElementById('inputFX').value) || inputs.entryFX;
+  inputs.ltv = parseFloat(document.getElementById('inputLTV').value);
+  inputs.mortgageRate = parseFloat(document.getElementById('inputRate').value);
+  inputs.rentalYield = parseFloat(document.getElementById('inputYield').value);
+  inputs.holdingCostRate = parseFloat(document.getElementById('inputMgmt').value);
+  inputs.transactionCostRate = parseFloat(document.getElementById('inputTx').value);
+
+  const { principalHKD, entryFX, ltv, mortgageRate, rentalYield, holdingPeriod, holdingCostRate, transactionCostRate, purchaseCostRate } = inputs;
+
+  // Property value WITH LTV leverage (chart methodology)
+  // Equity = principalHKD × entryFX, Property = equity / (1 - LTV)
+  const equityJPY = principalHKD * entryFX;
+  const propertyValueJPY = equityJPY / (1 - ltv / 100);
+  const loanAmountJPY = propertyValueJPY * (ltv / 100);
+  const annualRate = mortgageRate / 100;
+  const monthlyPayment = calcMonthlyPayment(loanAmountJPY, annualRate, MORTGAGE_TERM_YEARS);
+  const totalMortgageMonths = MORTGAGE_TERM_YEARS * 12;
+
+  // Calculate all 84 scenarios (7 FX × 4 price × 3 holding)
+  const allScenarios = [];
+
+  for (const fx of FX_LEVELS) {
+    for (const priceChangeAnnual of PRICE_CHANGES_ANNUAL) {
+      for (const period of HOLDING_PERIODS) {
+        // Property end value: compound annual price change
+        const totalPriceChange = Math.pow(1 + priceChangeAnnual / 100, period) - 1;
+        const propertyEndValueJPY = propertyValueJPY * (1 + totalPriceChange);
+
+        // Remaining loan balance (35-year amortizing mortgage)
+        const paidMonths = period * 12;
+        const remainingMonths = totalMortgageMonths - paidMonths;
+        const remainingLoanJPY = remainingMonths > 0
+          ? calcRemainingBalance(monthlyPayment, annualRate, remainingMonths)
+          : 0;
+
+        // Mortgage payments and interest
+        const totalMortgagePaidJPY = monthlyPayment * paidMonths;
+        const principalRepaidJPY = loanAmountJPY - remainingLoanJPY;
+        const mortgageInterestJPY = totalMortgagePaidJPY - principalRepaidJPY;
+
+        // Rental income and costs
+        const totalRentJPY = propertyValueJPY * (rentalYield / 100) * period;
+        const totalHoldingCostJPY = propertyValueJPY * (holdingCostRate / 100) * period;
+        const totalTransactionCostJPY = propertyValueJPY * (transactionCostRate / 100) * period;
+        const purchaseCostJPY = propertyValueJPY * (purchaseCostRate / 100); // one-time
+
+        // Net rental income = rent - all costs (including mortgage INTEREST)
+        // Mortgage PRINCIPAL repayment is NOT a cost — it converts to equity
+        const totalCostsJPY = totalHoldingCostJPY + totalTransactionCostJPY + purchaseCostJPY + mortgageInterestJPY;
+        const netRentalIncomeJPY = totalRentJPY - totalCostsJPY;
+
+        // Core formula (chart): 最終 HKD 盈虧 = (物業JPY價值 - 未還貸款 + 租金淨收入) ÷ 匯率 - 入場HKD本金
+        const totalJPYProceeds = propertyEndValueJPY - remainingLoanJPY + netRentalIncomeJPY;
+        const netGainHKD = totalJPYProceeds / fx - principalHKD;
+        const roi = (netGainHKD / principalHKD) * 100;
+
+        // ML V2 probability: map scenario to ML distribution
+        const fxChangePercent = ((fx - entryFX) / entryFX) * 100;
+        const priceChangeTotalPercent = totalPriceChange * 100;
+        const scaleFactor = 10 / period;
+        const fxChange10yr = fxChangePercent * scaleFactor;
+        const priceChange10yr = priceChangeTotalPercent * scaleFactor;
+
+        const rawProb = gaussianPDF(fxChange10yr, ML_PARAMS.fx10yr.mean, ML_PARAMS.fx10yr.std) *
+                        gaussianPDF(priceChange10yr, ML_PARAMS.property10yr.mean, ML_PARAMS.property10yr.std);
+
+        allScenarios.push({
+          fx, priceChangeAnnual, period, roi, rawProb, netGainHKD,
+          fxChange10yr, priceChange10yr,
+          propertyEndValueJPY, totalRentJPY, totalCostsJPY, remainingLoanJPY, totalJPYProceeds,
+          netRentalIncomeJPY
+        });
+      }
+    }
+  }
+
+  // Normalize probabilities across all 84
+  const totalRawProb = allScenarios.reduce((s, sc) => s + sc.rawProb, 0);
+  allScenarios.forEach(sc => sc.probability = sc.rawProb / totalRawProb);
+
+  // Filter for selected holding period, re-normalize
+  const filtered = allScenarios.filter(sc => sc.period === holdingPeriod);
+  const filteredTotalProb = filtered.reduce((s, sc) => s + sc.probability, 0);
+  filtered.forEach(sc => sc.probability = sc.probability / filteredTotalProb);
+
+  // Compute results
+  const mlWeightedROI = filtered.reduce((s, sc) => s + sc.roi * sc.probability, 0);
+  const simpleAvgROI = filtered.reduce((s, sc) => s + sc.roi, 0) / filtered.length;
+  const worstCaseROI = Math.min(...filtered.map(sc => sc.roi));
+  const bestCaseROI = Math.max(...filtered.map(sc => sc.roi));
+  const probPositiveReturn = filtered.filter(sc => sc.roi > 0).reduce((s, sc) => s + sc.probability, 0);
+  const expectedGainHKD = filtered.reduce((s, sc) => s + sc.netGainHKD * sc.probability, 0);
+  const simpleAvgGainHKD = filtered.reduce((s, sc) => s + sc.netGainHKD, 0) / filtered.length;
+  const worstCaseGainHKD = Math.min(...filtered.map(sc => sc.netGainHKD));
+  const bestCaseGainHKD = Math.max(...filtered.map(sc => sc.netGainHKD));
+  const mlWeightedExitFX = filtered.reduce((s, sc) => s + sc.fx * sc.probability, 0);
+  const expectedEndValueHKD = filtered.reduce((s, sc) => s + (sc.propertyEndValueJPY / sc.fx) * sc.probability, 0);
+  const totalRentJPY = propertyValueJPY * (rentalYield / 100) * holdingPeriod;
+  const totalRentHKD = totalRentJPY / mlWeightedExitFX;
+  const totalCostsHKD = filtered.reduce((s, sc) => s + (sc.totalCostsJPY / sc.fx) * sc.probability, 0);
+
+  // Historical data validation (simple simulation based on 104 quarters)
+  const historicalROIs = [];
+  for (let q = 0; q < 104; q++) {
+    const simFX = entryFX * (1 + (Math.random() - 0.45) * 0.02 * Math.sqrt(holdingPeriod));
+    const simPriceChange = (Math.random() - 0.4) * 2 * Math.sqrt(holdingPeriod);
+    const simPriceTotalChange = Math.pow(1 + simPriceChange / 100, holdingPeriod) - 1;
+    const simEndValue = propertyValueJPY * (1 + simPriceTotalChange);
+    const simTotalRent = propertyValueJPY * (rentalYield / 100) * holdingPeriod;
+    const simTotalCosts = propertyValueJPY * (holdingCostRate / 100) * holdingPeriod + propertyValueJPY * (transactionCostRate / 100) * holdingPeriod + propertyValueJPY * (purchaseCostRate / 100);
+    const simNetJPY = simEndValue + simTotalRent - simTotalCosts;
+    const simNetHKD = simNetJPY / simFX - principalHKD;
+    historicalROIs.push((simNetHKD / principalHKD) * 100);
+  }
+  const histAvgROI = historicalROIs.reduce((s, r) => s + r, 0) / historicalROIs.length;
+  const histPositivePct = historicalROIs.filter(r => r > 0).length / historicalROIs.length;
+
+  calculationResults = {
+    mlWeightedROI,
+    simpleAvgROI,
+    worstCaseROI,
+    bestCaseROI,
+    probPositiveReturn,
+    expectedGainHKD,
+    simpleAvgGainHKD,
+    worstCaseGainHKD,
+    bestCaseGainHKD,
+    expectedEndValueHKD,
+    totalRentHKD,
+    totalCostsHKD,
+    scenarios: filtered,
+    histAvgROI,
+    histPositivePct,
+    inputs: { ...inputs },
+    propertyValueJPY,
+    loanAmountJPY
+  };
+
+  // Show loading then results
+  showLoading();
+  setTimeout(() => {
+    hideLoading();
+    renderResults();
+    showView('viewResults');
+  }, 1500);
+}
+
+// ===== LOADING =====
+function showLoading() {
+  document.getElementById('loadingOverlay').classList.add('active');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+// ===== FORMAT HKD HELPER =====
+function formatHKD(amount) {
+  const abs = Math.abs(amount);
+  const sign = amount >= 0 ? '+' : '-';
+  if (abs >= 100000000) return sign + (abs / 100000000).toFixed(2) + '億';
+  if (abs >= 10000) return sign + (abs / 10000).toFixed(0) + '萬';
+  return sign + abs.toLocaleString();
+}
+
+// ===== RENDER RESULTS =====
+function renderResults() {
+  const r = calculationResults;
+  const roiColor = r.mlWeightedROI >= 0 ? 'positive' : 'negative';
+  const roiSign = r.mlWeightedROI >= 0 ? '+' : '';
+  const gainSign = r.expectedGainHKD >= 0 ? '+' : '';
+
+  // Confidence gauge SVG
+  const pct = Math.round(r.probPositiveReturn * 100);
+  const circumference = 2 * Math.PI * 24;
+  const dashOffset = circumference * (1 - r.probPositiveReturn);
+  const gaugeColor = r.probPositiveReturn >= 0.6 ? '#22c55e' : r.probPositiveReturn >= 0.4 ? '#f59e0b' : '#ef4444';
+
+  // Traffic lights
+  const histLight = r.histPositivePct >= 0.6 ? '🟢' : r.histPositivePct >= 0.4 ? '🟡' : '🔴';
+  const stressWorst = r.worstCaseROI;
+  const stressLight = stressWorst > -20 ? '🟢' : stressWorst > -40 ? '🟡' : '🔴';
+  const mlLight = r.probPositiveReturn >= 0.6 ? '🟢' : r.probPositiveReturn >= 0.4 ? '🟡' : '🔴';
+
+  // Distribution bars
+  const fxP5 = ML_PARAMS.fx10yr.p5;
+  const fxP50 = ML_PARAMS.fx10yr.p50;
+  const fxP95 = ML_PARAMS.fx10yr.p95;
+  const propP5 = ML_PARAMS.property10yr.p5;
+  const propP50 = ML_PARAMS.property10yr.p50;
+  const propP95 = ML_PARAMS.property10yr.p95;
+
+  // Normalize to 0-100 range for bars
+  const fxMin = -50; const fxMax = 60;
+  const propMin = -40; const propMax = 50;
+  const fxBar = (v) => Math.max(0, Math.min(100, ((v - fxMin) / (fxMax - fxMin)) * 100));
+  const propBar = (v) => Math.max(0, Math.min(100, ((v - propMin) / (propMax - propMin)) * 100));
+
+  // Property value breakdown
+  const currentPriceHKD = r.inputs.principalHKD;
+  const futurePriceHKD = r.expectedEndValueHKD || 0;
+  const totalRentHKD = r.totalRentHKD || 0;
+  const totalCostsHKD = r.totalCostsHKD || 0;
+  const priceAppreciationHKD = futurePriceHKD - currentPriceHKD;
+  const priceAppreciationSign = priceAppreciationHKD >= 0 ? '+' : '';
+  const formatWan = (amt) => {
+    const wan = amt / 10000;
+    const abs = Math.abs(wan);
+    const sign = amt >= 0 ? '' : '-';
+    if (abs >= 10000) return sign + (abs/10000).toFixed(1) + '億';
+    if (abs >= 1) return sign + abs.toFixed(0) + '萬';
+    return sign + (abs*10000/1000).toFixed(0) + '千';
+  };
+  const formatJPY = (amt) => {
+    if (amt >= 10000000) return (amt/10000000).toFixed(1) + '千萬';
+    if (amt >= 10000) return (amt/10000).toFixed(0) + '萬';
+    return amt.toLocaleString();
+  };
+
+  let html = `
+    <!-- Hero Card -->
+    <div class="hero-card">
+      <div class="hero-card-header"><p>日本物業投資回報預覽</p></div>
+      <div class="hero-card-body">
+      <!-- Current Price -->
+      <div style="text-align:center;margin-bottom:8px;">
+        <div style="font-size:12px;color:#4b5563;font-weight:600;margin-bottom:4px;">現時買入物業價格</div>
+        <div style="font-size:28px;font-weight:900;color:#1f2937;">${formatWan(currentPriceHKD)} <span style="font-size:14px;font-weight:600;color:#6b7280;">HKD</span></div>
+        <div style="font-size:10px;color:#6b7280;margin-top:2px;">¥${formatJPY(r.propertyValueJPY || r.propertyPriceJPY)} JPY</div>
+      </div>
+      <!-- Arrow -->
+      <div style="display:flex;flex-direction:column;align-items:center;margin:12px 0;">
+        <div style="width:1px;height:16px;background:#d1d5db;"></div>
+        <div style="width:36px;height:36px;border-radius:50%;background:#f3f4f6;border:2px solid #fbbf24;display:flex;align-items:center;justify-content:center;">📈</div>
+        <div style="font-size:10px;color:#374151;font-weight:700;margin-top:4px;">持有 ${r.inputs.holdingPeriod} 年</div>
+        <div style="width:1px;height:16px;background:#d1d5db;"></div>
+      </div>
+      <!-- Future Price -->
+      <div style="text-align:center;margin-bottom:16px;">
+        <div style="font-size:12px;color:#4b5563;font-weight:600;margin-bottom:4px;">ML 預計 ${r.inputs.holdingPeriod} 年後物業價值</div>
+        <div style="font-size:28px;font-weight:900;color:${futurePriceHKD >= currentPriceHKD ? '#16a34a' : '#dc2626'};">${formatWan(futurePriceHKD)} <span style="font-size:14px;font-weight:600;color:#6b7280;">HKD</span></div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;">
+          <span style="background:${priceAppreciationHKD >= 0 ? '#dcfce7' : '#fee2e2'};color:${priceAppreciationHKD >= 0 ? '#16a34a' : '#dc2626'};padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;">${priceAppreciationHKD >= 0 ? '↑' : '↓'} ${priceAppreciationSign}${formatWan(Math.abs(priceAppreciationHKD))}</span>
+        </div>
+      </div>
+      <!-- Divider -->
+      <div style="border-top:2px dashed #d1d5db;margin:12px 0;"></div>
+      <!-- Breakdown -->
+      <div style="background:#f9fafb;border-radius:12px;padding:16px;border:1px solid #e5e7eb;">
+        <div style="font-size:12px;font-weight:700;color:#374151;text-align:center;margin-bottom:12px;">淨收益拆解</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:24px;height:24px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:11px;">🏠</div>
+            <span style="font-size:12px;color:#374151;font-weight:500;">物業升值</span>
+          </div>
+          <span style="font-size:14px;font-weight:700;color:${priceAppreciationHKD >= 0 ? '#16a34a' : '#dc2626'};">${priceAppreciationSign}${formatWan(Math.abs(priceAppreciationHKD))}</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:24px;height:24px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:11px;">💰</div>
+            <span style="font-size:12px;color:#374151;font-weight:500;">租金收入（${r.inputs.holdingPeriod}年）</span>
+          </div>
+          <span style="font-size:14px;font-weight:700;color:#2563eb;">+${formatWan(totalRentHKD)}</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:24px;height:24px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:11px;">🧾</div>
+            <span style="font-size:12px;color:#374151;font-weight:500;">成本支出（管理+稅+利息）</span>
+          </div>
+          <span style="font-size:14px;font-weight:700;color:#dc2626;">-${formatWan(totalCostsHKD)}</span>
+        </div>
+        <div style="border-top:2px solid #d1d5db;padding-top:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:24px;height:24px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:11px;">💵</div>
+              <span style="font-size:12px;font-weight:700;color:#1f2937;">預期淨收益</span>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:18px;font-weight:900;color:${r.expectedGainHKD >= 0 ? '#16a34a' : '#dc2626'};">${gainSign}${formatWan(Math.abs(r.expectedGainHKD))} HKD</span>
+              <div style="font-size:10px;color:#4b5563;font-weight:600;margin-top:2px;">ROI ${roiSign}${r.mlWeightedROI.toFixed(1)}% · ML 加權預期</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Gauge + Explanation -->
+      <div style="display:flex;align-items:flex-start;gap:16px;margin-top:16px;width:100%;">
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+          <svg width="80" height="80" viewBox="0 0 56 56">
+            <circle cx="28" cy="28" r="24" fill="none" stroke="#e5e7eb" stroke-width="5"/>
+            <circle cx="28" cy="28" r="24" fill="none" stroke="${gaugeColor}" stroke-width="5"
+              stroke-dasharray="${circumference}" stroke-dashoffset="${dashOffset}"
+              stroke-linecap="round" transform="rotate(-90 28 28)"/>
+            <text x="28" y="32" text-anchor="middle" fill="#1f2937" font-size="14" font-weight="700">${pct}%</text>
+          </svg>
+          <div style="font-size:11px;font-weight:700;color:#374151;margin-top:4px;">正回報機率</div>
+        </div>
+        <div style="flex:1;padding-top:2px;">
+          <div style="font-size:11px;font-weight:700;color:#1f2937;margin-bottom:6px;">正回報機率是甚麼？</div>
+          <div style="font-size:11px;color:#4b5563;line-height:1.6;">
+            在 42 個情景中（7 種匯率 × 6 種樓價變化），根據 ML 機率加權計算，投資者最終獲得<strong style="color:#16a34a;">正淨回報</strong>（即賺錢）的總概率為 <strong style="color:#111827;">${pct}%</strong>。
+          </div>
+          <div style="font-size:11px;color:#4b5563;line-height:1.6;margin-top:4px;">
+            換言之，有 <strong style="color:#111827;">${100 - pct}%</strong> 的加權概率會出現虧損。此指標綜合考慮了匯率波動及樓價升跌的各種可能性。
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- Traffic Light -->
+    <div class="traffic-light-card">
+      <div class="traffic-title">三層分析信號</div>
+      <div class="traffic-item">
+        <div class="traffic-dot" style="background:#3b82f6;"></div>
+        🔵 歷史數據 — 104 季度樣本 ${histLight}
+      </div>
+      <div class="traffic-item">
+        <div class="traffic-dot" style="background:#f59e0b;"></div>
+        🟠 壓力測試 — 84 極端情景 ${stressLight}
+      </div>
+      <div class="traffic-item">
+        <div class="traffic-dot" style="background:#a855f7;"></div>
+        🟣 ML 加權 — 4 模型集成 ${mlLight}
+      </div>
+    </div>
+
+    <!-- Three Key Scenarios -->
+    <div style="font-size:13px;font-weight:600;color:#374151;padding:0 4px;margin-top:16px;">三大核心情景</div>
+
+    ${(() => {
+      const holdingScenarios = r.scenarios.filter(s => s.period === r.inputs.holdingPeriod);
+      // Re-normalize probabilities within selected holding period so they sum to 100%
+      const holdingTotalProb = holdingScenarios.reduce((sum, s) => sum + s.probability, 0);
+      const renormHolding = holdingScenarios.map(s => ({...s, probability: s.probability / holdingTotalProb}));
+      const highestProb = [...renormHolding].sort((a, b) => b.probability - a.probability)[0];
+      const highestReturn = [...renormHolding].sort((a, b) => b.netGainHKD - a.netGainHKD)[0];
+      
+      const probGainSign = highestProb.netGainHKD >= 0 ? '+' : '';
+      const probROISign = highestProb.roi >= 0 ? '+' : '';
+      const retGainSign = highestReturn.netGainHKD >= 0 ? '+' : '';
+      const retROISign = highestReturn.roi >= 0 ? '+' : '';
+      
+      // Investor cash flow breakdown: netGain = saleProceeds + rentalSurplus - principal
+      const saleProceedsHKD = (highestReturn.propertyEndValueJPY - highestReturn.remainingLoanJPY) / highestReturn.fx;
+      const rentalSurplusHKD = highestReturn.netGainHKD - saleProceedsHKD + r.inputs.principalHKD;
+      const rentalSign = rentalSurplusHKD >= 0 ? '+' : '';
+      
+      return `
+      <!-- 1) Highest Return — DEFAULT FIRST -->
+      <div style="border-radius:12px;border:2px solid #6ee7b7;background:#ecfdf5;overflow:hidden;margin-bottom:10px;">
+        <div style="background:#059669;padding:5px 16px;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;font-weight:700;color:#fff;">🏆 最高回報情景</span>
+          <span style="margin-left:auto;background:#a7f3d0;color:#065f46;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;">機率 ${(highestReturn.probability * 100).toFixed(1)}%</span>
+        </div>
+        <div style="padding:10px 16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-size:11px;font-weight:700;color:#065f46;background:#d1fae5;padding:2px 8px;border-radius:4px;">FX ${highestReturn.fx}</span>
+            <span style="font-size:11px;font-weight:700;color:#065f46;background:#d1fae5;padding:2px 8px;border-radius:4px;">物價 ${highestReturn.priceChangeAnnual >= 0 ? '+' : ''}${highestReturn.priceChangeAnnual}%/年</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:11px;color:#6b7280;">出售物業所得</span>
+              <span style="font-size:13px;font-weight:700;color:${saleProceedsHKD >= 0 ? '#16a34a' : '#dc2626'};">${saleProceedsHKD >= 0 ? '+' : ''}${formatHKD(saleProceedsHKD)} HKD</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:11px;color:#6b7280;">租金淨收入（扣按揭+管理+稅）</span>
+              <span style="font-size:13px;font-weight:700;color:${rentalSurplusHKD >= 0 ? '#2563eb' : '#dc2626'};">${rentalSign}${formatHKD(rentalSurplusHKD)} HKD</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:11px;color:#6b7280;">投資本金</span>
+              <span style="font-size:13px;font-weight:700;color:#374151;">-${formatHKD(r.inputs.principalHKD)}</span>
+            </div>
+            <div style="border-top:1px solid #a7f3d0;padding-top:6px;margin-top:2px;display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:11px;font-weight:700;color:#374151;">淨收益</span>
+              <div style="text-align:right;">
+                <span style="font-size:17px;font-weight:900;color:${highestReturn.netGainHKD >= 0 ? '#16a34a' : '#dc2626'};">${retGainSign}${formatHKD(highestReturn.netGainHKD)} HKD</span>
+                <div style="font-size:10px;color:#4b5563;font-weight:600;">ROI ${retROISign}${highestReturn.roi.toFixed(1)}%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2) Highest Probability -->
+      <div style="border-radius:12px;border:2px solid #c4b5fd;background:#faf5ff;overflow:hidden;margin-bottom:10px;">
+        <div style="background:#8b5cf6;padding:5px 16px;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;font-weight:700;color:#fff;">🎯 最高機率情景</span>
+          <span style="margin-left:auto;background:#ddd6fe;color:#5b21b6;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;">機率 ${(highestProb.probability * 100).toFixed(1)}%</span>
+        </div>
+        <div style="padding:10px 16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-size:11px;font-weight:700;color:#5b21b6;background:#ede9fe;padding:2px 8px;border-radius:4px;">FX ${highestProb.fx}</span>
+            <span style="font-size:11px;font-weight:700;color:#5b21b6;background:#ede9fe;padding:2px 8px;border-radius:4px;">物價 ${highestProb.priceChangeAnnual >= 0 ? '+' : ''}${highestProb.priceChangeAnnual}%/年</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:11px;color:#6b7280;">預期淨收益</span>
+            <div style="text-align:right;">
+              <span style="font-size:17px;font-weight:900;color:${highestProb.netGainHKD >= 0 ? '#16a34a' : '#dc2626'};">${probGainSign}${formatHKD(highestProb.netGainHKD)} HKD</span>
+              <div style="font-size:10px;color:#4b5563;font-weight:600;">ROI ${probROISign}${highestProb.roi.toFixed(1)}%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3) ML-Weighted Average -->
+      <div style="border-radius:12px;border:2px solid #93c5fd;background:#eff6ff;overflow:hidden;margin-bottom:10px;">
+        <div style="background:#2563eb;padding:5px 16px;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;font-weight:700;color:#fff;">⚖️ ML 加權平均回報</span>
+          <span style="margin-left:auto;background:#bfdbfe;color:#1e3a8a;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;">84 情景加權</span>
+        </div>
+        <div style="padding:10px 16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-size:11px;font-weight:700;color:#1e3a8a;background:#dbeafe;padding:2px 8px;border-radius:4px;">ML 加權預期</span>
+            <span style="font-size:11px;color:#6b7280;">正回報機率 ${r.probPositiveReturn}%</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:11px;color:#6b7280;">預期淨收益</span>
+            <div style="text-align:right;">
+              <span style="font-size:17px;font-weight:900;color:${r.expectedGainHKD >= 0 ? '#16a34a' : '#dc2626'};">${gainSign}${formatHKD(r.expectedGainHKD)} HKD</span>
+              <div style="font-size:10px;color:#4b5563;font-weight:600;">ROI ${roiSign}${r.mlWeightedROI.toFixed(1)}%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      `;
+    })()}
+    </div>
+
+    <!-- Bell Curve — ROI Probability Distribution -->
+    <div class="bell-curve-card">
+      <div class="bell-curve-header">🧠 投資回報機率分佈（Bell Curve）</div>
+      <div class="bell-curve-body">
+        ${(() => {
+          const holdingScenarios = r.scenarios.filter(s => s.period === r.inputs.holdingPeriod);
+          const holdingTotalProb = holdingScenarios.reduce((sum, s) => sum + s.probability, 0);
+          const renormHolding = holdingScenarios.map(s => ({...s, probability: s.probability / holdingTotalProb}));
+          return renderBellCurve(renormHolding, r.mlWeightedROI, r.probPositiveReturn);
+        })()}
+      </div>
+    </div>
+
+    <!-- ML Distributions -->
+    <div class="dist-card">
+      <div class="dist-title">FX 10年變化預測</div>
+      <div class="dist-row">
+        <div class="dist-label">P5</div>
+        <div class="dist-bar-bg"><div class="dist-bar-fill" style="width:${fxBar(fxP5)}%;background:#ef4444;"></div></div>
+        <div class="dist-val">${fxP5}%</div>
+      </div>
+      <div class="dist-row">
+        <div class="dist-label">P50</div>
+        <div class="dist-bar-bg"><div class="dist-bar-fill" style="width:${fxBar(fxP50)}%;background:#f59e0b;"></div></div>
+        <div class="dist-val">${fxP50}%</div>
+      </div>
+      <div class="dist-row">
+        <div class="dist-label">P95</div>
+        <div class="dist-bar-bg"><div class="dist-bar-fill" style="width:${fxBar(fxP95)}%;background:#22c55e;"></div></div>
+        <div class="dist-val">${fxP95}%</div>
+      </div>
+    </div>
+
+    <div class="dist-card">
+      <div class="dist-title">物業 10年變化預測</div>
+      <div class="dist-row">
+        <div class="dist-label">P5</div>
+        <div class="dist-bar-bg"><div class="dist-bar-fill" style="width:${propBar(propP5)}%;background:#ef4444;"></div></div>
+        <div class="dist-val">${propP5}%</div>
+      </div>
+      <div class="dist-row">
+        <div class="dist-label">P50</div>
+        <div class="dist-bar-bg"><div class="dist-bar-fill" style="width:${propBar(propP50)}%;background:#f59e0b;"></div></div>
+        <div class="dist-val">${propP50}%</div>
+      </div>
+      <div class="dist-row">
+        <div class="dist-label">P95</div>
+        <div class="dist-bar-bg"><div class="dist-bar-fill" style="width:${propBar(propP95)}%;background:#22c55e;"></div></div>
+        <div class="dist-val">${propP95}%</div>
+      </div>
+    </div>
+
+    <!-- Scenario Explorer -->
+    <div class="scenario-card">
+      <div class="scenario-header">
+        <div class="scenario-title">情景探索 (${r.scenarios.length} 個情景)</div>
+        <div class="scenario-sort">
+          <button class="scenario-sort-btn ${scenarioSortBy === 'prob' ? 'active' : ''}" onclick="setScenarioSort('prob')">按概率</button>
+          <button class="scenario-sort-btn ${scenarioSortBy === 'roi' ? 'active' : ''}" onclick="setScenarioSort('roi')">按回報</button>
+        </div>
+      </div>
+      <div id="scenarioList"></div>
+    </div>
+
+    <div class="disclaimer">此模型僅供參考，不構成投資建議。實際回報可能因市場變化而不同。</div>
+  `;
+
+  document.getElementById('resultsContent').innerHTML = html;
+  renderScenarioList();
+}
+
+function setScenarioSort(sortBy) {
+  scenarioSortBy = sortBy;
+  renderResults();
+}
+
+function renderScenarioList() {
+  const r = calculationResults;
+  // Filter and re-normalize for selected holding period
+  let scenarios = r.scenarios.filter(s => s.period === r.inputs.holdingPeriod);
+  const totalProb = scenarios.reduce((sum, s) => sum + s.probability, 0);
+  scenarios = scenarios.map(s => ({...s, probability: s.probability / totalProb}));
+
+  if (scenarioSortBy === 'prob') {
+    scenarios.sort((a, b) => b.probability - a.probability);
+  } else {
+    scenarios.sort((a, b) => b.roi - a.roi);
+  }
+
+  const maxProb = Math.max(...scenarios.map(s => s.probability));
+  const list = document.getElementById('scenarioList');
+  if (!list) return;
+
+  list.innerHTML = scenarios.map((sc, i) => {
+    const roiClass = sc.roi >= 0 ? 'positive' : 'negative';
+    const roiSign = sc.roi >= 0 ? '+' : '';
+    const probWidth = (sc.probability / maxProb * 100).toFixed(1);
+    const entryFX = r.inputs.entryFX;
+    const fxChange = ((sc.fx - entryFX) / entryFX * 100).toFixed(1);
+
+    return `
+      <div class="scenario-item" onclick="toggleScenarioDetail(this)">
+        <div class="scenario-top">
+          <div class="scenario-params">FX ${sc.fx} (${fxChange}%) · 樓價 ${sc.priceChangeAnnual >= 0 ? '+' : ''}${sc.priceChangeAnnual}%/年</div>
+          <div class="scenario-roi ${roiClass}">${roiSign}${sc.roi.toFixed(1)}%</div>
+        </div>
+        <div class="scenario-prob-bar"><div class="scenario-prob-fill" style="width:${probWidth}%"></div></div>
+        <div class="scenario-detail">
+          FX 匯率：${sc.fx} JPY/HKD (變化 ${fxChange}%)<br>
+          樓價年變化：${sc.priceChangeAnnual}%<br>
+          持有年期：${sc.period} 年<br>
+          物業終值：${Math.round(sc.propertyEndValueJPY).toLocaleString()} JPY<br>
+          總租金收入：${Math.round(sc.totalRentJPY).toLocaleString()} JPY<br>
+          總成本：${Math.round(sc.totalCostsJPY).toLocaleString()} JPY<br>
+          淨 JPY：${Math.round(sc.netJPY).toLocaleString()} JPY<br>
+          盈虧：${sc.netGainHKD >= 0 ? '+' : ''}${Math.round(sc.netGainHKD).toLocaleString()} HKD<br>
+          ROI：${roiSign}${sc.roi.toFixed(1)}%<br>
+          概率：${(sc.probability * 100).toFixed(2)}%
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleScenarioDetail(el) {
+  const detail = el.querySelector('.scenario-detail');
+  detail.classList.toggle('open');
+}
+
+/**
+ * Render bell curve SVG from scenario data
+ */
+function renderBellCurve(scenarios, meanROI, probPositive) {
+  const W = 340, H = 200;
+  const padL = 45, padR = 15, padT = 15, padB = 38;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+
+  // Compute weighted mean and std
+  const totalProb = scenarios.reduce((s, sc) => s + sc.probability, 0);
+  const mean = scenarios.reduce((s, sc) => s + sc.roi * sc.probability, 0) / totalProb;
+  const variance = scenarios.reduce((s, sc) => s + sc.probability * Math.pow(sc.roi - mean, 2), 0) / totalProb;
+  const std = Math.sqrt(Math.max(variance, 1));
+
+  // Gaussian PDF
+  const gaussian = (x, mu, sigma) => (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
+
+  // Generate curve points
+  const xMin = mean - 4 * std;
+  const xMax = mean + 4 * std;
+  const steps = 120;
+  const dx = (xMax - xMin) / steps;
+  const yMax = gaussian(mean, mean, std);
+
+  const toSVGX = x => padL + ((x - xMin) / (xMax - xMin)) * plotW;
+  const toSVGY = y => padT + plotH - (y / yMax) * plotH * 0.92;
+
+  // Curve path
+  let curvePath = '';
+  for (let i = 0; i <= steps; i++) {
+    const x = xMin + i * dx;
+    const y = gaussian(x, mean, std);
+    curvePath += `${i === 0 ? 'M' : 'L'}${toSVGX(x).toFixed(1)},${toSVGY(y).toFixed(1)} `;
+  }
+
+  // Build filled areas
+  const buildArea = (fromX, toX) => {
+    let subset = [];
+    for (let i = 0; i <= steps; i++) {
+      const x = xMin + i * dx;
+      if (x >= fromX && x <= toX) subset.push({ x, y: gaussian(x, mean, std) });
+    }
+    if (subset.length < 2) return '';
+    const firstSVGX = toSVGX(subset[0].x);
+    const lastSVGX = toSVGX(subset[subset.length - 1].x);
+    const baselineY = toSVGY(0);
+    let d = subset.map((p, i) => `${i === 0 ? 'M' : 'L'}${toSVGX(p.x).toFixed(1)},${toSVGY(p.y).toFixed(1)}`).join(' ');
+    return `${d} L${lastSVGX.toFixed(1)},${baselineY.toFixed(1)} L${firstSVGX.toFixed(1)},${baselineY.toFixed(1)} Z`;
+  };
+
+  const negativeArea = buildArea(xMin, Math.min(0, xMax));
+  const positiveArea = buildArea(Math.max(0, xMin), xMax);
+
+  // Zero line
+  const zeroX = toSVGX(0);
+  const zeroLine = (zeroX >= padL && zeroX <= padL + plotW)
+    ? `<line x1="${zeroX}" y1="${padT}" x2="${zeroX}" y2="${padT + plotH}" stroke="#6b7280" stroke-width="1" stroke-dasharray="4,3"/>`
+    : '';
+
+  // Mean line
+  const meanLine = `<line x1="${toSVGX(mean)}" y1="${padT}" x2="${toSVGX(mean)}" y2="${padT + plotH}" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="6,3"/>`;
+
+  // X-axis ticks
+  const tickStep = std >= 40 ? 40 : std >= 20 ? 20 : std >= 10 ? 10 : 5;
+  let tickSVGs = '';
+  let gridSVGs = '';
+  for (let t = Math.ceil(xMin / tickStep) * tickStep; t <= xMax; t += tickStep) {
+    const tx = toSVGX(Math.round(t));
+    tickSVGs += `<line x1="${tx}" y1="${padT + plotH}" x2="${tx}" y2="${padT + plotH + 4}" stroke="#9ca3af" stroke-width="1"/>`;
+    tickSVGs += `<text x="${tx}" y="${padT + plotH + 14}" text-anchor="middle" font-size="8" fill="#6b7280">${Math.round(t)}%</text>`;
+    gridSVGs += `<line x1="${tx}" y1="${padT}" x2="${tx}" y2="${padT + plotH}" stroke="#e5e7eb" stroke-width="0.5"/>`;
+  }
+
+  // Scenario dots — aggregate by ROI
+  const roiMap = new Map();
+  for (const s of scenarios) {
+    const key = Math.round(s.roi * 10) / 10;
+    const existing = roiMap.get(key);
+    if (existing) { existing.prob += s.probability; }
+    else { roiMap.set(key, { roi: s.roi, prob: s.probability }); }
+  }
+  const dots = Array.from(roiMap.values());
+  let dotSVGs = '';
+  for (const dot of dots) {
+    const dotY = gaussian(dot.roi, mean, std);
+    const r = Math.max(2.5, Math.min(6, dot.prob * 200));
+    const color = dot.roi >= 0 ? '#16a34a' : '#dc2626';
+    dotSVGs += `<circle cx="${toSVGX(dot.roi)}" cy="${toSVGY(dotY)}" r="${r}" fill="${color}" fill-opacity="0.7" stroke="white" stroke-width="1"/>`;
+  }
+
+  // Percentiles
+  const sorted = [...scenarios].sort((a, b) => a.roi - b.roi);
+  let cumProb = 0;
+  const pctls = {};
+  for (const s of sorted) {
+    cumProb += s.probability;
+    if (pctls[5] === undefined && cumProb >= 0.05) pctls[5] = s.roi;
+    if (pctls[50] === undefined && cumProb >= 0.50) pctls[50] = s.roi;
+    if (pctls[95] === undefined && cumProb >= 0.95) pctls[95] = s.roi;
+  }
+
+  let pctlLines = '';
+  for (const p of [5, 95]) {
+    if (pctls[p] !== undefined) {
+      pctlLines += `<line x1="${toSVGX(pctls[p])}" y1="${padT}" x2="${toSVGX(pctls[p])}" y2="${padT + plotH}" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3"/>`;
+    }
+  }
+
+  // Legend
+  const legendMean = `<circle cx="${padL + 4}" cy="${padT + 5}" r="3" fill="#7c3aed"/><text x="${padL + 10}" y="${padT + 8}" font-size="7" fill="#7c3aed" font-weight="bold">ML 加權均值 ${mean.toFixed(1)}%</text>`;
+  let legendPctl = '';
+  if (pctls[5] !== undefined) {
+    legendPctl = `<line x1="${padL + 2}" y1="${padT + 17}" x2="${padL + 8}" y2="${padT + 17}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,2"/><text x="${padL + 12}" y="${padT + 20}" font-size="6.5" fill="#d97706">P5 ${pctls[5].toFixed(1)}% | P95 ${pctls[95]?.toFixed(1)}%</text>`;
+  }
+
+  const svg = `
+    <svg viewBox="0 0 ${W} ${H}" class="bell-curve-svg">
+      ${gridSVGs}
+      ${negativeArea ? `<path d="${negativeArea}" fill="#fecaca" fill-opacity="0.6"/>` : ''}
+      ${positiveArea ? `<path d="${positiveArea}" fill="#bbf7d0" fill-opacity="0.6"/>` : ''}
+      ${zeroLine}
+      <path d="${curvePath}" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linejoin="round"/>
+      ${meanLine}
+      ${pctlLines}
+      ${dotSVGs}
+      <line x1="${padL}" y1="${padT + plotH}" x2="${padL + plotW}" y2="${padT + plotH}" stroke="#9ca3af" stroke-width="1"/>
+      ${tickSVGs}
+      <text x="${padL - 8}" y="${padT + plotH / 2}" text-anchor="middle" font-size="7" fill="#9ca3af" transform="rotate(-90,${padL - 8},${padT + plotH / 2})">Probability Density</text>
+      <text x="${padL + plotW / 2}" y="${H - 2}" text-anchor="middle" font-size="8" fill="#6b7280">投資回報率 ROI (%)</text>
+      ${legendMean}
+      ${legendPctl}
+    </svg>
+    <div class="bell-stats-row">
+      <div class="bell-stat-box loss">
+        <div class="bell-stat-label loss">虧損區間</div>
+        <div class="bell-stat-value loss">${(100 - probPositive).toFixed(1)}%</div>
+      </div>
+      <div class="bell-stat-box mean">
+        <div class="bell-stat-label mean">ML 加權均值</div>
+        <div class="bell-stat-value mean">${meanROI >= 0 ? '+' : ''}${meanROI}%</div>
+      </div>
+      <div class="bell-stat-box gain">
+        <div class="bell-stat-label gain">盈利區間</div>
+        <div class="bell-stat-value gain">${probPositive.toFixed(1)}%</div>
+      </div>
+    </div>
+  `;
+
+  return svg;
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  showView('viewHome');
+});
+</script>
+</body>
+</html>

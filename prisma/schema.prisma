@@ -1,0 +1,186 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("director") // admin, director (unlimited directors for business expansion)
+  phone     String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders        Order[]
+  commissions   Commission[]
+  events        EventParticipant[]
+  notifications Notification[]
+  notices       Notice[]
+  referrals     Customer[]         @relation("Referrals")
+}
+
+model Product {
+  id                   String   @id @default(cuid())
+  name                 String
+  nameEn               String
+  emoji                String
+  description          String
+  descriptionEn        String
+  category             String // investment, immigration, fund, trust, corporate, technology, legal, education
+  priceMin             Float
+  priceMax             Float
+  currency             String   @default("HKD")
+  commissionRate       Float    @default(0)
+  commissionFixed      Float    @default(0)
+  commissionNegotiable Boolean  @default(false) // true = show "另議" on card
+  parentId             String? // parent product ID for sub-products
+  attachmentUrl        String? // PDF/file attachment URL (e.g. /attachments/filename.pdf)
+  status               String   @default("active") // active, inactive, archived
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  orders   Order[]
+  parent   Product?  @relation("ProductChildren", fields: [parentId], references: [id])
+  children Product[] @relation("ProductChildren")
+}
+
+model Customer {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?  @unique
+  phone       String?
+  company     String?
+  nationality String?
+  referrerId  String?
+  notes       String?
+  status      String   @default("active") // active, inactive, prospect
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  referrer            User?                @relation("Referrals", fields: [referrerId], references: [id])
+  orders              Order[]
+  eventRegistrations  EventRegistration[]  @relation("CustomerEventRegistrations")
+}
+
+model Order {
+  id         String   @id @default(cuid())
+  customerId String
+  productId  String
+  agentId    String
+  status     String   @default("pending") // pending, processing, completed, cancelled
+  amount     Float
+  currency   String   @default("HKD")
+  commission Float    @default(0)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  customer    Customer     @relation(fields: [customerId], references: [id])
+  product     Product      @relation(fields: [productId], references: [id])
+  agent       User         @relation(fields: [agentId], references: [id])
+  commissions Commission[]
+}
+
+model Commission {
+  id        String    @id @default(cuid())
+  agentId   String
+  orderId   String?
+  amount    Float
+  currency  String    @default("HKD")
+  status    String    @default("pending") // pending, approved, paid
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  agent User   @relation(fields: [agentId], references: [id])
+  order Order? @relation(fields: [orderId], references: [id])
+}
+
+model Event {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  type         String   @default("seminar") // seminar, webinar, meeting, training
+  date         DateTime
+  location     String?
+  maxAttendees Int      @default(50)
+  imageUrl     String? // event poster / ad image
+  status       String   @default("upcoming") // upcoming, ongoing, completed, cancelled
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  participants  EventParticipant[]
+  registrations EventRegistration[]
+}
+
+model EventParticipant {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  status    String   @default("registered") // registered, attended, cancelled
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+}
+
+// Public/guest registrations for events — created by external clients
+// through the shareable /events/[id]/register page. No login required.
+// One registration per email per event.
+model EventRegistration {
+  id        String   @id @default(cuid())
+  eventId   String
+  name      String
+  email     String
+  phone     String?
+  guests    Int      @default(0) // number of additional seats beyond the registrant
+  notes     String?
+  status    String   @default("registered") // registered, attended, cancelled
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event    Event               @relation(fields: [eventId], references: [id])
+  customer Customer?           @relation("CustomerEventRegistrations", fields: [customerId], references: [id])
+  customerId String?
+
+  @@unique([eventId, email])
+  @@index([eventId, status])
+  @@index([customerId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("info") // info, warning, success, error
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Notice {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  category    String   @default("announcement") // announcement, urgent, policy
+  targetRoles String   @default("admin,director") // comma separated roles
+  authorId    String
+  isPinned    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author User @relation(fields: [authorId], references: [id])
+}
