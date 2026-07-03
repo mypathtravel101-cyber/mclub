@@ -29,31 +29,53 @@ const prismaClient = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query'] : ['error'],
 })
 
-// ─── Prisma Middleware: Auto-backup after any write operation ────────────────
-// Intercepts ALL create/update/delete and triggers a backup in the background.
-// No need to modify individual route files.
+// ─── Auto-backup via Proxy (works with Prisma v6+, which removed $use) ───────
+// Wraps write methods (create/update/delete/upsert) to trigger background backup.
+// Uses debouncing to avoid excessive backups during bulk operations.
 let backupTimer: ReturnType<typeof setTimeout> | null = null;
 let backupPending = false;
 
-prismaClient.$use(async (params, next) => {
-  const result = await next(params);
-
-  const action = params.action;
-  if (['create', 'update', 'delete', 'createMany', 'updateMany', 'deleteMany', 'upsert'].includes(action)) {
-    // Debounce: only backup once every 5 seconds even if multiple writes happen
-    if (!backupPending) {
-      backupPending = true;
-      backupTimer = setTimeout(() => {
-        backupPending = false;
-        backupDatabase().catch((err) => {
-          console.error('[Auto-Backup] Background backup failed:', err);
-        });
-      }, 5000);
-    }
+function scheduleBackup() {
+  if (!backupPending) {
+    backupPending = true;
+    backupTimer = setTimeout(() => {
+      backupPending = false;
+      backupDatabase().catch((err) => {
+        console.error('[Auto-Backup] Background backup failed:', err);
+      });
+    }, 5000);
   }
+}
 
-  return result;
-});
+const WRITE_METHODS = new Set([
+  'create', 'createMany', 'update', 'updateMany',
+  'delete', 'deleteMany', 'upsert',
+]);
+
+// Wrap each model's write methods with auto-backup
+const originalModels = prismaClient as unknown as Record<string, Record<string, unknown>>;
+for (const modelName of Object.keys(prismaClient)) {
+  const model = originalModels[modelName];
+  if (!model || typeof model !== 'object') continue;
+
+  for (const method of WRITE_METHODS) {
+    const original = model[method];
+    if (typeof original !== 'function') continue;
+
+    model[method] = function (...args: unknown[]) {
+      const result = (original as Function).apply(this, args);
+      // Handle both sync and async (Promise) results
+      if (result && typeof result === 'object' && 'then' in result) {
+        return (result as Promise<unknown>).then((val: unknown) => {
+          scheduleBackup();
+          return val;
+        });
+      }
+      scheduleBackup();
+      return result;
+    };
+  }
+}
 
 export const db = globalForPrisma.prisma ?? prismaClient;
 
