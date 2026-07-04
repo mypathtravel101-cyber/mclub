@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaLibSQL } from '@prisma/adapter-libsql'
+import { PrismaLibSql } from '@prisma/adapter-libsql'
 import { createClient } from '@libsql/client'
 
 const globalForPrisma = globalThis as unknown as {
@@ -7,55 +7,47 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 /**
- * Auto-detect database backend:
- * - If DATABASE_URL starts with "libsql:" → use Turso cloud DB (persistent)
- * - Otherwise → use local SQLite with backup/restore
+ * Database connection strategy:
+ * - libsql:// → Turso cloud DB (persistent, no data loss on redeploy)
+ * - file:   → Local SQLite (dev only, with backup/restore)
  */
 function createPrismaClient(): PrismaClient {
   const databaseUrl = process.env.DATABASE_URL || 'file:./db/custom.db'
 
   if (databaseUrl.startsWith('libsql:')) {
-    // ─── Turso Cloud Database ───────────────────────────────────────────
+    // ─── Turso Cloud Database ────────────────────────────────────────
     const libsql = createClient({
       url: databaseUrl,
       authToken: process.env.DATABASE_AUTH_TOKEN || undefined,
     })
-    const adapter = new PrismaLibSQL(libsql)
-    console.log('[DB] Using Turso cloud database:', databaseUrl.replace(/@.*/, '@***'))
-    return new PrismaClient({
-      adapter,
-      log: process.env.NODE_ENV === 'development' ? ['query'] : ['error'],
-    })
+    const adapter = new PrismaLibSql(libsql)
+    console.log('[DB] Using Turso cloud database')
+    return new PrismaClient({ adapter })
   }
 
-  // ─── Local SQLite with persistence ───────────────────────────────────
-  // Import persistence module for local SQLite backup/restore
+  // ─── Local SQLite with persistence ────────────────────────────────
   try {
     const { fixDatabaseUrl, ensureDatabase } = require('./db-persistence')
     fixDatabaseUrl()
-    // Start restore check in background (non-blocking)
     ensureDatabase().catch((err: unknown) => {
       console.error('[DB] ensureDatabase failed:', err)
     })
   } catch {
-    // db-persistence not available, continue without it
+    // db-persistence not available
   }
 
-  return new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query'] : ['error'],
-  })
+  return new PrismaClient()
 }
 
 const prismaClient = createPrismaClient()
 
-// ─── Auto-backup via Proxy for local SQLite only ──────────────────────
-// Only wraps write methods for local SQLite (not Turso, which is already persistent)
+// ─── Auto-backup proxy for local SQLite only ──────────────────────────
 let backupTimer: ReturnType<typeof setTimeout> | null = null;
 let backupPending = false;
 
 function scheduleBackup() {
   const databaseUrl = process.env.DATABASE_URL || ''
-  if (databaseUrl.startsWith('libsql:')) return // No backup needed for Turso
+  if (databaseUrl.startsWith('libsql:')) return
 
   if (!backupPending) {
     backupPending = true;
@@ -64,11 +56,9 @@ function scheduleBackup() {
       try {
         const { backupDatabase } = require('./db-persistence')
         backupDatabase().catch((err: unknown) => {
-          console.error('[Auto-Backup] Background backup failed:', err);
+          console.error('[Auto-Backup] Failed:', err);
         });
-      } catch {
-        // Ignore if persistence module not available
-      }
+      } catch { /* ignore */ }
     }, 5000);
   }
 }
@@ -78,7 +68,7 @@ const WRITE_METHODS = new Set([
   'delete', 'deleteMany', 'upsert',
 ]);
 
-const originalModels = prismaClient as unknown as Record<string, Record<string, unknown>>;
+const originalModels = prismaClient as unknown as Record<string, Record<string, unknown>>
 for (const modelName of Object.keys(prismaClient)) {
   const model = originalModels[modelName];
   if (!model || typeof model !== 'object') continue;
@@ -101,6 +91,6 @@ for (const modelName of Object.keys(prismaClient)) {
   }
 }
 
-export const db = globalForPrisma.prisma ?? prismaClient;
+export const db = globalForPrisma.prisma ?? prismaClient
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db;
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
