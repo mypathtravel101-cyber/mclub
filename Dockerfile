@@ -1,8 +1,5 @@
 FROM node:20-slim AS base
 
-# Install PostgreSQL client (required for Prisma to connect to Neon)
-RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
-
 # Install dependencies only when needed
 FROM base AS deps
 WORKDIR /app
