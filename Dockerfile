@@ -11,7 +11,7 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# DATABASE_URL and DATABASE_AUTH_TOKEN provided at runtime via env vars
+ENV DATABASE_URL="postgresql://neondb_owner:npg_IgKsQi54qphJ@ep-holy-wind-aoj7xyto-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 RUN npx prisma generate
 RUN npm run build
 

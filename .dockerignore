@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.gitignore
+db/
+uploads/
+*.md
+.env
+.env.*
+!prisma/
