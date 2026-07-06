@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Netlify requires default output (not standalone)
+  // output: "standalone",
   // Scope file tracing to the project root, but rely on tsconfig.exclude
   // to keep standalone output lean (avoids bundling skills/, scripts/, etc.)
   outputFileTracingRoot: path.resolve(__dirname),
