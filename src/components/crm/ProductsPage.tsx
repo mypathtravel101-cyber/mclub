@@ -335,28 +335,7 @@ export function ProductsPage() {
                         )}
                       </span>
                     </div>
-                    {product.commissionFixed > 0 ? (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Director 佣金</span>
-                        <span className="font-medium text-green-600">
-                          HK${product.commissionFixed.toLocaleString()}
-                        </span>
-                      </div>
-                    ) : product.commissionRate > 0 ? (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Director 佣金</span>
-                        <span className="font-medium text-amber-600">
-                          {product.commissionRate}%
-                        </span>
-                      </div>
-                    ) : product.commissionNegotiable ? (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Director 佣金</span>
-                        <span className="font-medium text-muted-foreground">
-                          另議
-                        </span>
-                      </div>
-                    ) : null}
+                    {/* Commission is displayed in sub-product page */}
                   </div>
                 )}
                 <div className="flex items-center justify-between">
