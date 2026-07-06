@@ -72,7 +72,7 @@ export default function RiskModelApp() {
     // Auto-fill from property data
     const priceJPY = property.priceWan * 10000;
     const entryFX = input.entryFX || 19.5;
-    const principalHKD = Math.round(priceJPY / entryFX);
+    const principalHKD = Math.round(priceJPY * (1 - input.ltv / 100) / entryFX);
 
     setInput({
       ...input,
