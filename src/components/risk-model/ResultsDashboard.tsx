@@ -429,155 +429,163 @@ export function ResultsDashboard({ result, onBack }: ResultsDashboardProps) {
       </div>
 
       <div className="px-4 py-4 space-y-4 pb-8">
-        {/* Hero Result Card — Property Value Journey */}
-        <div className="rounded-2xl border-2 border-amber-400 bg-white overflow-hidden shadow-lg">
-          {/* Amber header bar */}
-          <div className="bg-amber-500 px-4 py-2 text-center">
-            <p className="text-sm font-bold text-white tracking-wide">日本物業投資回報預覽</p>
-          </div>
-
-          <div className="pt-5 pb-4 px-4">
-            {/* Current Property Price */}
-            <div className="text-center">
-              <p className="text-sm font-semibold text-gray-600 mb-1">現時買入物業價格</p>
-              <p className="text-3xl font-black text-gray-800">
-                {formatWan(currentPriceHKD)} <span className="text-lg font-bold text-gray-500">HKD</span>
-              </p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                ¥{formatJPY(summary.propertyValueJPY)} JPY
+        {/* Property Summary — Compact */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">物業價值</p>
+              <p className="text-lg font-bold text-gray-900">
+                ¥{formatJPY(summary.propertyValueJPY)} <span className="text-sm font-medium text-gray-500">({formatWan(summary.propertyValueHKD)} HKD)</span>
               </p>
               <p className="text-[10px] text-gray-400 mt-0.5">
                 自付 ¥{formatJPY(summary.equityJPY)} + 貸款 ¥{formatJPY(summary.loanAmountJPY)}
               </p>
             </div>
-
-            {/* Arrow down */}
-            <div className="flex items-center justify-center my-3">
-              <div className="flex flex-col items-center">
-                <div className="w-px h-4 bg-gray-300" />
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center border-2 border-amber-400">
-                  <TrendingUp className="h-5 w-5 text-amber-600" />
-                </div>
-                <p className="text-xs text-gray-700 font-bold mt-1">持有 {summary.holdingPeriod} 年</p>
-                <div className="w-px h-4 bg-gray-300" />
-              </div>
-            </div>
-
-            {/* Future Predicted Price */}
-            <div className="text-center">
-              <p className="text-sm font-semibold text-gray-600 mb-1">ML 預計 {summary.holdingPeriod} 年後物業價值</p>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">持有 {summary.holdingPeriod} 年</p>
               <p className={cn(
-                'text-3xl font-black',
-                futurePriceHKD >= currentPriceHKD ? 'text-green-700' : 'text-red-700'
+                'text-xl font-black',
+                netReturnHKD >= 0 ? 'text-green-700' : 'text-red-700'
               )}>
-                {formatWan(futurePriceHKD)} <span className="text-lg font-bold text-gray-500">HKD</span>
+                {netReturnHKD >= 0 ? '+' : ''}{formatHKDFull(netReturnHKD)}
               </p>
-              <div className="flex items-center justify-center gap-2 mt-1">
-                <span className={cn(
-                  'inline-flex items-center gap-1 text-sm font-bold px-3 py-1 rounded-full',
-                  futurePriceHKD >= currentPriceHKD ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                )}>
-                  {futurePriceHKD >= currentPriceHKD ? '↑' : '↓'} {formatHKDFull(futurePriceHKD - currentPriceHKD)} HKD
-                </span>
-              </div>
+              <p className="text-xs font-semibold text-gray-600">
+                ROI {summary.mlWeightedROI >= 0 ? '+' : ''}{summary.mlWeightedROI}% · ML 加權
+              </p>
             </div>
-
-            {/* Divider */}
-            <div className="border-t-2 border-dashed border-gray-300 my-4" />
-
-            {/* Net Return Breakdown */}
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-              <p className="text-sm font-bold text-gray-700 mb-3 text-center">淨收益拆解</p>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center">
-                      <Building2 className="h-4 w-4 text-green-700" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">物業升值</span>
-                  </div>
-                  <span className={cn('text-base font-bold', futurePriceHKD - currentPriceHKD >= 0 ? 'text-green-700' : 'text-red-700')}>
-                    {formatHKDFull(futurePriceHKD - currentPriceHKD)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
-                      <Coins className="h-4 w-4 text-blue-700" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">租金收入（{summary.holdingPeriod}年總計）</span>
-                  </div>
-                  <span className="text-base font-bold text-blue-700">
-                    +{formatWan(totalRentHKD)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center">
-                      <Receipt className="h-4 w-4 text-red-700" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">成本支出（管理+稅+利息）</span>
-                  </div>
-                  <span className="text-base font-bold text-red-600">
-                    -{formatWan(totalCostsHKD)}
-                  </span>
-                </div>
-                {/* Total line */}
-                <div className="border-t-2 border-gray-300 pt-3 mt-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center">
-                        <Wallet className="h-4 w-4 text-amber-700" />
-                      </div>
-                      <span className="text-sm font-bold text-gray-800">預期淨收益</span>
-                    </div>
-                    <div className="text-right">
-                      <span className={cn(
-                        'text-xl font-black',
-                        netReturnHKD >= 0 ? 'text-green-700' : 'text-red-700'
-                      )}>
-                        {formatHKDFull(netReturnHKD)} HKD
-                      </span>
-                      <p className="text-xs font-semibold text-gray-600">
-                        ROI {summary.mlWeightedROI >= 0 ? '+' : ''}{summary.mlWeightedROI}% · ML 加權預期
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          </div>
+          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <span className="text-[10px] text-gray-600">物業升值 {formatHKDFull(futurePriceHKD - currentPriceHKD)}</span>
             </div>
-
-            {/* Confidence gauge */}
-            <div className="mt-4">
-              <ConfidenceGauge probPositive={summary.probPositiveReturn} />
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="text-[10px] text-gray-600">租金 +{formatWan(totalRentHKD)}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-red-400" />
+              <span className="text-[10px] text-gray-600">成本 -{formatWan(totalCostsHKD)}</span>
             </div>
           </div>
         </div>
 
-        {/* Three-Layer Traffic Light Summary */}
-        <div className="space-y-2">
+        {/* Three-Layer Analysis — Expanded */}
+        <div className="space-y-3">
           <p className="text-sm font-semibold text-gray-800 px-1">三層分析摘要</p>
-          <TrafficLightLayer
-            color="blue"
-            icon={<BarChart3 className="h-5 w-5" />}
-            title="歷史數據驗證"
-            status="pass"
-            detail="104 季度樣本 · 65 個重疊 10 年窗口"
-          />
-          <TrafficLightLayer
-            color="amber"
-                        title="84 情景壓力測試"
-            icon={<AlertTriangle className="h-5 w-5" />}
-            status={summary.worstCaseROI > 0 ? 'pass' : 'warn'}
-            detail={`最差情景 淨損 ${formatHKDFull(summary.worstCaseNetGainHKD)} HKD (ROI ${summary.worstCaseROI >= 0 ? '+' : ''}${summary.worstCaseROI}%)`}
-          />
-          <TrafficLightLayer
-            color="purple"
-            title="ML 機率加權"
-            icon={<Brain className="h-5 w-5" />}
-            status="strong"
-            detail={`4 模型集成 · ${summary.probPositiveReturn}% 正回報機率`}
-          />
+
+          {/* Layer 1: Historical Data Validation */}
+          <div className="rounded-xl border bg-blue-50 border-blue-200 p-4 space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <BarChart3 className="h-5 w-5 text-blue-700" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-blue-700">第一層：歷史數據驗證</p>
+                  <Badge className="text-[10px] bg-blue-100 text-blue-700">通過</Badge>
+                </div>
+                <p className="text-xs text-gray-600 mt-0.5">104 季度樣本 · 65 個重疊 10 年窗口</p>
+              </div>
+              <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+            </div>
+            <div className="ml-13 bg-white/60 rounded-lg p-3 space-y-1.5 border border-blue-100">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">簡單平均 ROI</span>
+                <span className={cn('font-bold', summary.simpleAvgROI >= 0 ? 'text-green-700' : 'text-red-700')}>
+                  {summary.simpleAvgROI >= 0 ? '+' : ''}{summary.simpleAvgROI}%
+                </span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">最佳情景 ROI</span>
+                <span className="font-bold text-green-700">+{summary.bestCaseROI}%</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">最差情景 ROI</span>
+                <span className={cn('font-bold', summary.worstCaseROI >= 0 ? 'text-green-700' : 'text-red-700')}>
+                  {summary.worstCaseROI >= 0 ? '+' : ''}{summary.worstCaseROI}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Layer 2: 84 Scenario Stress Test */}
+          <div className={cn('rounded-xl border p-4 space-y-2', summary.worstCaseROI > 0 ? 'bg-amber-50 border-amber-200' : 'bg-amber-50 border-red-300')}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-amber-700" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-amber-700">第二層：84 情景壓力測試</p>
+                  <Badge className={cn('text-[10px]', summary.worstCaseROI > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')}>
+                    {summary.worstCaseROI > 0 ? '通過' : '注意'}
+                  </Badge>
+                </div>
+                <p className="text-xs text-gray-600 mt-0.5">7 匯率 × 4 物價 × 3 年期 = 84 組合</p>
+              </div>
+              {summary.worstCaseROI > 0 ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+              )}
+            </div>
+            <div className="ml-13 bg-white/60 rounded-lg p-3 space-y-1.5 border border-amber-100">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">最差情景淨損</span>
+                <span className={cn('font-bold', summary.worstCaseNetGainHKD >= 0 ? 'text-green-700' : 'text-red-700')}>
+                  {formatHKDFull(summary.worstCaseNetGainHKD)} HKD
+                </span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">最差情景 ROI</span>
+                <span className={cn('font-bold', summary.worstCaseROI >= 0 ? 'text-green-700' : 'text-red-700')}>
+                  {summary.worstCaseROI >= 0 ? '+' : ''}{summary.worstCaseROI}%
+                </span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">最佳情景收益</span>
+                <span className="font-bold text-green-700">
+                  {formatHKDFull(summary.bestCaseNetGainHKD)} HKD (+{summary.bestCaseROI}%)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Layer 3: ML Probability Weighting */}
+          <div className="rounded-xl border bg-purple-50 border-purple-200 p-4 space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                <Brain className="h-5 w-5 text-purple-700" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-purple-700">第三層：ML 機率加權</p>
+                  <Badge className="text-[10px] bg-purple-100 text-purple-700">強力</Badge>
+                </div>
+                <p className="text-xs text-gray-600 mt-0.5">4 模型集成 + Monte Carlo 機率分佈</p>
+              </div>
+              <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+            </div>
+            <div className="ml-13 bg-white/60 rounded-lg p-3 space-y-1.5 border border-purple-100">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">ML 加權預期收益</span>
+                <span className={cn('font-bold', summary.expectedNetGainHKD >= 0 ? 'text-green-700' : 'text-red-700')}>
+                  {formatHKDFull(summary.expectedNetGainHKD)} HKD
+                </span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">ML 加權 ROI</span>
+                <span className={cn('font-bold', summary.mlWeightedROI >= 0 ? 'text-green-700' : 'text-red-700')}>
+                  {summary.mlWeightedROI >= 0 ? '+' : ''}{summary.mlWeightedROI}%
+                </span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">正回報機率</span>
+                <span className="font-bold text-purple-700">{summary.probPositiveReturn}%</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Three Key Scenarios */}
