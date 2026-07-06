@@ -42,7 +42,12 @@ export function InputWizard({ input, setInput, onCalculate, selectedProperty, on
   const [step, setStep] = useState(0);
 
   const updateField = (field: keyof RiskModelFormInput, value: number) => {
-    setInput({ ...input, [field]: value });
+    const updated = { ...input, [field]: value };
+    // Keep principalHKD in sync with equityJPY / entryFX
+    if (field === 'entryFX') {
+      updated.principalHKD = Math.round((input.principalHKD * input.entryFX) / value);
+    }
+    setInput(updated);
   };
 
   const equityJPY = input.principalHKD * input.entryFX;
@@ -120,21 +125,17 @@ export function InputWizard({ input, setInput, onCalculate, selectedProperty, on
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="principalHKD">投入本金 (HKD)</Label>
-                  <Input
-                    id="principalHKD"
-                    type="number"
-                    value={input.principalHKD || ''}
-                    onChange={(e) => updateField('principalHKD', Number(e.target.value))}
-                    placeholder="3,200,000"
-                    className="text-lg font-semibold"
-                  />
-                  <p className="text-xs text-muted-foreground">港幣本金，如 320萬 = 3,200,000</p>
+                {/* Property Value in JPY */}
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">物業價值</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    ¥{Math.round(equityJPY).toLocaleString()}
+                  </p>
                 </div>
 
+                {/* FX Rate */}
                 <div className="space-y-2">
-                  <Label htmlFor="entryFX">入場匯率 (JPY/HKD)</Label>
+                  <Label htmlFor="entryFX">入場匯率</Label>
                   <Input
                     id="entryFX"
                     type="number"
@@ -144,23 +145,14 @@ export function InputWizard({ input, setInput, onCalculate, selectedProperty, on
                     placeholder="19.5"
                     className="text-lg font-semibold"
                   />
-                  <p className="text-xs text-muted-foreground">1 港幣兌換多少日圓</p>
+                  <p className="text-xs text-muted-foreground">1 HKD = {input.entryFX} JPY</p>
                 </div>
 
-                {/* Live calculation preview */}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <p className="text-sm text-amber-700 font-medium mb-1">物業價值預覽（含槓桿）</p>
+                {/* Property Value in HKD */}
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">投入本金</p>
                   <p className="text-2xl font-bold text-amber-900">
-                    ¥{Math.round(propertyJPY).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-amber-600 mt-1">
-                    匯率: 1 HKD = {input.entryFX} JPY
-                  </p>
-                  <p className="text-xs text-amber-600 mt-1">
-                    自付 ¥{Math.round(equityJPY).toLocaleString()} + 貸款 ¥{Math.round(propertyJPY * input.ltv / 100).toLocaleString()} = ¥{Math.round(propertyJPY).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-amber-800 mt-1 font-medium">
-                    投入本金 ≈ HKD {Math.round(equityJPY / input.entryFX).toLocaleString()}
+                    HKD {Math.round(equityJPY / input.entryFX).toLocaleString()}
                   </p>
                 </div>
               </CardContent>
