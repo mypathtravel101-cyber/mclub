@@ -43,15 +43,13 @@ export function InputWizard({ input, setInput, onCalculate, selectedProperty, on
 
   const updateField = (field: keyof RiskModelFormInput, value: number) => {
     const updated = { ...input, [field]: value };
-    // Keep principalHKD in sync with equityJPY / entryFX
-    if (field === 'entryFX') {
-      updated.principalHKD = Math.round((input.principalHKD * input.entryFX) / value);
-    }
     setInput(updated);
   };
 
-  const equityJPY = input.principalHKD * input.entryFX;
-  const propertyJPY = equityJPY / (1 - input.ltv / 100); // With LTV leverage
+  // principalHKD = total property price in HKD
+  const propertyJPY = input.principalHKD * input.entryFX;
+  const loanJPY = propertyJPY * (input.ltv / 100);
+  const equityJPY = propertyJPY - loanJPY;
 
   const canProceed = () => {
     switch (step) {
@@ -129,7 +127,7 @@ export function InputWizard({ input, setInput, onCalculate, selectedProperty, on
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">物業價值</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    ¥{Math.round(equityJPY).toLocaleString()}
+                    ¥{Math.round(propertyJPY).toLocaleString()}
                   </p>
                 </div>
 
@@ -150,9 +148,9 @@ export function InputWizard({ input, setInput, onCalculate, selectedProperty, on
 
                 {/* Property Value in HKD */}
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">投入本金</p>
+                  <p className="text-sm text-muted-foreground">物業價值 (HKD)</p>
                   <p className="text-2xl font-bold text-amber-900">
-                    HKD {Math.round(equityJPY / input.entryFX).toLocaleString()}
+                    HKD {Math.round(propertyJPY / input.entryFX).toLocaleString()}
                   </p>
                 </div>
               </CardContent>
@@ -336,8 +334,12 @@ export function InputWizard({ input, setInput, onCalculate, selectedProperty, on
                     <span className="font-medium">1 HKD = {input.entryFX} JPY</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">投入本金</span>
-                    <span className="font-medium">HKD {Math.round(equityJPY / input.entryFX).toLocaleString()}</span>
+                    <span className="text-muted-foreground">自付金額</span>
+                    <span className="font-medium">¥{Math.round(equityJPY).toLocaleString()} (HKD {Math.round(equityJPY / input.entryFX).toLocaleString()})</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">貸款金額</span>
+                    <span className="font-medium">¥{Math.round(loanJPY).toLocaleString()} ({input.ltv}%)</span>
                   </div>
                 </div>
 

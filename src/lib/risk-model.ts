@@ -70,8 +70,10 @@ export interface RiskModelOutput {
     bestCaseNetGainHKD: number;
     probPositiveReturn: number;
     propertyValueJPY: number;
+    equityJPY: number;
     loanAmountJPY: number;
     propertyValueHKD: number;
+    equityHKD: number;
     expectedEndValueHKD: number;
     totalRentHKD: number;
     totalCostsHKD: number;
@@ -143,14 +145,14 @@ export function runRiskModel(input: RiskModelInput): RiskModelOutput {
     holdingPeriod,
   } = input;
 
-  // ── Property value with LTV leverage ──
-  // Chart: 客戶投入 HKD 320萬 → JPY 6,240萬 (equity)
-  // With 40% LTV: Property = equity / (1 - LTV) = 6,240 / 0.6 = 10,400
-  const equityJPY = principalHKD * entryFX;
+  // ── Property value and LTV breakdown ──
+  // principalHKD is the total property price in HKD
+  // LTV = loan as % of property value
   const propertyValueJPY = input.propertyPriceJPY > 0
     ? input.propertyPriceJPY
-    : equityJPY / (1 - ltv / 100);
+    : principalHKD * entryFX;
   const loanAmountJPY = propertyValueJPY * (ltv / 100);
+  const equityJPY = propertyValueJPY - loanAmountJPY;
 
   // ── Mortgage calculations ──
   const annualRate = mortgageRate / 100;
@@ -195,11 +197,12 @@ export function runRiskModel(input: RiskModelInput): RiskModelOutput {
           totalHoldingCostJPY + totalTransactionCostJPY + purchaseCostJPY + mortgageInterestJPY;
         const netRentalIncomeJPY = totalRentJPY - totalCostsJPY;
 
-        // Core formula from chart:
-        // 最終 HKD 盈虧 = (物業JPY價值 - 未還貸款 + 租金淨收入) ÷ 匯率 - 入場HKD本金
+        // Core formula:
+        // 最終 HKD 盈虧 = (物業JPY價值 - 未還貸款 + 租金淨收入) ÷ 匯率 - 自付HKD本金
+        const equityHKD = equityJPY / entryFX;
         const totalJPYProceeds = propertyEndValueJPY - remainingLoanJPY + netRentalIncomeJPY;
-        const netGainHKD = totalJPYProceeds / fx - principalHKD;
-        const roi = (netGainHKD / principalHKD) * 100;
+        const netGainHKD = totalJPYProceeds / fx - equityHKD;
+        const roi = (netGainHKD / equityHKD) * 100;
 
         // ML V2 probability: map scenario to ML distribution
         // FX change % relative to entry FX
@@ -277,6 +280,7 @@ export function runRiskModel(input: RiskModelInput): RiskModelOutput {
 
   // Property value breakdown
   const propertyValueHKD = Math.round(propertyValueJPY / entryFX);
+  const equityHKD = Math.round(equityJPY / entryFX);
   const expectedEndValueHKD = normalizedFiltered.reduce(
     (sum, s) => sum + (s.propertyEndValueJPY / s.fx) * s.probability,
     0
@@ -306,8 +310,10 @@ export function runRiskModel(input: RiskModelInput): RiskModelOutput {
       bestCaseNetGainHKD: Math.round(bestCaseNetGainHKD),
       probPositiveReturn: Math.round(probPositiveReturn * 1000) / 10,
       propertyValueJPY: Math.round(propertyValueJPY),
+      equityJPY: Math.round(equityJPY),
       loanAmountJPY: Math.round(loanAmountJPY),
       propertyValueHKD: Math.round(propertyValueHKD),
+      equityHKD,
       expectedEndValueHKD: Math.round(expectedEndValueHKD),
       totalRentHKD: Math.round(totalRentHKD),
       totalCostsHKD: Math.round(totalCostsHKD),

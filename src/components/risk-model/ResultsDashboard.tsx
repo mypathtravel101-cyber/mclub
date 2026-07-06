@@ -447,7 +447,7 @@ export function ResultsDashboard({ result, onBack }: ResultsDashboardProps) {
                 ¥{formatJPY(summary.propertyValueJPY)} JPY
               </p>
               <p className="text-[10px] text-gray-400 mt-0.5">
-                含槓桿：自付 ¥{formatJPY(summary.propertyValueJPY - summary.loanAmountJPY)} + 貸款 ¥{formatJPY(summary.loanAmountJPY)}
+                自付 ¥{formatJPY(summary.equityJPY)} + 貸款 ¥{formatJPY(summary.loanAmountJPY)}
               </p>
             </div>
 
@@ -640,10 +640,10 @@ export function ResultsDashboard({ result, onBack }: ResultsDashboardProps) {
                           <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
                             <Receipt className="h-3 w-3 text-emerald-700" />
                           </div>
-                          <span className="text-xs text-gray-600">投資本金</span>
+                          <span className="text-xs text-gray-600">投資本金（自付）</span>
                         </div>
                         <span className="text-sm font-bold text-gray-700">
-                          -{formatWan(summary.propertyValueHKD)}
+                          -{formatWan(summary.equityHKD)}
                         </span>
                       </div>
                       <div className="border-t border-emerald-200 pt-1.5 mt-1">
