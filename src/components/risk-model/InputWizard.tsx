@@ -154,10 +154,13 @@ export function InputWizard({ input, setInput, onCalculate, selectedProperty, on
                     ¥{Math.round(propertyJPY).toLocaleString()}
                   </p>
                   <p className="text-xs text-amber-600 mt-1">
+                    匯率: 1 HKD = {input.entryFX} JPY
+                  </p>
+                  <p className="text-xs text-amber-600 mt-1">
                     自付 {Math.round(equityJPY).toLocaleString()} + 貸款 {Math.round(propertyJPY * input.ltv / 100).toLocaleString()} = ¥{Math.round(propertyJPY).toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-amber-500 mt-0.5">
-                    HKD {input.principalHKD.toLocaleString()} × {input.entryFX} ÷ (1-{input.ltv}%) = ¥{Math.round(propertyJPY).toLocaleString()}
+                  <p className="text-xs text-amber-800 mt-1 font-medium">
+                    ≈ HKD {Math.round(propertyJPY / input.entryFX).toLocaleString()}
                   </p>
                 </div>
               </CardContent>
@@ -333,16 +336,16 @@ export function InputWizard({ input, setInput, onCalculate, selectedProperty, on
                 <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                   <p className="text-sm font-semibold text-gray-700">物業基本</p>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">投入本金</span>
-                    <span className="font-medium">HKD {input.principalHKD.toLocaleString()}</span>
+                    <span className="text-muted-foreground">物業價值</span>
+                    <span className="font-medium">¥{Math.round(propertyJPY).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">入場匯率</span>
-                    <span className="font-medium">{input.entryFX} JPY/HKD</span>
+                    <span className="font-medium">1 HKD = {input.entryFX} JPY</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">物業價值</span>
-                    <span className="font-medium">¥{propertyJPY.toLocaleString()}</span>
+                    <span className="text-muted-foreground">投入本金</span>
+                    <span className="font-medium">HKD {input.principalHKD.toLocaleString()}</span>
                   </div>
                 </div>
 
