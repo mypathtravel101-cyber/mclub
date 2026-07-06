@@ -59,6 +59,11 @@ model Customer {
   phone       String?
   company     String?
   nationality String?
+  age        Int?
+  gender     String?
+  background String?
+  education  String?
+  occupation String?
   referrerId  String?
   notes       String?
   status      String   @default("active") // active, inactive, prospect

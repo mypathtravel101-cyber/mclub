@@ -72,6 +72,11 @@ export function CustomersPage() {
     phone: '',
     company: '',
     nationality: '',
+    age: '',
+    gender: '',
+    background: '',
+    education: '',
+    occupation: '',
     status: 'prospect',
   });
 
@@ -134,12 +139,15 @@ export function CustomersPage() {
   };
 
   const handleAdd = async () => {
+    const payload: Record<string, unknown> = { ...form };
+    if (payload.age) payload.age = parseInt(payload.age as string, 10) || null;
+    else delete payload.age;
     await fetchWithAuth('/api/customers', {
       method: 'POST',
-      body: JSON.stringify(form),
+      body: JSON.stringify(payload),
     });
     setOpen(false);
-    setForm({ name: '', email: '', phone: '', company: '', nationality: '', status: 'prospect' });
+    setForm({ name: '', email: '', phone: '', company: '', nationality: '', age: '', gender: '', background: '', education: '', occupation: '', status: 'prospect' });
     refreshCustomers();
   };
 
@@ -219,6 +227,59 @@ export function CustomersPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">年齡</label>
+                  <Input
+                    type="number"
+                    value={form.age}
+                    onChange={(e) => setForm({ ...form, age: e.target.value })}
+                    placeholder="年齡"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">性別</label>
+                  <Select value={form.gender} onValueChange={(v) => setForm({ ...form, gender: v })}>
+                    <SelectTrigger><SelectValue placeholder="選擇" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">男</SelectItem>
+                      <SelectItem value="female">女</SelectItem>
+                      <SelectItem value="other">其他</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">學歷</label>
+                  <Select value={form.education} onValueChange={(v) => setForm({ ...form, education: v })}>
+                    <SelectTrigger><SelectValue placeholder="選擇" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high_school">中學</SelectItem>
+                      <SelectItem value="bachelor">學士</SelectItem>
+                      <SelectItem value="master">碩士</SelectItem>
+                      <SelectItem value="doctorate">博士</SelectItem>
+                      <SelectItem value="other">其他</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">職業</label>
+                  <Input
+                    value={form.occupation}
+                    onChange={(e) => setForm({ ...form, occupation: e.target.value })}
+                    placeholder="職業"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">背景資料</label>
+                <Input
+                  value={form.background}
+                  onChange={(e) => setForm({ ...form, background: e.target.value })}
+                  placeholder="客戶背景、投資經驗、特殊需求等"
+                />
               </div>
               <Button onClick={handleAdd} className="w-full bg-amber-600 hover:bg-amber-700" disabled={!form.name}>
                 確認新增

@@ -90,6 +90,11 @@ const customerSchema = z.object({
   phone: z.string().optional(),
   company: z.string().optional(),
   nationality: z.string().optional(),
+  age: z.number().int().min(0).max(150).optional(),
+  gender: z.string().optional(),
+  background: z.string().optional(),
+  education: z.string().optional(),
+  occupation: z.string().optional(),
   status: z.enum(['active', 'inactive', 'prospect']).default('prospect'),
 });
 
@@ -113,6 +118,10 @@ export async function POST(request: Request) {
       phone: parsed.data.phone || null,
       company: parsed.data.company || null,
       nationality: parsed.data.nationality || null,
+      gender: parsed.data.gender || null,
+      background: parsed.data.background || null,
+      education: parsed.data.education || null,
+      occupation: parsed.data.occupation || null,
     };
 
     const customer = await db.customer.create({ data });
@@ -129,6 +138,11 @@ const customerUpdateSchema = z.object({
   phone: z.string().optional(),
   company: z.string().optional(),
   nationality: z.string().optional(),
+  age: z.number().int().min(0).max(150).optional(),
+  gender: z.string().optional(),
+  background: z.string().optional(),
+  education: z.string().optional(),
+  occupation: z.string().optional(),
   status: z.enum(['active', 'inactive', 'prospect']).optional(),
   notes: z.string().optional(),
   referrerId: z.string().optional(),
@@ -151,6 +165,10 @@ export async function PUT(request: Request) {
     const { id, ...data } = parsed.data;
     // Convert empty strings to null for optional fields
     if (data.email === '') data.email = null as unknown as undefined;
+    if (data.gender === '') data.gender = null as unknown as undefined;
+    if (data.background === '') data.background = null as unknown as undefined;
+    if (data.education === '') data.education = null as unknown as undefined;
+    if (data.occupation === '') data.occupation = null as unknown as undefined;
 
     const customer = await db.customer.update({ where: { id }, data });
     return NextResponse.json(customer);

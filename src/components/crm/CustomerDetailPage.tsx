@@ -21,6 +21,7 @@ import {
   Save,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CustomerDetail {
   id: string;
@@ -29,6 +30,11 @@ interface CustomerDetail {
   phone: string | null;
   company: string | null;
   nationality: string | null;
+  age: number | null;
+  gender: string | null;
+  background: string | null;
+  education: string | null;
+  occupation: string | null;
   status: string;
   notes: string | null;
   createdAt: string;
@@ -74,6 +80,20 @@ const ORDER_STATUS_MAP: Record<string, { label: string; color: string }> = {
   cancelled: { label: '已取消', color: 'bg-red-100 text-red-800' },
 };
 
+const GENDER_LABELS: Record<string, string> = {
+  male: '男',
+  female: '女',
+  other: '其他',
+};
+
+const EDUCATION_LABELS: Record<string, string> = {
+  high_school: '中學',
+  bachelor: '學士',
+  master: '碩士',
+  doctorate: '博士',
+  other: '其他',
+};
+
 function formatCurrency(amount: number, currency: string = 'HKD') {
   return new Intl.NumberFormat('zh-HK', {
     style: 'currency',
@@ -103,6 +123,11 @@ export function CustomerDetailPage({ customerId, onBack }: CustomerDetailPagePro
           phone: data.phone || '',
           company: data.company || '',
           nationality: data.nationality || '',
+          age: data.age != null ? String(data.age) : '',
+          gender: data.gender || '',
+          background: data.background || '',
+          education: data.education || '',
+          occupation: data.occupation || '',
           notes: data.notes || '',
         });
       }
@@ -131,6 +156,11 @@ export function CustomerDetailPage({ customerId, onBack }: CustomerDetailPagePro
         phone: editForm.phone || null,
         company: editForm.company || null,
         nationality: editForm.nationality || null,
+        age: editForm.age ? parseInt(editForm.age as string, 10) : null,
+        gender: editForm.gender || null,
+        background: editForm.background || null,
+        education: editForm.education || null,
+        occupation: editForm.occupation || null,
         notes: editForm.notes || null,
       }),
     });
@@ -225,45 +255,113 @@ export function CustomerDetailPage({ customerId, onBack }: CustomerDetailPagePro
                 <Input value={editForm.nationality || ''} onChange={(e) => setEditForm({ ...editForm, nationality: e.target.value })} />
               </div>
               <div>
+                <label className="text-sm font-medium">年齡</label>
+                <Input type="number" value={editForm.age || ''} onChange={(e) => setEditForm({ ...editForm, age: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-sm font-medium">性別</label>
+                <Select value={editForm.gender || ''} onValueChange={(v) => setEditForm({ ...editForm, gender: v })}>
+                  <SelectTrigger><SelectValue placeholder="選擇" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">男</SelectItem>
+                    <SelectItem value="female">女</SelectItem>
+                    <SelectItem value="other">其他</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">學歷</label>
+                <Select value={editForm.education || ''} onValueChange={(v) => setEditForm({ ...editForm, education: v })}>
+                  <SelectTrigger><SelectValue placeholder="選擇" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="high_school">中學</SelectItem>
+                    <SelectItem value="bachelor">學士</SelectItem>
+                    <SelectItem value="master">碩士</SelectItem>
+                    <SelectItem value="doctorate">博士</SelectItem>
+                    <SelectItem value="other">其他</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">職業</label>
+                <Input value={editForm.occupation || ''} onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })} />
+              </div>
+              <div>
                 <label className="text-sm font-medium">備註</label>
                 <Input value={editForm.notes || ''} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
               </div>
+              <div className="sm:col-span-2">
+                <label className="text-sm font-medium">背景資料</label>
+                <Input value={editForm.background || ''} onChange={(e) => setEditForm({ ...editForm, background: e.target.value })} placeholder="客戶背景、投資經驗、特殊需求等" />
+              </div>
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {customer.email && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{customer.email}</span>
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {customer.email && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{customer.email}</span>
+                  </div>
+                )}
+                {customer.phone && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{customer.phone}</span>
+                  </div>
+                )}
+                {customer.company && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Building className="h-4 w-4 text-muted-foreground" />
+                    <span>{customer.company}</span>
+                  </div>
+                )}
+                {customer.nationality && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <span>{customer.nationality}</span>
+                  </div>
+                )}
+                {customer.age != null && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">年齡:</span>
+                    <span>{customer.age} 歲</span>
+                  </div>
+                )}
+                {customer.gender && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">性別:</span>
+                    <span>{GENDER_LABELS[customer.gender] || customer.gender}</span>
+                  </div>
+                )}
+                {customer.education && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">學歷:</span>
+                    <span>{EDUCATION_LABELS[customer.education] || customer.education}</span>
+                  </div>
+                )}
+                {customer.occupation && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">職業:</span>
+                    <span>{customer.occupation}</span>
+                  </div>
+                )}
+                {customer.referrer && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">推薦人:</span>
+                    <span>{customer.referrer.name} ({customer.referrer.email})</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>加入日期: {new Date(customer.createdAt).toLocaleDateString('zh-HK')}</span>
                 </div>
-              )}
-              {customer.phone && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{customer.phone}</span>
-                </div>
-              )}
-              {customer.company && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Building className="h-4 w-4 text-muted-foreground" />
-                  <span>{customer.company}</span>
-                </div>
-              )}
-              {customer.nationality && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Globe className="h-4 w-4 text-muted-foreground" />
-                  <span>{customer.nationality}</span>
-                </div>
-              )}
-              {customer.referrer && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground">推薦人:</span>
-                  <span>{customer.referrer.name} ({customer.referrer.email})</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>加入日期: {new Date(customer.createdAt).toLocaleDateString('zh-HK')}</span>
               </div>
+              {customer.background && (
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">背景資料</p>
+                  <p className="text-sm">{customer.background}</p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
