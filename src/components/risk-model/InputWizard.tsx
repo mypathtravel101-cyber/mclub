@@ -157,10 +157,10 @@ export function InputWizard({ input, setInput, onCalculate, selectedProperty, on
                     匯率: 1 HKD = {input.entryFX} JPY
                   </p>
                   <p className="text-xs text-amber-600 mt-1">
-                    自付 {Math.round(equityJPY).toLocaleString()} + 貸款 {Math.round(propertyJPY * input.ltv / 100).toLocaleString()} = ¥{Math.round(propertyJPY).toLocaleString()}
+                    自付 ¥{Math.round(equityJPY).toLocaleString()} + 貸款 ¥{Math.round(propertyJPY * input.ltv / 100).toLocaleString()} = ¥{Math.round(propertyJPY).toLocaleString()}
                   </p>
                   <p className="text-xs text-amber-800 mt-1 font-medium">
-                    ≈ HKD {Math.round(propertyJPY / input.entryFX).toLocaleString()}
+                    投入本金 ≈ HKD {Math.round(equityJPY / input.entryFX).toLocaleString()}
                   </p>
                 </div>
               </CardContent>
@@ -345,7 +345,7 @@ export function InputWizard({ input, setInput, onCalculate, selectedProperty, on
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">投入本金</span>
-                    <span className="font-medium">HKD {input.principalHKD.toLocaleString()}</span>
+                    <span className="font-medium">HKD {Math.round(equityJPY / input.entryFX).toLocaleString()}</span>
                   </div>
                 </div>
 

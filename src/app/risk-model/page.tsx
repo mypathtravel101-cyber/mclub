@@ -72,7 +72,8 @@ export default function RiskModelApp() {
     // Auto-fill from property data
     const priceJPY = property.priceWan * 10000;
     const entryFX = input.entryFX || 19.5;
-    const principalHKD = Math.round(priceJPY * (1 - input.ltv / 100) / entryFX);
+    // priceJPY is already the equity amount (自付金額), just convert to HKD
+    const principalHKD = Math.round(priceJPY / entryFX);
 
     setInput({
       ...input,
