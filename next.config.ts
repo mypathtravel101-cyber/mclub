@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  // Allow Cloudflare Tunnel origins for mobile access
+  allowedDevOrigins: ['*.trycloudflare.com'],
 };
 
 export default nextConfig;
