@@ -306,7 +306,7 @@ function BellCurve({
         {/* Legend markers */}
         {/* Mean marker */}
         <circle cx={padL + 4} cy={padT + 5} r={3} fill="#7c3aed" />
-        <text x={padL + 10} y={padT + 8} fontSize={7} fill="#7c3aed" fontWeight="bold">
+        <text x={padL + 10} y={padT + 8} fontSize={11} fill="#7c3aed" fontWeight="bold">
           ML 加權均值 {stats.mean.toFixed(1)}%
         </text>
 
@@ -328,8 +328,8 @@ function BellCurve({
           <p className="text-sm font-black text-red-700">{(100 - probPositive).toFixed(1)}%</p>
         </div>
         <div className="bg-purple-50 border border-purple-200 rounded-lg px-2 py-1.5 text-center">
-          <p className="text-[10px] text-purple-600 font-semibold">ML 加權均值</p>
-          <p className="text-sm font-black text-purple-700">{meanROI >= 0 ? '+' : ''}{meanROI}%</p>
+          <p className="text-xs text-purple-600 font-semibold">ML 加權均值</p>
+          <p className="text-base font-black text-purple-700">{meanROI >= 0 ? '+' : ''}{meanROI}%</p>
         </div>
         <div className="bg-green-50 border border-green-200 rounded-lg px-2 py-1.5 text-center">
           <p className="text-[10px] text-green-600 font-semibold">盈利區間</p>
