@@ -470,6 +470,19 @@ export function ResultsDashboard({ result, onBack }: ResultsDashboardProps) {
           </div>
         </div>
 
+        {/* Bell Curve — ROI Probability Distribution */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Brain className="h-4 w-4 text-purple-600" />
+              投資回報機率分佈（Bell Curve）
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BellCurve scenarios={renormalized} meanROI={summary.mlWeightedROI} probPositive={summary.probPositiveReturn} />
+          </CardContent>
+        </Card>
+
         {/* Three-Layer Analysis — Expanded */}
         <div className="space-y-3">
           <p className="text-sm font-semibold text-gray-800 px-1">三層分析摘要</p>
@@ -756,19 +769,6 @@ export function ResultsDashboard({ result, onBack }: ResultsDashboardProps) {
             </div>
           </div>
         </div>
-
-        {/* Bell Curve — ROI Probability Distribution */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Brain className="h-4 w-4 text-purple-600" />
-              投資回報機率分佈（Bell Curve）
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <BellCurve scenarios={renormalized} meanROI={summary.mlWeightedROI} probPositive={summary.probPositiveReturn} />
-          </CardContent>
-        </Card>
 
         {/* ML Prediction Distribution — Factor Level */}
         <Card>
