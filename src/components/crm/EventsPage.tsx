@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { fetchWithAuth } from '@/lib/api-helpers';
 import { useAppStore } from '@/store/app';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, MapPin, Users, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Calendar, X, Link2, ClipboardList, Check, UserCheck, UserX, RotateCcw } from 'lucide-react';
+import { Plus, MapPin, Users, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Calendar, X, Link2, ClipboardList, Check, UserCheck, UserX, RotateCcw, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   format,
