@@ -286,18 +286,36 @@ export function EventsPage() {
       return;
     }
 
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: '檔案過大', description: '圖片大小不能超過 5MB', variant: 'destructive' });
+    // Validate file size (10MB raw)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: '檔案過大', description: '圖片大小不能超過 10MB', variant: 'destructive' });
       return;
     }
 
     setImageFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setImagePreview(ev.target?.result as string);
+
+    // Compress image client-side to keep base64 under Vercel's body limit
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_DIM = 800; // max width or height
+      let w = img.width;
+      let h = img.height;
+      if (w > MAX_DIM || h > MAX_DIM) {
+        if (w > h) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; }
+        else { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
+      }
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, w, h);
+      // Use JPEG for smaller size; fallback to PNG for transparent images
+      const mimeType = file.type === 'image/png' || file.type === 'image/gif' ? 'image/png' : 'image/jpeg';
+      const quality = mimeType === 'image/jpeg' ? 0.7 : undefined;
+      const dataUrl = canvas.toDataURL(mimeType, quality);
+      setImagePreview(dataUrl);
     };
-    reader.readAsDataURL(file);
+    img.src = URL.createObjectURL(file);
   };
 
   const removeImage = () => {
@@ -334,9 +352,13 @@ export function EventsPage() {
       // Get image URL directly from preview (base64 data URL from FileReader)
       const imageUrl = getImageUrl();
 
-      console.log('[Event] Creating event with imageUrl:', imageUrl ? 'yes' : 'no');
-      await fetchWithAuth('/api/events', {
+      console.log('[Event] Creating event with imageUrl:', imageUrl ? `${(imageUrl.length / 1024).toFixed(0)}KB` : 'no');
+      const res = await fetch('/api/events', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('mclub_crm_token')}`,
+        },
         body: JSON.stringify({
           ...form,
           maxAttendees: parseInt(form.maxAttendees),
@@ -345,6 +367,10 @@ export function EventsPage() {
           imageUrl: imageUrl ?? undefined,
         }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `伺服器錯誤 (${res.status})`);
+      }
       setOpen(false);
       resetForm();
       loadEvents();
