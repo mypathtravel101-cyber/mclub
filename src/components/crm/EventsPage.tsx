@@ -298,7 +298,7 @@ export function EventsPage() {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const MAX_DIM = 800; // max width or height
+      const MAX_DIM = 600; // max width or height (conservative for Vercel body limit)
       let w = img.width;
       let h = img.height;
       if (w > MAX_DIM || h > MAX_DIM) {
@@ -311,7 +311,7 @@ export function EventsPage() {
       ctx.drawImage(img, 0, 0, w, h);
       // Use JPEG for smaller size; fallback to PNG for transparent images
       const mimeType = file.type === 'image/png' || file.type === 'image/gif' ? 'image/png' : 'image/jpeg';
-      const quality = mimeType === 'image/jpeg' ? 0.7 : undefined;
+      const quality = mimeType === 'image/jpeg' ? 0.5 : undefined;
       const dataUrl = canvas.toDataURL(mimeType, quality);
       setImagePreview(dataUrl);
     };
@@ -352,6 +352,17 @@ export function EventsPage() {
       // Get image URL directly from preview (base64 data URL from FileReader)
       const imageUrl = getImageUrl();
 
+      // Guard: skip image if base64 is too large for Vercel (4.5MB limit)
+      const MAX_PAYLOAD_KB = 3000; // 3MB safety margin
+      if (imageUrl && imageUrl.length > MAX_PAYLOAD_KB * 1024) {
+        toast({
+          title: '圖片過大',
+          description: `壓縮後仍 ${(imageUrl.length / 1024 / 1024).toFixed(1)}MB，請選擇更小的圖片（建議 < 1MB）`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       console.log('[Event] Creating event with imageUrl:', imageUrl ? `${(imageUrl.length / 1024).toFixed(0)}KB` : 'no');
       const res = await fetch('/api/events', {
         method: 'POST',
@@ -368,8 +379,9 @@ export function EventsPage() {
         }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `伺服器錯誤 (${res.status})`);
+        let errMsg = `伺服器錯誤 (${res.status})`;
+        try { const d = await res.json(); errMsg = d.error || errMsg; } catch {}
+        throw new Error(errMsg);
       }
       setOpen(false);
       resetForm();
