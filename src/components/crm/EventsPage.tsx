@@ -163,7 +163,7 @@ export function EventsPage() {
   // Image upload state
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
@@ -279,58 +279,43 @@ export function EventsPage() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate file type
     if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
       toast({ title: '格式錯誤', description: '只支援 JPG、PNG、GIF、WebP 格式', variant: 'destructive' });
       return;
     }
-
-    // Validate file size (10MB raw)
-    if (file.size > 10 * 1024 * 1024) {
-      toast({ title: '檔案過大', description: '圖片大小不能超過 10MB', variant: 'destructive' });
-      return;
-    }
-
     setImageFile(file);
-
-    // Compress image client-side to keep base64 under Vercel's body limit
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const MAX_DIM = 600; // max width or height (conservative for Vercel body limit)
-      let w = img.width;
-      let h = img.height;
-      if (w > MAX_DIM || h > MAX_DIM) {
-        if (w > h) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; }
-        else { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
-      }
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0, w, h);
-      // Use JPEG for smaller size; fallback to PNG for transparent images
-      const mimeType = file.type === 'image/png' || file.type === 'image/gif' ? 'image/png' : 'image/jpeg';
-      const quality = mimeType === 'image/jpeg' ? 0.5 : undefined;
-      const dataUrl = canvas.toDataURL(mimeType, quality);
-      setImagePreview(dataUrl);
-    };
-    img.src = URL.createObjectURL(file);
+    setImageUrl(''); // clear URL input when file selected
+    setImagePreview(URL.createObjectURL(file));
   };
 
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    setImageUrl('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  // Use client-side FileReader data URL directly — no server upload needed
-  // Works on Vercel serverless (no filesystem) and avoids extra network round-trip
-  const getImageUrl = (): string | null => {
-    if (!imagePreview) return null;
-    return imagePreview; // already a base64 data URL from FileReader
+  // Compress image to tiny base64 for Vercel body limit
+  const compressToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        const MAX = 400;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        c.width = w; c.height = h;
+        c.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', 0.3));
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
   };
 
   const handleAdd = async () => {
@@ -349,21 +334,25 @@ export function EventsPage() {
         return;
       }
 
-      // Get image URL directly from preview (base64 data URL from FileReader)
-      const imageUrl = getImageUrl();
-
-      // Guard: skip image if base64 is too large for Vercel (4.5MB limit)
-      const MAX_PAYLOAD_KB = 3000; // 3MB safety margin
-      if (imageUrl && imageUrl.length > MAX_PAYLOAD_KB * 1024) {
-        toast({
-          title: '圖片過大',
-          description: `壓縮後仍 ${(imageUrl.length / 1024 / 1024).toFixed(1)}MB，請選擇更小的圖片（建議 < 1MB）`,
-          variant: 'destructive',
-        });
-        return;
+      // Determine final image URL: URL input > compressed file upload > none
+      let finalImageUrl: string | undefined;
+      if (imageUrl.trim()) {
+        finalImageUrl = imageUrl.trim();
+      } else if (imageFile) {
+        try {
+          const b64 = await compressToBase64(imageFile);
+          if (b64.length > 400 * 1024) {
+            toast({ title: '圖片過大', description: '請使用圖片連結代替上傳', variant: 'destructive' });
+            return;
+          }
+          finalImageUrl = b64;
+        } catch {
+          toast({ title: '圖片處理失敗', description: '請使用圖片連結代替', variant: 'destructive' });
+          return;
+        }
       }
 
-      console.log('[Event] Creating event with imageUrl:', imageUrl ? `${(imageUrl.length / 1024).toFixed(0)}KB` : 'no');
+      console.log('[Event] Creating event, image:', finalImageUrl ? `${(finalImageUrl.length / 1024).toFixed(0)}KB` : 'none');
       const res = await fetch('/api/events', {
         method: 'POST',
         headers: {
@@ -375,7 +364,7 @@ export function EventsPage() {
           maxAttendees: parseInt(form.maxAttendees),
           date: new Date(form.date).toISOString(),
           status: 'upcoming',
-          imageUrl: imageUrl ?? undefined,
+          imageUrl: finalImageUrl,
         }),
       });
       if (!res.ok) {
@@ -401,6 +390,7 @@ export function EventsPage() {
     setForm({ ...emptyForm });
     setImageFile(null);
     setImagePreview(null);
+    setImageUrl('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -631,7 +621,21 @@ export function EventsPage() {
                 {/* Image Upload */}
                 <div>
                   <label className="text-sm font-medium">活動海報 / 宣傳圖</label>
-                  <div className="mt-1.5">
+                  <div className="mt-1.5 space-y-2">
+                    {/* URL input (recommended for Vercel) */}
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">貼上圖片連結（推薦）：</p>
+                      <Input
+                        placeholder="https://example.com/image.jpg"
+                        value={imageUrl}
+                        onChange={(e) => { setImageUrl(e.target.value); if (e.target.value) { setImageFile(null); setImagePreview(e.target.value); } else { setImagePreview(null); } }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="flex-1 h-px bg-border" />
+                      <span>或上傳檔案（會自動壓縮）</span>
+                      <span className="flex-1 h-px bg-border" />
+                    </div>
                     {!imagePreview ? (
                       <div
                         className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/30 p-6 cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition-colors"
@@ -639,7 +643,7 @@ export function EventsPage() {
                       >
                         <ImagePlus className="h-8 w-8 text-muted-foreground/50 mb-2" />
                         <p className="text-sm text-muted-foreground">點擊上傳圖片</p>
-                        <p className="text-xs text-muted-foreground/70 mt-1">支援 JPG、PNG、GIF、WebP（最大 5MB）</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">支援 JPG、PNG、GIF、WebP</p>
                       </div>
                     ) : (
                       <div className="relative rounded-lg overflow-hidden border bg-muted/20">
@@ -670,7 +674,7 @@ export function EventsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="mt-2 w-full"
+                        className="w-full"
                         onClick={() => fileInputRef.current?.click()}
                       >
                         <Upload className="mr-2 h-3.5 w-3.5" />
@@ -683,16 +687,9 @@ export function EventsPage() {
                 <Button
                   onClick={handleAdd}
                   className="w-full bg-amber-600 hover:bg-amber-700"
-                  disabled={!form.title || !form.date || uploading}
+                  disabled={!form.title || !form.date}
                 >
-                  {uploading ? (
-                    <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                      上傳中...
-                    </>
-                  ) : (
-                    '確認新增'
-                  )}
+                  確認新增
                 </Button>
               </div>
             </DialogContent>
