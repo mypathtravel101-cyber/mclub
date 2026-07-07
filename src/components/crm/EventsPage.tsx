@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { fetchWithAuth } from '@/lib/api-helpers';
 import { useAppStore } from '@/store/app';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, MapPin, Users, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Calendar, ImagePlus, X, Upload, Trash2, Link2, ClipboardList, Check, UserCheck, UserX, RotateCcw } from 'lucide-react';
+import { Plus, MapPin, Users, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Calendar, X, Link2, ClipboardList, Check, UserCheck, UserX, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   format,
@@ -162,9 +162,7 @@ export function EventsPage() {
 
   // Image upload state
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -276,53 +274,8 @@ export function EventsPage() {
     return days;
   }, [currentMonth]);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
-      toast({ title: '格式錯誤', description: '只支援 JPG、PNG、GIF、WebP 格式', variant: 'destructive' });
-      return;
-    }
-    setImageFile(file);
-    setImageUrl(''); // clear URL input when file selected
-    setImagePreview(URL.createObjectURL(file));
-  };
-
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
-    setImageUrl('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  // Compress image to tiny base64 for Vercel body limit
-  const compressToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const c = document.createElement('canvas');
-        const MAX = 400;
-        let w = img.width, h = img.height;
-        if (w > MAX || h > MAX) {
-          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-          else { w = Math.round(w * MAX / h); h = MAX; }
-        }
-        c.width = w; c.height = h;
-        c.getContext('2d')!.drawImage(img, 0, 0, w, h);
-        resolve(c.toDataURL('image/jpeg', 0.3));
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
   const handleAdd = async () => {
     try {
-      // Defense-in-depth: even though the date picker has min={now},
-      // browsers may not enforce it in all cases (e.g. programmatic
-      // value changes, older browsers). Reject past dates explicitly.
       const selectedDate = new Date(form.date);
       const now = new Date();
       if (selectedDate.getTime() <= now.getTime()) {
@@ -334,25 +287,8 @@ export function EventsPage() {
         return;
       }
 
-      // Determine final image URL: URL input > compressed file upload > none
-      let finalImageUrl: string | undefined;
-      if (imageUrl.trim()) {
-        finalImageUrl = imageUrl.trim();
-      } else if (imageFile) {
-        try {
-          const b64 = await compressToBase64(imageFile);
-          if (b64.length > 400 * 1024) {
-            toast({ title: '圖片過大', description: '請使用圖片連結代替上傳', variant: 'destructive' });
-            return;
-          }
-          finalImageUrl = b64;
-        } catch {
-          toast({ title: '圖片處理失敗', description: '請使用圖片連結代替', variant: 'destructive' });
-          return;
-        }
-      }
+      const finalImageUrl = imageUrl.trim() || undefined;
 
-      console.log('[Event] Creating event, image:', finalImageUrl ? `${(finalImageUrl.length / 1024).toFixed(0)}KB` : 'none');
       const res = await fetch('/api/events', {
         method: 'POST',
         headers: {
@@ -375,7 +311,6 @@ export function EventsPage() {
       setOpen(false);
       resetForm();
       loadEvents();
-      // Refresh unread count so the red dot appears on sidebar
       fetchWithAuth<{ count?: number }>('/api/notifications/unread-count')
         .then((data) => setUnreadNoticeCount(data.count ?? 0))
         .catch(() => {});
@@ -388,12 +323,8 @@ export function EventsPage() {
 
   const resetForm = () => {
     setForm({ ...emptyForm });
-    setImageFile(null);
-    setImagePreview(null);
     setImageUrl('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    setImagePreview(null);
   };
 
   // Build the public registration URL for an event.
@@ -618,69 +549,38 @@ export function EventsPage() {
                   </div>
                 </div>
 
-                {/* Image Upload */}
+                {/* Image URL input (only method for Vercel compatibility) */}
                 <div>
                   <label className="text-sm font-medium">活動海報 / 宣傳圖</label>
                   <div className="mt-1.5 space-y-2">
-                    {/* URL input (recommended for Vercel) */}
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">貼上圖片連結（推薦）：</p>
-                      <Input
-                        placeholder="https://example.com/image.jpg"
-                        value={imageUrl}
-                        onChange={(e) => { setImageUrl(e.target.value); if (e.target.value) { setImageFile(null); setImagePreview(e.target.value); } else { setImagePreview(null); } }}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="flex-1 h-px bg-border" />
-                      <span>或上傳檔案（會自動壓縮）</span>
-                      <span className="flex-1 h-px bg-border" />
-                    </div>
-                    {!imagePreview ? (
-                      <div
-                        className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/30 p-6 cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition-colors"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <ImagePlus className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                        <p className="text-sm text-muted-foreground">點擊上傳圖片</p>
-                        <p className="text-xs text-muted-foreground/70 mt-1">支援 JPG、PNG、GIF、WebP</p>
-                      </div>
-                    ) : (
+                    <Input
+                      placeholder="貼上圖片連結，例如 https://example.com/poster.jpg"
+                      value={imageUrl}
+                      onChange={(e) => {
+                        setImageUrl(e.target.value);
+                        setImagePreview(e.target.value || null);
+                      }}
+                    />
+                    {imagePreview && (
                       <div className="relative rounded-lg overflow-hidden border bg-muted/20">
                         <img
                           src={imagePreview}
                           alt="活動海報預覽"
                           className="w-full h-48 object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
                         <Button
                           variant="destructive"
                           size="icon"
                           className="absolute top-2 right-2 h-7 w-7 rounded-full shadow-md"
-                          onClick={removeImage}
+                          onClick={() => { setImageUrl(''); setImagePreview(null); }}
                           title="移除圖片"
                         >
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     )}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      className="hidden"
-                      onChange={handleImageSelect}
-                    />
-                    {imagePreview && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <Upload className="mr-2 h-3.5 w-3.5" />
-                        更換圖片
-                      </Button>
-                    )}
+                    <p className="text-xs text-muted-foreground">將圖片上傳至 Imgur、imgbb 等免費圖床，然後貼上連結</p>
                   </div>
                 </div>
 
