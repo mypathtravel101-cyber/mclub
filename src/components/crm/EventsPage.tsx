@@ -308,37 +308,11 @@ export function EventsPage() {
     }
   };
 
-  const uploadImage = async (): Promise<string | null> => {
-    if (!imageFile) return null;
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', imageFile);
-      console.log('[Upload] Starting image upload...', imageFile.name, imageFile.type, imageFile.size);
-      const result = await fetchWithAuth<{ url?: string }>('/api/uploads/events', {
-        method: 'POST',
-        body: formData,
-      });
-      console.log('[Upload] Upload result:', result);
-      if (!result.url) {
-        console.error('[Upload] No URL returned from upload API');
-        toast({ title: '上傳失敗', description: '伺服器未返回圖片地址', variant: 'destructive' });
-        return null;
-      }
-      return result.url as string;
-    } catch (err) {
-      console.error('[Upload] Upload failed:', err);
-      // Show the actual error reason from the server if available
-      const errMsg = err instanceof Error ? err.message : String(err);
-      toast({
-        title: '上傳失敗',
-        description: errMsg || '圖片上傳失敗，請重試',
-        variant: 'destructive',
-      });
-      return null;
-    } finally {
-      setUploading(false);
-    }
+  // Use client-side FileReader data URL directly — no server upload needed
+  // Works on Vercel serverless (no filesystem) and avoids extra network round-trip
+  const getImageUrl = (): string | null => {
+    if (!imagePreview) return null;
+    return imagePreview; // already a base64 data URL from FileReader
   };
 
   const handleAdd = async () => {
@@ -357,14 +331,10 @@ export function EventsPage() {
         return;
       }
 
-      // Upload image first if selected
-      let imageUrl: string | null = null;
-      if (imageFile) {
-        imageUrl = await uploadImage();
-        if (!imageUrl) return; // upload failed
-      }
+      // Get image URL directly from preview (base64 data URL from FileReader)
+      const imageUrl = getImageUrl();
 
-      console.log('[Event] Creating event with imageUrl:', imageUrl);
+      console.log('[Event] Creating event with imageUrl:', imageUrl ? 'yes' : 'no');
       await fetchWithAuth('/api/events', {
         method: 'POST',
         body: JSON.stringify({
