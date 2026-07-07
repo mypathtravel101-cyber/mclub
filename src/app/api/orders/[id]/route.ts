@@ -39,3 +39,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = getUserAuth(req);
+    if (!auth) return NextResponse.json({ error: '未登入' }, { status: 401 });
+    const { role } = auth;
+
+    if (role !== 'admin' && role !== 'director') {
+      return NextResponse.json({ error: '權限不足' }, { status: 403 });
+    }
+
+    const { id } = await params;
+    const order = await db.order.findUnique({ where: { id } });
+    if (!order) return NextResponse.json({ error: '訂單不存在' }, { status: 404 });
+
+    await db.commission.deleteMany({ where: { orderId: id } });
+    await db.order.delete({ where: { id } });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
